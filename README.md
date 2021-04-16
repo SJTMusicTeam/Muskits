@@ -1,2 +1,2 @@
-# Muskit
-An opensource music processing toolkit
+# Muskits
+Opensource music processing toolkits
