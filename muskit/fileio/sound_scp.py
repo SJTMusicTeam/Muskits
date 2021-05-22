@@ -8,7 +8,7 @@ from typeguard import check_argument_types
 
 from muskit.fileio.read_text import read_2column_text
 
-
+# audio, wav file
 class SoundScpReader(collections.abc.Mapping):
     """Reader class for 'wav.scp'.
     Examples:
