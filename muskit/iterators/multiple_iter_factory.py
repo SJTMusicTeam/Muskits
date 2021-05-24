@@ -1,6 +1,6 @@
-'''
+"""
 Credit to espnet: https://github.com/espnet/espnet/blob/master/espnet2/iterators/multiple_iter_factory.py
-'''
+"""
 
 import logging
 from typing import Callable

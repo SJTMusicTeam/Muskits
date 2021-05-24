@@ -5,6 +5,7 @@ import warnings
 from typeguard import check_argument_types
 from typeguard import check_return_type
 
+
 class DatadirWriter:
     """Writer class to create kaldi like data directory.
     Examples:

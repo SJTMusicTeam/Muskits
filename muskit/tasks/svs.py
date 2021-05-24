@@ -196,7 +196,6 @@ class SVSTask(AbsTask):
             # e.g. --encoder and --encoder_conf
             class_choices.add_arguments(group)
 
-
     @classmethod
     def build_collate_fn(
         cls, args: argparse.Namespace, train: bool

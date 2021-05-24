@@ -23,18 +23,18 @@ class MidiScpReader(collections.abc.Mapping):
     """
 
     def __init__(
-            self,
-            fname,
-            dtype=np.int16,
-            always_2d: bool = False,
-            normalize: bool = False,
+        self,
+        fname,
+        dtype=np.int16,
+        always_2d: bool = False,
+        normalize: bool = False,
     ):
         assert check_argument_types()
         self.fname = fname
         self.dtype = dtype
         self.always_2d = always_2d
         self.normalize = normalize
-        self.data = read_2column_text(fname) # read_phoneme
+        self.data = read_2column_text(fname)  # read_phoneme
 
     def __getitem__(self, key):
         wav = self.data[key]
@@ -78,11 +78,11 @@ class MidiScpWriter:
     """
 
     def __init__(
-            self,
-            outdir: Union[Path, str],
-            scpfile: Union[Path, str],
-            format="wav",
-            dtype=None,
+        self,
+        outdir: Union[Path, str],
+        scpfile: Union[Path, str],
+        format="wav",
+        dtype=None,
     ):
         assert check_argument_types()
         self.dir = Path(outdir)

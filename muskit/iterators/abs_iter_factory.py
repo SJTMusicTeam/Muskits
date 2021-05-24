@@ -1,6 +1,6 @@
-'''
+"""
 Credit to espnet: https://github.com/espnet/espnet/blob/master/espnet2/iterators/abs_iter_factory.py
-'''
+"""
 
 
 from abc import ABC

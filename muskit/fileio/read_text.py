@@ -33,7 +33,7 @@ def read_2column_text(path: Union[Path, str]) -> Dict[str, str]:
 
 
 def load_num_sequence_text(
-        path: Union[Path, str], loader_type: str = "csv_int"
+    path: Union[Path, str], loader_type: str = "csv_int"
 ) -> Dict[str, List[Union[float, int]]]:
     """Read a text file indicating sequences of number
     Examples:

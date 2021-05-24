@@ -1,6 +1,6 @@
-'''
+"""
 Credit to espnet: https://github.com/espnet/espnet/tree/master/espnet2
-'''
+"""
 
 from abc import ABC
 from abc import abstractmethod

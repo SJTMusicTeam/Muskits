@@ -248,7 +248,6 @@ class AbsTask(ABC):
     def build_model(cls, args: argparse.Namespace) -> AbsMuskitModel:
         raise NotImplementedError
 
-
     @classmethod
     def get_parser(cls) -> config_argparse.ArgumentParser:
         assert check_argument_types()
