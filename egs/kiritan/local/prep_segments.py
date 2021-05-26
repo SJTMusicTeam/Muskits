@@ -1,13 +1,9 @@
 #!/usr/bin/env python3
-
-# Copyright 2019 Ryuichi Yamamoto
-#  Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
-
 import argparse
 import os
 import sys
 
-from nnmnkwii.io import hts
+# from nnmnkwii.io import hts
 
 
 def get_parser():
@@ -25,14 +21,23 @@ if __name__ == "__main__":
     with open(args.wav_scp) as f:
         for line in f:
             recording_id, path = line.split()
-            lab_path = path.replace("wav/", "lab/").replace(".wav", ".lab")
+            lab_path = path.replace("wav/", "mono_label/").replace(".wav", ".lab")
+            # lab_path = path.replace("wav/", "lab/").replace(".wav", ".lab")
+            # print(lab_path)
             assert os.path.exists(lab_path)
+            labels = []
+            with open(lab_path) as lab_f:
+                for line in lab_f:
+                    start, end, phone = line.split(' ')
+                    # print(line)
+                    labels.append([ float(start), float(end), phone])
 
-            labels = hts.load(lab_path)
-            assert "sil" in labels[0][-1]
-            assert "sil" in labels[-1][-1]
-            segment_begin = "{:.3f}".format(labels[0][1] * 1e-7)
-            segment_end = "{:.3f}".format(labels[-1][0] * 1e-7)
+
+            # labels = hts.load(lab_path)
+            # assert "sil" in labels[0][-1]
+            # assert "sil" in labels[-1][-1]
+            segment_begin = "{:.7f}".format(labels[0][1])
+            segment_end = "{:.7f}".format(labels[-1][0])
 
             # As we assume that there's only a single utterance per recording,
             # utt_id is same as recording_id.
