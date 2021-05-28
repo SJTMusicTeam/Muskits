@@ -1,21 +1,17 @@
 import miditoolkit
 import numpy as np
 
-def midi_to_noteseq(midi_obj, dtype=np.int16 , rate=16000):
+def midi_to_noteseq(midi_obj, dtype=np.int16 , rate=22050):
     """method for midi_obj.
     Input:
         miditoolkit_object, sampling rate
     Output:
         np.array([pitch1,pitch2....]), which length is equal to note.time*rate
     """
-
     tick_to_time = midi_obj.get_tick_to_time_mapping()
-    # print(tick_to_time[:20])
     max_time = tick_to_time[-1]
-
     notes = midi_obj.instruments[0].notes
     notes.sort(key=lambda x: (x.start, x.pitch))
-    # print(notes)
 
     note_seq = np.zeros(int(rate * max_time), dtype=dtype)
     idx = 0
@@ -28,13 +24,15 @@ def midi_to_noteseq(midi_obj, dtype=np.int16 , rate=16000):
     return note_seq
 
 
-def noteseq_to_midi(note_seq, rate=16000, DEFAULT_RESOLUTION = 480, DEFAULT_TEMPO = 60, DEFAULT_VELOCITY = 60):
-
+def noteseq_to_midi(note_seq, rate=22050, DEFAULT_RESOLUTION = 480, DEFAULT_TEMPO = 60, DEFAULT_VELOCITY = 60):
+    """method for note_seq.
+    Input:
+        note_seq, sampling rate
+    Output:
+        miditoolkit_object with default resolution, tempo and velocity.
+    """
     # get downbeat and note (no time)
     temp_notes = note_seq
-    temp_chords = []
-    temp_tempos = []
-
 
     ticks_per_beat = DEFAULT_RESOLUTION
     ticks_per_bar = DEFAULT_RESOLUTION * 4 # assume 4/4
@@ -59,7 +57,6 @@ def noteseq_to_midi(note_seq, rate=16000, DEFAULT_RESOLUTION = 480, DEFAULT_TEMP
         notes.append(miditoolkit.midi.containers.Note(start=st, end=ed, pitch=pitch, velocity=DEFAULT_VELOCITY))
         i = j + 1
 
-
     # get specific time for tempos
     tempos = [[0, DEFAULT_TEMPO]]
 
@@ -76,13 +73,3 @@ def noteseq_to_midi(note_seq, rate=16000, DEFAULT_RESOLUTION = 480, DEFAULT_TEMP
         tempo_changes.append(miditoolkit.midi.containers.TempoChange(bpm, st))
     midi.tempo_changes = tempo_changes
     return midi
-
-
-if __name__ == '__main__':
-    pp = '/data2/qt/MusicGeneration/egs/dataset/tmp_res/test.mid'
-    midi_obj = miditoolkit.midi.parser.MidiFile(pp)
-    # print(len(midi_obj.get_tick_to_time_mapping()))
-    note_seq = midi_to_noteseq(midi_obj)
-    # print(note_seq)
-    midi_obj = noteseq_to_midi(note_seq)
-    midi_obj.dump('/data2/qt/MusicGeneration/egs/dataset/tmp_res/note_seq_test.mid')

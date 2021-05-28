@@ -45,16 +45,6 @@ class MIDIScpReader(collections.abc.Mapping):
         if self.rep == "representation":
             seq = midi_to_noteseq(midi_obj, self.dtype, self.rate)
         return seq
-        # wav = self.data[key]
-        # if self.normalize:
-        #     # soundfile.read normalizes data to [-1,1] if dtype is not given
-        #     array, rate = soundfile.read(wav, always_2d=self.always_2d)
-        # else:
-        #     array, rate = soundfile.read(
-        #         wav, dtype=self.dtype, always_2d=self.always_2d
-        #     )
-        #
-        # return rate, array
 
     def get_path(self, key):
         return self.data[key]
