@@ -131,7 +131,7 @@ with open(version_file, "r") as f:
     version = f.read().strip()
 setup(
     name="muskit",
-    version=0.0.1,
+    version="0.0.1",
     url="https://github.com/SJTMusicTeam/Muskit",
     author="Shinji Watanabe",
     author_email="shinjiw@ieee.org",
