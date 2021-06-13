@@ -31,9 +31,10 @@ def read_2column_text(path: Union[Path, str]) -> Dict[str, str]:
             data[k] = v
     return data
 
+
 # read duration
 def load_num_sequence_text(
-        path: Union[Path, str], loader_type: str = "text_float"
+    path: Union[Path, str], loader_type: str = "text_float"
 ) -> Dict[str, List[Union[float, int]]]:
     """Read a text file indicating sequences of number
     Examples:
@@ -77,6 +78,7 @@ def load_num_sequence_text(
             logging.error(f'Error happened with path="{path}", id="{k}", value="{v}"')
             raise
     return retval
+
 
 def load_label_sequence(path: Union[Path, str]) -> Dict[str, List[Union[float, int]]]:
     """Read a text file indicating sequences of number

@@ -1,7 +1,8 @@
 import miditoolkit
 import numpy as np
 
-def midi_to_noteseq(midi_obj, dtype=np.int16 , rate=22050):
+
+def midi_to_noteseq(midi_obj, dtype=np.int16, rate=22050):
     """method for midi_obj.
     Input:
         miditoolkit_object, sampling rate
@@ -24,7 +25,9 @@ def midi_to_noteseq(midi_obj, dtype=np.int16 , rate=22050):
     return note_seq
 
 
-def noteseq_to_midi(note_seq, rate=22050, DEFAULT_RESOLUTION = 480, DEFAULT_TEMPO = 60, DEFAULT_VELOCITY = 60):
+def noteseq_to_midi(
+    note_seq, rate=22050, DEFAULT_RESOLUTION=480, DEFAULT_TEMPO=60, DEFAULT_VELOCITY=60
+):
     """method for note_seq.
     Input:
         note_seq, sampling rate
@@ -35,7 +38,7 @@ def noteseq_to_midi(note_seq, rate=22050, DEFAULT_RESOLUTION = 480, DEFAULT_TEMP
     temp_notes = note_seq
 
     ticks_per_beat = DEFAULT_RESOLUTION
-    ticks_per_bar = DEFAULT_RESOLUTION * 4 # assume 4/4
+    ticks_per_bar = DEFAULT_RESOLUTION * 4  # assume 4/4
 
     seconds_per_beat = 60 / DEFAULT_TEMPO
     seconds_per_tick = seconds_per_beat / float(ticks_per_beat)
@@ -48,13 +51,17 @@ def noteseq_to_midi(note_seq, rate=22050, DEFAULT_RESOLUTION = 480, DEFAULT_TEMP
     while i < len(temp_notes):
         pitch = temp_notes[i]
         j = i
-        while j+1 < len(temp_notes) and temp_notes[j+1] == pitch:
+        while j + 1 < len(temp_notes) and temp_notes[j + 1] == pitch:
             j += 1
-        duration = int( (j-i+1) * ticks_per_second / rate)
+        duration = int((j - i + 1) * ticks_per_second / rate)
         # duration (end time)
         ed = st + duration
         st = ed
-        notes.append(miditoolkit.midi.containers.Note(start=st, end=ed, pitch=pitch, velocity=DEFAULT_VELOCITY))
+        notes.append(
+            miditoolkit.midi.containers.Note(
+                start=st, end=ed, pitch=pitch, velocity=DEFAULT_VELOCITY
+            )
+        )
         i = j + 1
 
     # get specific time for tempos
