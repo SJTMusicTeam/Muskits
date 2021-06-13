@@ -6,9 +6,6 @@ from pathlib import Path
 import shutil
 import resampy
 import numpy as np
-from concurrent.futures import ProcessPoolExecutor, wait, ALL_COMPLETED
-# os.chdir(sys.path[0]+'/../../..')
-# print(os.getcwd())
 
 from muskit.fileio.sound_scp import SoundScpWriter, SoundScpReader
 from muskit.fileio.midi_scp import MIDIScpWriter, MIDIScpReader
@@ -82,9 +79,6 @@ def segmentation(key, segment_begin, segment_end, args_fs, args_outdir, rate, wa
     midi_writer[key] = sub_note
 
 if __name__ == "__main__":
-    # print(sys.path[0]+'/..')
-    # os.chdir(sys.path[0]+'/..')
-    # print(os.getcwd())
     args = get_parser().parse_args(sys.argv[1:])
 
     label_reader = {}
@@ -145,20 +139,7 @@ if __name__ == "__main__":
 
     if args.fs is None:
         args.fs = midi_reader.rate
-    # Note: generate segmented file
-    # wav_writer = SoundScpWriter(
-    #     out_wavdir,
-    #     out_wavscp,
-    #     format="wav",
-    # )
-    # midi_writer = MIDIScpWriter(
-    #     out_mididir,
-    #     out_midiscp,
-    #     format="midi",
-    #     rate=args.fs
-    # )
 
-    executor = ProcessPoolExecutor(args.nj)
     writer = {}
     for key, val in segments.items():
         # text, duration, label
@@ -179,29 +160,12 @@ if __name__ == "__main__":
         f_text.close()
         f_duration.close()
         f_label.close()
-        # print(val)
         segment_begin = val[0][0]
         segment_end = val[-1][1]
-        # print("{} {}".format(segment_begin,segment_end))
-        # a, b = executor.submit(segmentation, key, segment_begin, segment_end , args.fs)
-        # writer[key] = executor.submit(segmentation, key, segment_begin, segment_end , args.fs, wav_reader, midi_reader)
 
         # wav, midi
         uttid, seg_id = key.split('_')
         rate, wave = wav_reader[uttid]
         note_seq = midi_reader[uttid]
-        executor.submit(segmentation, key, segment_begin, segment_end, args.fs, args.outdir, rate, wave, note_seq)
-
-        # executor.submit(segmentation, key, segment_begin, segment_end , args.fs, wav_reader, midi_reader, wav_writer, midi_writer)
-        # wav_writer[key], midi_writer[key] =
-
-        # wav_writer[key] = int(rate), sub_wav
-        # midi_writer[key] = sub_note
-    # wait(writer.values(), return_when=ALL_COMPLETED)
-    # for key, val in writer.items():
-    #     print(val)
-    #     wav_writer[key] = val[0]
-    #     midi_writer[key] = val[1]
-
-
+        segmentation(key, segment_begin, segment_end, args.fs, args.outdir, rate, wave, note_seq)
 

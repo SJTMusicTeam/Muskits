@@ -6,9 +6,6 @@ from pathlib import Path
 import shutil
 import resampy
 import numpy as np
-from concurrent.futures import ProcessPoolExecutor, wait, ALL_COMPLETED
-# os.chdir(sys.path[0]+'/../../..')
-# print(os.getcwd())
 
 from muskit.fileio.sound_scp import SoundScpWriter, SoundScpReader
 from muskit.fileio.midi_scp import MIDIScpWriter, MIDIScpReader
@@ -45,7 +42,6 @@ def get_subsequence(start_time, end_time, seq, rate):
     else:
         start = np.searchsorted([item[0] for item in seq], start_time, 'left')
         end = np.searchsorted([item[1] for item in seq], end_time, 'left')
-        # print(seq[start:end])
     return seq[start: end]
 
 def segmentation(key, segment_begin, segment_end, args_fs, args_outdir, rate, wave, note_seq):
@@ -82,9 +78,6 @@ def segmentation(key, segment_begin, segment_end, args_fs, args_outdir, rate, wa
     midi_writer[key] = sub_note
 
 if __name__ == "__main__":
-    # print(sys.path[0]+'/..')
-    # os.chdir(sys.path[0]+'/..')
-    # print(os.getcwd())
     args = get_parser().parse_args(sys.argv[1:])
 
     label_reader = {}
@@ -148,13 +141,11 @@ if __name__ == "__main__":
         rate=args.fs
     )
 
-    executor = ProcessPoolExecutor(args.nj)
     for key, val in segments.items():
         segment_begin = val[0][0]
         segment_end = val[-1][1]
-        # a, b = executor.submit(segmentation, key, segment_begin, segment_end , args.fs)
         uttid, seg_id = key.split('_')
         rate, wave = wav_reader[uttid]
         note_seq = midi_reader[uttid]
-        executor.submit(segmentation, key, segment_begin, segment_end, args.fs, args.outdir, rate, wave, note_seq)
-        # executor.submit(segmentation, key, segment_begin, segment_end , args.fs, wav_reader, midi_reader, wav_writer, midi_writer)
+        segmentation(key, segment_begin, segment_end, args.fs, args.outdir, rate, wave, note_seq)
+
