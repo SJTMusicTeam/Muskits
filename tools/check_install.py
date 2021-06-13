@@ -16,7 +16,7 @@ from distutils.version import LooseVersion
 
 # NOTE: add the libraries which are not included in setup.py
 MANUALLY_INSTALLED_LIBRARIES = [
-    ("SVS", None),
+    ("muskit", None),
 ]
 
 # NOTE: list all torch versions which are compatible with svs

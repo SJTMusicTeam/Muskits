@@ -1,4 +1,3 @@
-<<<<<<< Updated upstream
 import collections.abc
 from pathlib import Path
 from typing import Union
@@ -26,18 +25,18 @@ class MIDIScpReader(collections.abc.Mapping):
     """
 
     def __init__(
-            self,
-            fname,
-            dtype=np.int16,
-            loader_type: str = "representation",
-            rate: np.int16 = np.int16(16000)
+        self,
+        fname,
+        dtype=np.int16,
+        loader_type: str = "representation",
+        rate: np.int16 = np.int16(16000),
     ):
         assert check_argument_types()
         self.fname = fname
         self.dtype = dtype
         self.rep = loader_type
         self.rate = rate
-        self.data = read_2column_text(fname) # get key-value dict
+        self.data = read_2column_text(fname)  # get key-value dict
 
     def __getitem__(self, key):
         # return miditoolkit.midi.parser.MidiFile(self.data[key])
@@ -77,12 +76,12 @@ class MIDIScpWriter:
     """
 
     def __init__(
-            self,
-            outdir: Union[Path, str],
-            scpfile: Union[Path, str],
-            format="midi",
-            dtype=None,
-            rate: np.int16 = np.int16(16000),
+        self,
+        outdir: Union[Path, str],
+        scpfile: Union[Path, str],
+        format="midi",
+        dtype=None,
+        rate: np.int16 = np.int16(16000),
     ):
         assert check_argument_types()
         self.dir = Path(outdir)
@@ -120,7 +119,8 @@ class MIDIScpWriter:
 
     def close(self):
         self.fscp.close()
-=======
+
+
 import collections.abc
 from pathlib import Path
 from typing import Union
@@ -148,18 +148,18 @@ class MIDIScpReader(collections.abc.Mapping):
     """
 
     def __init__(
-            self,
-            fname,
-            dtype=np.int16,
-            loader_type: str = "representation",
-            rate: np.int16 = np.int16(16000)
+        self,
+        fname,
+        dtype=np.int16,
+        loader_type: str = "representation",
+        rate: np.int16 = np.int16(16000),
     ):
         assert check_argument_types()
         self.fname = fname
         self.dtype = dtype
         self.rep = loader_type
         self.rate = rate
-        self.data = read_2column_text(fname) # get key-value dict
+        self.data = read_2column_text(fname)  # get key-value dict
 
     def __getitem__(self, key):
         # return miditoolkit.midi.parser.MidiFile(self.data[key])
@@ -199,12 +199,12 @@ class MIDIScpWriter:
     """
 
     def __init__(
-            self,
-            outdir: Union[Path, str],
-            scpfile: Union[Path, str],
-            format="midi",
-            dtype=None,
-            rate: np.int16 = np.int16(16000),
+        self,
+        outdir: Union[Path, str],
+        scpfile: Union[Path, str],
+        format="midi",
+        dtype=None,
+        rate: np.int16 = np.int16(16000),
     ):
         assert check_argument_types()
         self.dir = Path(outdir)
@@ -242,4 +242,3 @@ class MIDIScpWriter:
 
     def close(self):
         self.fscp.close()
->>>>>>> Stashed changes
