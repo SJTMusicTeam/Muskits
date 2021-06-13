@@ -6,7 +6,7 @@ from typing import Union
 
 from typeguard import check_argument_types
 
-
+# read text
 def read_2column_text(path: Union[Path, str]) -> Dict[str, str]:
     """Read a text file having 2 column as dict object.
     Examples:
@@ -32,15 +32,16 @@ def read_2column_text(path: Union[Path, str]) -> Dict[str, str]:
     return data
 
 
+# read duration
 def load_num_sequence_text(
-    path: Union[Path, str], loader_type: str = "csv_int"
+    path: Union[Path, str], loader_type: str = "text_float"
 ) -> Dict[str, List[Union[float, int]]]:
     """Read a text file indicating sequences of number
     Examples:
         key1 1 2 3
-        key2 34 5 6
-        >>> d = load_num_sequence_text('text')
-        >>> np.testing.assert_array_equal(d["key1"], np.array([1, 2, 3]))
+        key2 3 4 5 6
+        >>> d = load_num_sequence_text('duration')
+        >>> np.testing.assert_array_equal(d["key1"], np.array([0.1, 0.2, 0.3]))
     """
     assert check_argument_types()
     if loader_type == "text_int":
@@ -55,6 +56,9 @@ def load_num_sequence_text(
     elif loader_type == "csv_float":
         delimiter = ","
         dtype = float
+    elif loader_type == "str":
+        delimiter = " "
+        dtype = str
     else:
         raise ValueError(f"Not supported loader_type={loader_type}")
 
@@ -70,6 +74,32 @@ def load_num_sequence_text(
     for k, v in d.items():
         try:
             retval[k] = [dtype(i) for i in v.split(delimiter)]
+        except TypeError:
+            logging.error(f'Error happened with path="{path}", id="{k}", value="{v}"')
+            raise
+    return retval
+
+
+def load_label_sequence(path: Union[Path, str]) -> Dict[str, List[Union[float, int]]]:
+    """Read a text file indicating sequences of number
+    Examples:
+        key1 1 2 3
+        key2 3 4 5 6
+        >>> d = load_num_sequence_text('duration')
+        >>> np.testing.assert_array_equal(d["key1"], [0.1, 0.2, "啊"]))
+    """
+    assert check_argument_types()
+
+    delimiter = " "
+    dtype = float
+
+    d = read_2column_text(path)
+
+    retval = {}
+    for k, v in d.items():
+        try:
+            start, end, text = v.split(delimiter)
+            retval[k] = [dtype(start), dtype(end), text]
         except TypeError:
             logging.error(f'Error happened with path="{path}", id="{k}", value="{v}"')
             raise

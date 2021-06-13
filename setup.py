@@ -39,6 +39,7 @@ requirements = {
         "PyYAML>=5.1.2",
         "soundfile>=0.10.2",
         "h5py>=2.10.0",
+        "miditoolkit",
         # TTS related
         "pyworld>=0.2.10",
         "torch_complex",
@@ -131,8 +132,8 @@ setup(
     name="muskit",
     version="0.0.1",
     url="https://github.com/SJTMusicTeam/Muskit",
-    author="Jiatong Shi",
-    author_email="ftshijt@gmail.com",
+    author="Shinji Watanabe",
+    author_email="shinjiw@ieee.org",
     description="Muskit: music processing toolkit",
     long_description=open(os.path.join(dirname, "README.md"), encoding="utf-8").read(),
     long_description_content_type="text/markdown",
