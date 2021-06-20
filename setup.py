@@ -39,6 +39,7 @@ requirements = {
         "PyYAML>=5.1.2",
         "soundfile>=0.10.2",
         "h5py>=2.10.0",
+        "miditoolkit",
         # TTS related
         "pyworld>=0.2.10",
         "torch_complex",
@@ -129,7 +130,7 @@ with open(version_file, "r") as f:
     version = f.read().strip()
 setup(
     name="muskit",
-    version=0.0.1,
+    version="0.0.1",
     url="https://github.com/SJTMusicTeam/Muskit",
     author="Shinji Watanabe",
     author_email="shinjiw@ieee.org",

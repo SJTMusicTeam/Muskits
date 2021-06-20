@@ -12,11 +12,7 @@ def check(pytorch_version: str, cuda_version: str):
     # if you built pytorch at local.
     maybe_supported = []
     # 1.7.0 or 1.7.1
-    if (
-        LooseVersion("1.8")
-        > LooseVersion(pytorch_version)
-        >= LooseVersion("1.7")
-    ):
+    if LooseVersion("1.8") > LooseVersion(pytorch_version) >= LooseVersion("1.7"):
         supported = ["11.0", "10.2", "10.1", "9.2"]
     # 1.6.0
     elif LooseVersion(pytorch_version) >= LooseVersion("1.6"):
@@ -65,9 +61,7 @@ def check(pytorch_version: str, cuda_version: str):
 
 
 def get_parser():
-    parser = argparse.ArgumentParser(
-        description="Check pytorch-cuda compatibility"
-    )
+    parser = argparse.ArgumentParser(description="Check pytorch-cuda compatibility")
     parser.add_argument("pytorch_version")
     parser.add_argument("cuda_version")
     return parser

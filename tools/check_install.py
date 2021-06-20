@@ -16,7 +16,7 @@ from distutils.version import LooseVersion
 
 # NOTE: add the libraries which are not included in setup.py
 MANUALLY_INSTALLED_LIBRARIES = [
-    ("SVS", None),
+    ("muskit", None),
 ]
 
 # NOTE: list all torch versions which are compatible with svs
@@ -55,9 +55,7 @@ def main(args):
     )
     args = parser.parse_args(args)
 
-    logging.basicConfig(
-        level=logging.INFO, format="%(levelname)s: %(message)s"
-    )
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     logging.info(f"python version = {sys.version}")
 
     library_list = []
@@ -73,14 +71,10 @@ def main(args):
 
         logging.info(f"pytorch version = {torch.__version__}")
         if torch.__version__ not in COMPATIBLE_TORCH_VERSIONS:
-            logging.warning(
-                f"{torch.__version__} is not tested. please be careful."
-            )
+            logging.warning(f"{torch.__version__} is not tested. please be careful.")
     except ImportError:
         logging.warning("torch is not installed.")
-        logging.warning(
-            "please try to setup again and then re-run this script."
-        )
+        logging.warning("please try to setup again and then re-run this script.")
         sys.exit(1)
 
     library_list.extend(MANUALLY_INSTALLED_LIBRARIES)
@@ -108,9 +102,7 @@ def main(args):
     )
 
     if len(library_list) != sum(is_correct_installed_list):
-        logging.warning(
-            "please try to setup again and then re-run this script."
-        )
+        logging.warning("please try to setup again and then re-run this script.")
         sys.exit(1)
 
     # check library version
@@ -126,9 +118,7 @@ def main(args):
             if vers is not None:
                 is_correct = vers in version
                 if is_correct:
-                    logging.info(
-                        "--> %s version is matched (%s)." % (name, vers)
-                    )
+                    logging.info("--> %s version is matched (%s)." % (name, vers))
                     is_correct_version_list.append(True)
                 else:
                     logging.warning(
@@ -138,12 +128,9 @@ def main(args):
                     is_correct_version_list.append(False)
             else:
                 logging.info(
-                    "--> %s has no version info, but version is specified."
-                    % name
+                    "--> %s has no version info, but version is specified." % name
                 )
-                logging.info(
-                    "--> maybe it is better to reinstall the latest version."
-                )
+                logging.info("--> maybe it is better to reinstall the latest version.")
                 is_correct_version_list.append(False)
     logging.info("library version check done.")
     logging.info(
@@ -166,16 +153,12 @@ def main(args):
             assert torch.cuda.is_available()
             logging.info("--> cuda is available in torch.")
         except AssertionError:
-            logging.warning(
-                "--> it seems that cuda is not available in torch."
-            )
+            logging.warning("--> it seems that cuda is not available in torch.")
         try:
             assert torch.backends.cudnn.is_available()
             logging.info("--> cudnn is available in torch.")
         except AssertionError:
-            logging.warning(
-                "--> it seems that cudnn is not available in torch."
-            )
+            logging.warning("--> it seems that cudnn is not available in torch.")
         try:
             from cupy.cuda import nccl  # NOQA
 

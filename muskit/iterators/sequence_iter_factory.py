@@ -1,6 +1,6 @@
-'''
+"""
 Credit to espnet: https://github.com/espnet/espnet/blob/master/espnet2/iterators/sequence_iter_factory.py
-'''
+"""
 
 from typing import Any
 from typing import Sequence

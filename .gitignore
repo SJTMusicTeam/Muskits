@@ -3,6 +3,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+.DS_Store
+
 # C extensions
 *.so
 
@@ -135,7 +137,7 @@ dmypy.json
 .\#*
 *DS_Store
 out.txt
-espnet.egg-info/
+muskit.egg-info/
 doc/_build
 slurm-*.out
 tmp*
