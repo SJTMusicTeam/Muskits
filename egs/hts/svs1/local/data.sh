@@ -21,8 +21,8 @@ if [ $# -ne 0 ]; then
     exit 2
 fi
 
-Kiritan=/data2/qt
-db_root=${Kiritan}
+HTS=/data2/qt
+db_root=${HTS}
 
 train_set=tr_no_dev
 train_dev=dev
@@ -43,7 +43,7 @@ pwd
 
 if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
     log "stage -1: Dataset split "
-    local/dataset_split.py ${db_root}/kiritan_singing/wav `pwd`/data 0.1 0.1
+    local/dataset_split.py ${db_root}/HTS-demo_NIT-SONG070-F001/data/raw `pwd`/data 0.1 0.1
 fi
 
 for dataset in train dev eval1; do
