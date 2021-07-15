@@ -10,7 +10,7 @@ log() {
 }
 SECONDS=0
 
-stage=1
+stage=0
 stop_stage=3
 
 log "$0 $*"
@@ -21,7 +21,7 @@ if [ $# -ne 0 ]; then
     exit 2
 fi
 
-Kiritan=/data2/qt
+Kiritan=../..
 db_root=${Kiritan}
 
 train_set=tr_no_dev
@@ -52,7 +52,7 @@ for dataset in train dev eval1; do
   if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
       log "stage 0: local/data_pre.sh"
       # scp files generation
-      local/data_pre.sh data/${dataset}_raw data/${dataset} 48000
+      ./local/data_pre.sh data/${dataset}_raw data/${dataset} 48000
   fi
 
   if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then

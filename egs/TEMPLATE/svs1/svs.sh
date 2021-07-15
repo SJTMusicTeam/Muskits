@@ -26,7 +26,7 @@ SECONDS=0
 
 # General configuration
 stage=1              # Processes starts from the specified stage.
-stop_stage=10000     # Processes is stopped at the specified stage.
+stop_stage=1     # Processes is stopped at the specified stage.
 skip_data_prep=false # Skip data preparation stages.
 skip_train=false     # Skip training stages.
 skip_eval=false      # Skip decoding and evaluation stages.
@@ -186,86 +186,87 @@ EOF
 
 log "$0 $*"
 # Save command line args for logging (they will be lost after utils/parse_options.sh)
-run_args=$(pyscripts/utils/print_args.py $0 "$@")
-. utils/parse_options.sh
 
-if [ $# -ne 0 ]; then
-    log "${help_message}"
-    log "Error: No positional arguments are required."
-    exit 2
-fi
+# run_args=$(pyscripts/utils/print_args.py $0 "$@")
+# . utils/parse_options.sh
 
-. ./path.sh
-. ./cmd.sh
+# if [ $# -ne 0 ]; then
+#     log "${help_message}"
+#     log "Error: No positional arguments are required."
+#     exit 2
+# fi
 
-# Check feature type
-if [ "${feats_type}" = fbank ]; then
-    data_feats="${dumpdir}/fbank"
-elif [ "${feats_type}" = stft ]; then
-    data_feats="${dumpdir}/stft"
-elif [ "${feats_type}" = raw ]; then
-    data_feats="${dumpdir}/raw"
-else
-    log "${help_message}"
-    log "Error: not supported: --feats_type ${feats_type}"
-    exit 2
-fi
+# . ./path.sh
+# . ./cmd.sh
 
-# Check token list type
-token_listdir="data/token_list/${token_type}"
-if [ "${cleaner}" != none ]; then
-    token_listdir+="_${cleaner}"
-fi
-if [ "${token_type}" = phn ]; then
-    token_listdir+="_${g2p}"
-fi
-token_list="${token_listdir}/tokens.txt"
+# # Check feature type
+# if [ "${feats_type}" = fbank ]; then
+#     data_feats="${dumpdir}/fbank"
+# elif [ "${feats_type}" = stft ]; then
+#     data_feats="${dumpdir}/stft"
+# elif [ "${feats_type}" = raw ]; then
+#     data_feats="${dumpdir}/raw"
+# else
+#     log "${help_message}"
+#     log "Error: not supported: --feats_type ${feats_type}"
+#     exit 2
+# fi
 
-# Set tag for naming of model directory
-if [ -z "${tag}" ]; then
-    if [ -n "${train_config}" ]; then
-        tag="$(basename "${train_config}" .yaml)_${feats_type}_${token_type}"
-    else
-        tag="train_${feats_type}_${token_type}"
-    fi
-    if [ "${cleaner}" != none ]; then
-        tag+="_${cleaner}"
-    fi
-    if [ "${token_type}" = phn ]; then
-        tag+="_${g2p}"
-    fi
-    # Add overwritten arg's info
-    if [ -n "${train_args}" ]; then
-        tag+="$(echo "${train_args}" | sed -e "s/--/\_/g" -e "s/[ |=]//g")"
-    fi
-fi
-if [ -z "${inference_tag}" ]; then
-    if [ -n "${inference_config}" ]; then
-        inference_tag="$(basename "${inference_config}" .yaml)"
-    else
-        inference_tag=inference
-    fi
-    # Add overwritten arg's info
-    if [ -n "${inference_args}" ]; then
-        inference_tag+="$(echo "${inference_args}" | sed -e "s/--/\_/g" -e "s/[ |=]//g")"
-    fi
-    inference_tag+="_$(echo "${inference_model}" | sed -e "s/\//_/g" -e "s/\.[^.]*$//g")"
-fi
+# # Check token list type
+# token_listdir="data/token_list/${token_type}"
+# if [ "${cleaner}" != none ]; then
+#     token_listdir+="_${cleaner}"
+# fi
+# if [ "${token_type}" = phn ]; then
+#     token_listdir+="_${g2p}"
+# fi
+# token_list="${token_listdir}/tokens.txt"
 
-# The directory used for collect-stats mode
-if [ -z "${svs_stats_dir}" ]; then
-    svs_stats_dir="${expdir}/svs_stats_${feats_type}_${token_type}"
-    if [ "${cleaner}" != none ]; then
-        svs_stats_dir+="_${cleaner}"
-    fi
-    if [ "${token_type}" = phn ]; then
-        svs_stats_dir+="_${g2p}"
-    fi
-fi
-# The directory used for training commands
-if [ -z "${svs_exp}" ]; then
-    svs_exp="${expdir}/svs_${tag}"
-fi
+# # Set tag for naming of model directory
+# if [ -z "${tag}" ]; then
+#     if [ -n "${train_config}" ]; then
+#         tag="$(basename "${train_config}" .yaml)_${feats_type}_${token_type}"
+#     else
+#         tag="train_${feats_type}_${token_type}"
+#     fi
+#     if [ "${cleaner}" != none ]; then
+#         tag+="_${cleaner}"
+#     fi
+#     if [ "${token_type}" = phn ]; then
+#         tag+="_${g2p}"
+#     fi
+#     # Add overwritten arg's info
+#     if [ -n "${train_args}" ]; then
+#         tag+="$(echo "${train_args}" | sed -e "s/--/\_/g" -e "s/[ |=]//g")"
+#     fi
+# fi
+# if [ -z "${inference_tag}" ]; then
+#     if [ -n "${inference_config}" ]; then
+#         inference_tag="$(basename "${inference_config}" .yaml)"
+#     else
+#         inference_tag=inference
+#     fi
+#     # Add overwritten arg's info
+#     if [ -n "${inference_args}" ]; then
+#         inference_tag+="$(echo "${inference_args}" | sed -e "s/--/\_/g" -e "s/[ |=]//g")"
+#     fi
+#     inference_tag+="_$(echo "${inference_model}" | sed -e "s/\//_/g" -e "s/\.[^.]*$//g")"
+# fi
+
+# # The directory used for collect-stats mode
+# if [ -z "${svs_stats_dir}" ]; then
+#     svs_stats_dir="${expdir}/svs_stats_${feats_type}_${token_type}"
+#     if [ "${cleaner}" != none ]; then
+#         svs_stats_dir+="_${cleaner}"
+#     fi
+#     if [ "${token_type}" = phn ]; then
+#         svs_stats_dir+="_${g2p}"
+#     fi
+# fi
+# # The directory used for training commands
+# if [ -z "${svs_exp}" ]; then
+#     svs_exp="${expdir}/svs_${tag}"
+# fi
 
 
 # ========================== Main stages start from here. ==========================
