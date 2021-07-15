@@ -29,8 +29,6 @@ train_dev=dev
 recog_set=eval1
 
 #cd /data2/qt/Muskits/egs/kiritan
-cd ..
-pwd
 
 #if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
 #    log "stage -1: Data Download"
@@ -43,7 +41,7 @@ pwd
 
 if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
     log "stage -1: Dataset split "
-    local/dataset_split.py ${db_root}/kiritan_singing/wav `pwd`/data 0.1 0.1
+    python local/dataset_split.py ${db_root}/kiritan_singing/wav `pwd`/data 0.1 0.1
 fi
 
 for dataset in train dev eval1; do
