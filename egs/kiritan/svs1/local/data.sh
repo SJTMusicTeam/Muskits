@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#! /usr/bin/env bash
 
 set -e
 set -u
@@ -21,7 +21,7 @@ if [ $# -ne 0 ]; then
     exit 2
 fi
 
-Kiritan=../..
+Kiritan=..
 db_root=${Kiritan}
 
 train_set=tr_no_dev
@@ -55,7 +55,7 @@ for dataset in train dev eval1; do
 
   if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
       log "stage 1: local/prep_segments.py"
-      local/prep_segments.py data/${dataset} 13500 60 30 > data/${dataset}/segments
+      python ./local/prep_segments.py data/${dataset} 13500 60 30 > data/${dataset}/segments
   fi
 
 #  if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
@@ -65,12 +65,12 @@ for dataset in train dev eval1; do
 
   if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
       log "stage 2: local/format_other_scp.py"
-      local/format_other_scp.py data/${dataset} data/${dataset}_seg
+      python ./local/format_other_scp.py data/${dataset} data/${dataset}_seg
   fi
 
   if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
-    log "stage 3: local/format_wav_midi_scp.py"
-    local/format_wav_midi_scp.py data/${dataset} data/${dataset}_seg 22050 40
+      log "stage 3: local/format_wav_midi_scp.py"
+      python ./local/format_wav_midi_scp.py data/${dataset} data/${dataset}_seg 22050 40
   fi
 
 done
