@@ -26,6 +26,7 @@ inference_config=conf/decode.yaml
 
 ./svs.sh \
     --lang jp \
+    --local_data_opts "--stage 2" \
     --feats_type raw \
     --fs "${fs}" \
     --n_fft "${n_fft}" \
