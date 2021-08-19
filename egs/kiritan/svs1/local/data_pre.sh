@@ -16,23 +16,11 @@ set -euo pipefail
 # check directory existence
 [ ! -e "${data_dir}" ] && mkdir -p "${data_dir}"
 
-## set filenames
-#scp=${data_dir}/wav.scp
-#utt2spk=${data_dir}/utt2spk
-#spk2utt=${data_dir}/spk2utt
-#text=${data_dir}/text
-#
-## check file existence
-#[ -e "${scp}" ] && rm "${scp}"
-#[ -e "${utt2spk}" ] && rm "${utt2spk}"
-#[ -e "${spk2utt}" ] && rm "${spk2utt}"
-#[ -e "${text}" ] && rm "${text}"
-
 wav_scp=${data_dir}/wav.scp
 midi_scp=${data_dir}/midi.scp
-text_scp=${data_dir}/text_scp
-duration_scp=${data_dir}/duration_scp
-label_scp=${data_dir}/label_scp
+text_scp=${data_dir}/text
+duration_scp=${data_dir}/duration
+label_scp=${data_dir}/label
 
 # check file existence
 [ -e "${wav_scp}" ] && rm "${wav_scp}"
@@ -48,7 +36,7 @@ find "${db}" -name "*.wav" | sort | while read -r filename; do
         # default sampling rate
         echo "${id} ${filename}" >> "${wav_scp}"
     else
-        echo "${id} sox ${filename} -t wav -r $fs - |" >> "${wav_scp}" # ?
+        echo "${id} sox ${filename} -t wav -r ${fs} - |" >> "${wav_scp}" # ?
     fi
 done
 echo "finished making wav.scp."
@@ -56,14 +44,8 @@ echo "finished making wav.scp."
 # make midi.scp
 (find "${db}" -name "*.mid" || find "${db}" -name "*.midi" )| sort | while read -r filename; do
     id=$(basename ${filename} | sed -e "s/\.[^\.]*$//g")
-    if [ "${fs}" -eq 48000 ]; then
-        # default sampling rate
-        echo "${id} ${filename}" >> "${midi_scp}"
-    else
-        echo "${id} sox ${filename} -t wav -r $fs - |" >> "${midi_scp}"
-    fi
+    echo "${id} ${filename}" >> "${midi_scp}"
 done
-
 
 echo "finished making midi.scp."
 

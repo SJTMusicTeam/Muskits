@@ -4,25 +4,33 @@ set -e
 set -u
 set -o pipefail
 
+. ./path.sh || exit 1;
+. ./cmd.sh || exit 1;
+. ./db.sh || exit 1;
+
 log() {
     local fname=${BASH_SOURCE[1]##*/}
     echo -e "$(date '+%Y-%m-%dT%H:%M:%S') (${fname}:${BASH_LINENO[0]}:${FUNCNAME[1]}) $*"
 }
-SECONDS=0
 
+SECONDS=0
 stage=2
 stop_stage=5
 
 log "$0 $*"
-. utils/parse_options.sh
-
 if [ $# -ne 0 ]; then
     log "Error: No positional arguments are required."
-    exit 2
+    exit 0
 fi
 
-Kiritan=/export/c06/jiatong/svs/SVS_system/egs/public_dataset/kiritan/downloads/
-db_root=${Kiritan}
+. utils/parse_options.sh || exit 1;
+
+if [ -z "${KIRITAN}" ]; then
+    log "Fill the value of 'KIRITAN' of db.sh"
+    exit 1
+fi
+
+mkdir -p ${KIRITAN}
 
 train_set=tr_no_dev
 train_dev=dev
@@ -32,7 +40,8 @@ recog_set=eval1
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     log "stage -1: Data Download"
-    local/download.sh "${db_root}"
+    # The KIRITAN data should be downloaded from https://zunko.jp/kiridev/login.php
+    # with Facebook authentication
 
     [ -e "${wav_scp}" ] && rm "${wav_scp}"
     [ -e "${midi_scp}" ] && rm "${midi_scp}"
@@ -41,21 +50,22 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
 fi
 
 
-if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
+if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
     log "stage -1: Dataset split "
-    python local/dataset_split.py ${db_root}/kiritan_singing/wav `pwd`/data 0.1 0.1
+    python local/dataset_split.py ${KIRITAN}/kiritan_singing/wav $(`pwd`)/data 0.1 0.1
 fi
+
 
 for dataset in train dev eval1; do
   echo "process for subset: ${dataset}"
   # dataset=test
-  if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
+  if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
       log "stage 0: local/data_pre.sh"
       # scp files generation
       local/data_pre.sh data/${dataset}_raw data/${dataset} 48000
   fi
 
-  if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
+  if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
       log "stage 1: local/prep_segments.py"
       local/prep_segments.py data/${dataset} 13500 60 30 > data/${dataset}/segments
   fi
@@ -65,15 +75,15 @@ for dataset in train dev eval1; do
 #      local/format_scp.py data/${dataset} data/${dataset}_seg 22050 40
 #  fi
 
-  if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
-      log "stage 2: local/format_other_scp.py"
-      local/format_other_scp.py data/${dataset} data/${dataset}_seg
-  fi
+#   if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
+#       log "stage 2: local/format_other_scp.py"
+#       local/format_other_scp.py data/${dataset} data/${dataset}_seg
+#   fi
 
-  if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
-    log "stage 3: local/format_wav_midi_scp.py"
-    local/format_wav_midi_scp.py data/${dataset} data/${dataset}_seg 22050 40
-  fi
+#   if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
+#     log "stage 3: local/format_wav_midi_scp.py"
+#     local/format_wav_midi_scp.py data/${dataset} data/${dataset}_seg 22050 40
+#   fi
 
 done
 
