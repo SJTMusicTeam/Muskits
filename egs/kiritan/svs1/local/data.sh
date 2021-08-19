@@ -14,14 +14,10 @@ log() {
 }
 
 SECONDS=0
-stage=2
-stop_stage=5
+stage=0
+stop_stage=0
 
 log "$0 $*"
-if [ $# -ne 0 ]; then
-    log "Error: No positional arguments are required."
-    exit 0
-fi
 
 . utils/parse_options.sh || exit 1;
 
@@ -42,10 +38,6 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     log "stage -1: Data Download"
     # The KIRITAN data should be downloaded from https://zunko.jp/kiridev/login.php
     # with Facebook authentication
-
-    [ -e "${wav_scp}" ] && rm "${wav_scp}"
-    [ -e "${midi_scp}" ] && rm "${midi_scp}"
-    [ -e "${text_scp}" ] && rm "${text_scp}"
 
 fi
 
