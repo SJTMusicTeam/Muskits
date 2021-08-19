@@ -17,6 +17,7 @@ set -euo pipefail
 [ ! -e "${data_dir}" ] && mkdir -p "${data_dir}"
 
 wav_scp=${data_dir}/wav.scp
+utt2spk=${data_dir}/utt2spk
 midi_scp=${data_dir}/midi.scp
 text_scp=${data_dir}/text
 duration_scp=${data_dir}/duration
@@ -29,33 +30,39 @@ label_scp=${data_dir}/label
 [ -e "${duration_scp}" ] && rm "${duration_scp}"
 [ -e "${label_scp}" ] && rm "${label_scp}"
 
+# for single spk id
+utt_prefix=kiritan
+
 # make wav.scp
 find "${db}" -name "*.wav" | sort | while read -r filename; do
     id=$(basename ${filename} | sed -e "s/\.[^\.]*$//g")
     if [ "${fs}" -eq 48000 ]; then
         # default sampling rate
-        echo "${id} ${filename}" >> "${wav_scp}"
+        echo "${utt_prefix}${id} ${filename}" >> "${wav_scp}"
     else
-        echo "${id} sox ${filename} -t wav -r ${fs} - |" >> "${wav_scp}" # ?
+        echo "${utt_prefix}${id} sox ${filename} -t wav -r ${fs} - |" >> "${wav_scp}"
     fi
+
+    echo "${utt_prefix}${id} ${utt_prefix}" >> "${utt2spk}"
+    
 done
 echo "finished making wav.scp."
 
 # make midi.scp
 (find "${db}" -name "*.mid" || find "${db}" -name "*.midi" )| sort | while read -r filename; do
     id=$(basename ${filename} | sed -e "s/\.[^\.]*$//g")
-    echo "${id} ${filename}" >> "${midi_scp}"
+    echo "${utt_prefix}${id} ${filename}" >> "${midi_scp}"
 done
 
 echo "finished making midi.scp."
 
-# make text_scp and duration_scp
+# make text and duration
 find "${db}" -name "*.lab" | sort | while read -r filename; do
     id=$(basename ${filename} | sed -e "s/\.[^\.]*$//g")
 
-    echo -n "${id}" >> "${text_scp}"
-    echo -n "${id}" >> "${duration_scp}"
-    echo -n "${id}" >> "${label_scp}"
+    echo -n "${utt_prefix}${id}" >> "${text_scp}"
+    echo -n "${utt_prefix}${id}" >> "${duration_scp}"
+    echo -n "${utt_prefix}${id}" >> "${label_scp}"
     cat ${filename} | while read -r start end text
     do
       echo -n " ${text}" >> "${text_scp}"
