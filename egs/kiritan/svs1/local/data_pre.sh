@@ -75,4 +75,13 @@ find "${db}" -name "*.lab" | sort | while read -r filename; do
 done
 echo "finished making text_scp, duration_scp."
 
+sort ${wav_scp} -o ${wav_scp}
+sort ${utt2spk} -o ${utt2spk}
+sort ${midi_scp} -o ${midi_scp}
+sort ${text_scp} -o ${text_scp}
+sort ${duration_scp} -o ${duration_scp}
+sort ${label_scp} -o ${label_scp}
+
+utils/utt2spk_to_spk2utt.pl  <${utt2spk} >$destdir/${data_dir}/spk2utt
+
 echo "finished making .scp or _scp files."
