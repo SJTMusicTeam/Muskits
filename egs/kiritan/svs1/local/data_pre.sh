@@ -20,14 +20,12 @@ wav_scp=${data_dir}/wav.scp
 utt2spk=${data_dir}/utt2spk
 midi_scp=${data_dir}/midi.scp
 text_scp=${data_dir}/text
-duration_scp=${data_dir}/duration
 label_scp=${data_dir}/label
 
 # check file existence
 [ -e "${wav_scp}" ] && rm "${wav_scp}"
 [ -e "${midi_scp}" ] && rm "${midi_scp}"
 [ -e "${text_scp}" ] && rm "${text_scp}"
-[ -e "${duration_scp}" ] && rm "${duration_scp}"
 [ -e "${label_scp}" ] && rm "${label_scp}"
 
 # for single spk id
@@ -61,25 +59,21 @@ find "${db}" -name "*.lab" | sort | while read -r filename; do
     id=$(basename ${filename} | sed -e "s/\.[^\.]*$//g")
 
     echo -n "${utt_prefix}${id}" >> "${text_scp}"
-    echo -n "${utt_prefix}${id}" >> "${duration_scp}"
     echo -n "${utt_prefix}${id}" >> "${label_scp}"
     cat ${filename} | while read -r start end text
     do
       echo -n " ${text}" >> "${text_scp}"
-      echo -n " ${start} ${end}" >> "${duration_scp}"
       echo -n " ${start} ${end}  ${text}" >> "${label_scp}"
     done
     echo "" >> "${text_scp}"
-    echo "" >> "${duration_scp}"
     echo "" >> "${label_scp}"
 done
-echo "finished making text_scp, duration_scp."
+echo "finished making text and label.scp"
 
 sort ${wav_scp} -o ${wav_scp}
 sort ${utt2spk} -o ${utt2spk}
 sort ${midi_scp} -o ${midi_scp}
 sort ${text_scp} -o ${text_scp}
-sort ${duration_scp} -o ${duration_scp}
 sort ${label_scp} -o ${label_scp}
 
 utils/utt2spk_to_spk2utt.pl  <${utt2spk} >$destdir/${data_dir}/spk2utt

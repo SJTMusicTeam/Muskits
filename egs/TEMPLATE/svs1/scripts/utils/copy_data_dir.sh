@@ -11,7 +11,6 @@
 #  utt2spk
 #  text
 #  midi.scp
-#  duration
 #  label
 #  segments
 #
@@ -25,7 +24,7 @@ spk_prefix=
 utt_prefix=
 spk_suffix=
 utt_suffix=
-validate_opts=   # should rarely be needed.
+
 # end configuration section
 
 . utils/parse_options.sh
