@@ -129,7 +129,7 @@ def make_segment(file_id, labels, threshold=13.5, sil="pau"):
             segments.extend(segment.split(threshold=threshold))
             segment = SegInfo()
             continue
-        segment.add(label[0], label[1], label[2])
+        segment.add(label.start, label.end, label.label_id)
     
     if len(segment.segs) > 0:
         segments.extend(segment.split(threshold=threshold))
