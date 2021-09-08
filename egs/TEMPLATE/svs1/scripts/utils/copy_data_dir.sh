@@ -79,6 +79,14 @@ else # no segments->wav indexed by utt.
   fi
 fi
 
+if [ -f $srcdir/label ]; then
+  utils/apply_map.pl -f 1 $destdir/utt_map <$srcdir/label >$destdir/label
+fi
+
+if [ -f $srcdir/midi.scp ]; then
+  utils/apply_map.pl -f 1 $destdir/utt_map <$srcdir/midi.scp >$destdir/midi.scp
+fi
+
 if [ -f $srcdir/text ]; then
   utils/apply_map.pl -f 1 $destdir/utt_map <$srcdir/text >$destdir/text
 fi

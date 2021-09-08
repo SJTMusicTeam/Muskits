@@ -296,7 +296,7 @@ if ! "${skip_data_prep}"; then
                 else
                     _suf=""
                 fi
-                utils/copy_data_dir.sh data/"${dset}" "${data_feats}${_suf}/${dset}"
+                scripts/utils/copy_data_dir.sh data/"${dset}" "${data_feats}${_suf}/${dset}"
                 rm -f ${data_feats}${_suf}/${dset}/{segments,wav.scp,reco2file_and_channel}
                 _opts=
                 if [ -e data/"${dset}"/segments ]; then
