@@ -52,14 +52,19 @@ for dataset in train dev eval1; do
   echo "process for subset: ${dataset}"
   # dataset=test
   if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
-      log "stage 0: local/data_pre.sh"
+      log "stage 0: Generate data directory"
       # scp files generation
       local/data_pre.sh data/${dataset}_raw data/${dataset} 48000
   fi
 
   if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
-      log "stage 1: local/prep_segments.py"
-      local/prep_segments.py --silence pau --silence br --silence sil data/${dataset} 13500
+      log "stage 1: Prepare segments"
+      src_data=data/${dataset}
+      local/prep_segments.py --silence pau --silence sil ${src_data} 10000
+      mv ${src_data}/segments.tmp ${src_data}/segments
+      mv ${src_data}/label.tmp ${src_data}/label
+      cat ${src_data}/segments | awk '{printf("%s kiritan\n", $1);}' > ${src_data}/utt2spk
+      utils/utt2spk_to_spk2utt.pl < ${src_data}/utt2spk > ${src_data}/spk2utt
   fi
 
 #  if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
