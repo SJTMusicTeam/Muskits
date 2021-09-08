@@ -1,7 +1,51 @@
 #!/usr/bin/env python3
 import argparse
+import math
 import os
 import sys
+
+class LabelInfo(object):
+    def __init__(self, label_id, start, end):
+        self.label_id = label_id
+        self.start = start
+        self.end = end
+
+class SegInfo(object):
+    def __init__(self):
+        self.segs = []
+        self.start = -1
+        self.end = -1
+    
+    def add(self, start, end, label):
+        if self.start < 0 or self.start > start:
+            self.start = start
+        if self.end < end:
+            self.end = end
+        self.segs.append((start, end, label))
+    
+    def split(self, threshold=10):
+        seg_num =  math.ceil( (self.end - self.start) / threshold )
+        if seg_num == 1:
+            return [self.segs]
+        
+        avg = (self.end - self.start) / seg_num
+        return_seg = []
+
+        start_time = self.start
+        cache_seg = []
+        for seg in self.segs:
+            cache_time = seg[1] - start_time
+            if cache_time > avg:
+                return_seg.append(cache_seg)
+                start_time = seg[0]
+                cache_seg = [seg]
+            else:
+                cache_seg.append(seg)
+        
+        return_seg.append(cache_seg)
+
+        return return_seg
+
 
 def pack_zero(file_id, number, length=4):
     number = str(number)
@@ -14,8 +58,7 @@ def get_parser():
     )
     parser.add_argument("scp", type=str, help="scp folder")
     parser.add_argument("threshold", type=int, help="threshold for silence identification.")
-    parser.add_argument("win_size", type=int, help="window size in ms")
-    parser.add_argument("win_shift", type=int, help="window shift in ms")
+    parser.add_argument("--silence", type=str, help="silence_phone", default="pau")
     return parser
 
 def same_split(alignment, threshold):
@@ -76,6 +119,28 @@ def make_segment(file_id, alignment, threshold=13500 * 1e-3, sil="pau"):
             start_id += 1
     return segment_info
 
+
+def make_segment(file_id, labels, threshold=13.5, sil="pau"):
+    segments = []
+    segment = SegInfo()
+    for label in labels:
+        if label.label_id == sil:
+            
+            segments.extend(segment.split(threshold=threshold))
+            segment = SegInfo()
+            continue
+        segment.add(label[0], label[1], label[2])
+    
+    if len(segment.segs) > 0:
+        segments.extend(segment.split(threshold=threshold))
+    
+    segments_w_id = {}
+    id = 0
+    for seg in segments:
+        segments_w_id[file_id + pack_zero(id)] = seg
+    return segments_w_id
+
+
 if __name__ == "__main__":
     # print(sys.path[0]+'/..')
     os.chdir(sys.path[0]+'/..')
@@ -84,27 +149,31 @@ if __name__ == "__main__":
     args.threshold *= 1e-3
     segments = []
 
-    with open(args.scp+"/wav.scp") as f:
-        for line in f:
-            if len(line) == 0:
-                continue
-            recording_id, path = line.replace('\n', '').split(' ')
-            lab_path = path.replace("wav/", "mono_label/").replace(".wav", ".lab")
-            assert os.path.exists(lab_path)
-            with open(lab_path) as lab_f:
-                labels = []
-                for lin in lab_f:
-                    label = lin.replace('\n', '').split(' ')
-                    if len(label) != 3:
-                        continue
-                    labels.append([float(label[0]), float(label[1]), label[2]])
-                segments.append(make_segment(recording_id, labels, args.threshold))
+    wavscp = open(os.path.join(args.scp, "wav.scp"), "r", encoding="utf-8")
+    label = open(os.path.join(args.scp, "label"), "r", encoder="utf-8")
 
+    update_segments = open(os.path.join(args.scp, "segments.tmp"), "w", encoding="utf-8")
+    update_label = open(os.path.join(args.scp, "label.tmp"), "r", encoder="utf-8")
+
+    for wav_line in wavscp:
+        label_line = label.readline()
+        if not label_line:
+            raise ValueError("not match label and wav.scp in {}".format(args.scp))
+        
+        recording_id, path = wav_line.strip().split(" ")
+        phn_info = label_line.strip().split()[1:]
+        temp_info = []
+        for i in range(len(phn_info) // 3):
+            temp_info.append(LabelInfo(phn_info[i], phn_info[i + 1], phn_info[i + 2]))
+        segments.append(make_segment(recording_id, temp_info, args.threshold, args.slience))
+    
     for file in segments:
         for key, val in file.items():
-            segment_begin = "{:.7f}".format(val[0][0])
-            segment_end = "{:.7f}".format(val[-1][1])
+            segment_begin = "{:.3f}".format(val[0][0])
+            segment_end = "{:.3f}".format(val[-1][1])
 
-            sys.stdout.write(
-                "{} {} {}\n".format(key, segment_begin, segment_end)
-            )
+            update_segments.write("{} {} {}\n".format(key, segment_begin, segment_end))
+            update_label.write("{}".format(key))
+
+            for v in val:
+                update_label.write(" {:.3f} {:.3f}  {}".format(v[0], v[1], v[2]))
