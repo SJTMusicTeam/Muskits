@@ -142,18 +142,16 @@ def make_segment(file_id, labels, threshold=13.5, sil="pau"):
 
 
 if __name__ == "__main__":
-    # print(sys.path[0]+'/..')
-    os.chdir(sys.path[0]+'/..')
-    # print(os.getcwd())
-    args = get_parser().parse_args(sys.argv[1:])
+    # os.chdir(sys.path[0]+'/..')
+    args = get_parser().parse_args()
     args.threshold *= 1e-3
     segments = []
 
     wavscp = open(os.path.join(args.scp, "wav.scp"), "r", encoding="utf-8")
-    label = open(os.path.join(args.scp, "label"), "r", encoder="utf-8")
+    label = open(os.path.join(args.scp, "label"), "r", encoding="utf-8")
 
     update_segments = open(os.path.join(args.scp, "segments.tmp"), "w", encoding="utf-8")
-    update_label = open(os.path.join(args.scp, "label.tmp"), "r", encoder="utf-8")
+    update_label = open(os.path.join(args.scp, "label.tmp"), "w", encoding="utf-8")
 
     for wav_line in wavscp:
         label_line = label.readline()
@@ -165,7 +163,7 @@ if __name__ == "__main__":
         temp_info = []
         for i in range(len(phn_info) // 3):
             temp_info.append(LabelInfo(phn_info[i], phn_info[i + 1], phn_info[i + 2]))
-        segments.append(make_segment(recording_id, temp_info, args.threshold, args.slience))
+        segments.append(make_segment(recording_id, temp_info, args.threshold, args.silence))
     
     for file in segments:
         for key, val in file.items():
