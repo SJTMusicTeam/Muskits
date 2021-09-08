@@ -59,7 +59,7 @@ for dataset in train dev eval1; do
 
   if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
       log "stage 1: local/prep_segments.py"
-      local/prep_segments.py --silence pau data/${dataset} 13500
+      local/prep_segments.py --silence pau --silence br --silence sil data/${dataset} 13500
   fi
 
 #  if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then

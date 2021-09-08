@@ -5,7 +5,7 @@ import os
 import sys
 
 class LabelInfo(object):
-    def __init__(self, label_id, start, end):
+    def __init__(self, start, end, label_id):
         self.label_id = label_id
         self.start = start
         self.end = end
@@ -17,6 +17,8 @@ class SegInfo(object):
         self.end = -1
     
     def add(self, start, end, label):
+        start = float(start)
+        end =  float(end)
         if self.start < 0 or self.start > start:
             self.start = start
         if self.end < end:
@@ -27,7 +29,6 @@ class SegInfo(object):
         seg_num =  math.ceil( (self.end - self.start) / threshold )
         if seg_num == 1:
             return [self.segs]
-        
         avg = (self.end - self.start) / seg_num
         return_seg = []
 
@@ -58,9 +59,10 @@ def get_parser():
     )
     parser.add_argument("scp", type=str, help="scp folder")
     parser.add_argument("threshold", type=int, help="threshold for silence identification.")
-    parser.add_argument("--silence", type=str, help="silence_phone", default="pau")
+    parser.add_argument("--silence",  action='append', help="silence_phone", default=["pau"])
     return parser
 
+'''
 def same_split(alignment, threshold):
     size = 2
     while (alignment[-1][1] - alignment[0][0]) / size > threshold:
@@ -76,7 +78,7 @@ def same_split(alignment, threshold):
     segments.append(alignment[start:])
     return segments, size
 
-def make_segment(file_id, alignment, threshold=13500 * 1e-3, sil="pau"):
+def make_segment(file_id, alignment, threshold=13500 * 1e-3, sil=["pau", "br"]):
     segment_info = {}
     start_id = 1
     seg_start = []
@@ -118,16 +120,18 @@ def make_segment(file_id, alignment, threshold=13500 * 1e-3, sil="pau"):
             segment_info[pack_zero(file_id, start_id)] = alignment[st:ed]
             start_id += 1
     return segment_info
+'''
 
-
-def make_segment(file_id, labels, threshold=13.5, sil="pau"):
+def make_segment(file_id, labels, threshold=13.5, sil=["pau", "br", "sil"]):
     segments = []
     segment = SegInfo()
     for label in labels:
-        if label.label_id == sil:
+        
+        if label.label_id in sil:
             
-            segments.extend(segment.split(threshold=threshold))
-            segment = SegInfo()
+            if len(segment.segs) > 0: 
+                segments.extend(segment.split(threshold=threshold))
+                segment = SegInfo()
             continue
         segment.add(label.start, label.end, label.label_id)
     
@@ -137,7 +141,10 @@ def make_segment(file_id, labels, threshold=13.5, sil="pau"):
     segments_w_id = {}
     id = 0
     for seg in segments:
-        segments_w_id[file_id + pack_zero(id)] = seg
+        if len(seg) == 0:
+            continue
+        segments_w_id[pack_zero(file_id, id)] = seg
+        id += 1
     return segments_w_id
 
 
@@ -162,11 +169,12 @@ if __name__ == "__main__":
         phn_info = label_line.strip().split()[1:]
         temp_info = []
         for i in range(len(phn_info) // 3):
-            temp_info.append(LabelInfo(phn_info[i], phn_info[i + 1], phn_info[i + 2]))
+            temp_info.append(LabelInfo(phn_info[i * 3], phn_info[i * 3 + 1], phn_info[i * 3 + 2]))
         segments.append(make_segment(recording_id, temp_info, args.threshold, args.silence))
     
     for file in segments:
         for key, val in file.items():
+            print(key, val)
             segment_begin = "{:.3f}".format(val[0][0])
             segment_end = "{:.3f}".format(val[-1][1])
 
@@ -175,3 +183,4 @@ if __name__ == "__main__":
 
             for v in val:
                 update_label.write(" {:.3f} {:.3f}  {}".format(v[0], v[1], v[2]))
+            update_label.write("\n")
