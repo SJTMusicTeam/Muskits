@@ -305,7 +305,7 @@ if ! "${skip_data_prep}"; then
                 # shellcheck disable=SC2086
                 scripts/audio/format_scp.sh --nj "${nj}" --cmd "${train_cmd}" \
                     --audio-format "${audio_format}" --fs "${fs}" ${_opts} \
-                    "data/${dset}/wav.scp" "${data_feats}${_suf}/${dset}"
+                    "data/${dset}" "${data_feats}${_suf}/${dset}"
                 echo "${feats_type}" > "${data_feats}${_suf}/${dset}/feats_type"
             done
 

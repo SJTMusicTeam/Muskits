@@ -40,6 +40,7 @@ requirements = {
         "soundfile>=0.10.2",
         "h5py>=2.10.0",
         "miditoolkit",
+        "kaldiio",
         # TTS related
         "pyworld>=0.2.10",
         "torch_complex",
