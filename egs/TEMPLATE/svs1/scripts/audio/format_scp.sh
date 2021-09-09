@@ -52,10 +52,15 @@ fi
 
 . ./path.sh  # Setup the environment
 
-scp=$1
-if [ ! -f "${scp}" ]; then
+scp_dir=$1
+if [ ! -f "${scp_dir}/wav.scp" ]; then
     log "${help_message}"
-    echo "$0: Error: No such file: ${scp}"
+    echo "$0: Error: No such file: ${scp_dir}/wav.scp"
+    exit 1
+fi
+if [ ! -f "${scp_dir}/midi.scp" ]; then
+    log "${help_message}"
+    echo "$0: Error: No such file: ${scp_dir}/midi.scp"
     exit 1
 fi
 dir=$2
@@ -100,25 +105,29 @@ if [ -n "${segments}" ]; then
             --fs ${fs} \
             --audio-format "${audio_format}" \
             "--segment=${logdir}/segments.JOB" \
-            "${scp}" "${outdir}/format_wav.JOB"
+            "${scp_dir}/wav.scp" "${outdir}/format_wav.JOB"
 
-    ${cmd} "JOB=1:${nj}" "${logdir}/format_wav_scp.JOB.log" \
+    ${cmd} "JOB=1:${nj}" "${logdir}/format_midi_scp.JOB.log" \
         pyscripts/audio/format_midi_scp.py \
-        ${opts} \
-        --fs "${fs}" \
-        "${logdir}/midi.JOB.scp" "${outdir}/format_midi.JOB"
+            ${opts} \
+            --fs "${fs}" \
+            "--segment=${logdir}/segments.JOB" \
+            "${scp_dir}/midi.scp" "${outdir}/format_midi.JOB"
 
 else
     log "[info]: without segments"
-    nutt=$(<${scp} wc -l)
+    nutt=$(<${scp_dir}/wav.scp wc -l)
     nj=$((nj<nutt?nj:nutt))
 
     split_scps=""
+    split_midi_scps=""
     for n in $(seq ${nj}); do
         split_scps="${split_scps} ${logdir}/wav.${n}.scp"
+        split_midi_scps="${split_midi_scps} ${logdir}/midi.${n}.scp"
     done
 
-    utils/split_scp.pl "${scp}" ${split_scps}
+    utils/split_scp.pl "${scp_dir}/wav.scp" ${split_scps}
+    utils/split_scp.pl "${scp_dir}/midi.scp" ${split_midi_scps}
     ${cmd} "JOB=1:${nj}" "${logdir}/format_wav_scp.JOB.log" \
         pyscripts/audio/format_wav_scp.py \
         ${opts} \
@@ -126,7 +135,7 @@ else
         --audio-format "${audio_format}" \
         "${logdir}/wav.JOB.scp" "${outdir}/format_wav.JOB"
     
-    ${cmd} "JOB=1:${nj}" "${logdir}/format_wav_scp.JOB.log" \
+    ${cmd} "JOB=1:${nj}" "${logdir}/format_midi_scp.JOB.log" \
         pyscripts/audio/format_midi_scp.py \
         ${opts} \
         --fs "${fs}" \
@@ -139,7 +148,11 @@ ls ${outdir}/format.* > /dev/null
 # concatenate the .scp files together.
 for n in $(seq ${nj}); do
     cat "${outdir}/format.${n}/wav.scp" || exit 1;
-done > "${dir}/${out_filename}" || exit 1
+done > "${dir}/${out_wavfilename}" || exit 1
+
+for n in $(seq ${nj}); do
+    cat "${outdir}/format.${n}/midi.scp" || exit 1;
+done > "${dir}/${out_midifilename}" || exit 1
 
 if "${write_utt2num_samples}"; then
     for n in $(seq ${nj}); do
