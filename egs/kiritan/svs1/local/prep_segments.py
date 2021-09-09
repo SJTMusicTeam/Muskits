@@ -106,8 +106,8 @@ if __name__ == "__main__":
             raise ValueError("not match label and wav.scp in {}".format(args.scp))
         
         wavline = wav_line.strip().split(" ")
-        recording_id = wav_line[0]
-        path = " ".join(wav_line[1:])
+        recording_id = wavline[0]
+        path = " ".join(wavline[1:])
         phn_info = label_line.strip().split()[1:]
         temp_info = []
         for i in range(len(phn_info) // 3):
