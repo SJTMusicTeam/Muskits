@@ -83,10 +83,6 @@ if [ -f $srcdir/label ]; then
   utils/apply_map.pl -f 1 $destdir/utt_map <$srcdir/label >$destdir/label
 fi
 
-if [ -f $srcdir/midi.scp ]; then
-  utils/apply_map.pl -f 1 $destdir/utt_map <$srcdir/midi.scp >$destdir/midi.scp
-fi
-
 if [ -f $srcdir/text ]; then
   utils/apply_map.pl -f 1 $destdir/utt_map <$srcdir/text >$destdir/text
 fi
@@ -105,7 +101,7 @@ rm $destdir/spk_map $destdir/utt_map
 
 echo "$0: copied data from $srcdir to $destdir"
 
-for f in utt2lang utt2dur utt2num_frames text wav.scp; do
+for f in utt2lang utt2dur utt2num_frames text wav.scp midi.scp label; do
   if [ -f $destdir/$f ] && [ ! -f $srcdir/$f ]; then
     echo "$0: file $f exists in dest $destdir but not in src $srcdir.  Moving it to"
     echo " ... $destdir/.backup/$f"
