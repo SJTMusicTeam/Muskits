@@ -136,12 +136,12 @@ else
 
     utils/split_scp.pl "${scp_dir}/wav.scp" ${split_scps}
     utils/split_scp.pl "${scp_dir}/midi.scp" ${split_midi_scps}
-    ${cmd} "JOB=1:${nj}" "${logdir}/format_wav_scp.JOB.log" \
+    echo '''${cmd} "JOB=1:${nj}" "${logdir}/format_wav_scp.JOB.log" \
         pyscripts/audio/format_wav_scp.py \
         ${opts} \
         --fs "${fs}" \
         --audio-format "${audio_format}" \
-        "${logdir}/wav.JOB.scp" "${outdir}/format_wav.JOB"
+        "${logdir}/wav.JOB.scp" "${outdir}/format_wav.JOB"'''
     
     ${cmd} "JOB=1:${nj}" "${logdir}/format_midi_scp.JOB.log" \
         pyscripts/audio/format_midi_scp.py \
