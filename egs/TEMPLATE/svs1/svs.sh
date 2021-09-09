@@ -296,14 +296,14 @@ if ! "${skip_data_prep}"; then
                 else
                     _suf=""
                 fi
-                utils/copy_data_dir.sh data/"${dset}" "${data_feats}${_suf}/${dset}"
+                scripts/utils/copy_data_dir.sh data/"${dset}" "${data_feats}${_suf}/${dset}"
                 rm -f ${data_feats}${_suf}/${dset}/{segments,wav.scp,reco2file_and_channel}
                 _opts=
                 if [ -e data/"${dset}"/segments ]; then
                     _opts+="--segments data/${dset}/segments "
                 fi
                 # shellcheck disable=SC2086
-                scripts/audio/format_wav_scp.sh --nj "${nj}" --cmd "${train_cmd}" \
+                scripts/audio/format_scp.sh --nj "${nj}" --cmd "${train_cmd}" \
                     --audio-format "${audio_format}" --fs "${fs}" ${_opts} \
                     "data/${dset}/wav.scp" "${data_feats}${_suf}/${dset}"
                 echo "${feats_type}" > "${data_feats}${_suf}/${dset}/feats_type"

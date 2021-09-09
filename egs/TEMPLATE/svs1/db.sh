@@ -3,3 +3,7 @@
 
 KIRITAN=
 
+# For only JHU environment
+if [[ "$(hostname -d)" == clsp.jhu.edu ]]; then
+    KIRITAN=/export/c06/jiatong/svs/SVS_system/egs/public_dataset/kiritan/downloads/
+fi

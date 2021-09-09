@@ -85,13 +85,6 @@ def transition(dataset, des_url):
         des_lab = path[1] + item.replace(".wav", ".lab")
         des_midi = path[2] + item.replace(".wav", ".mid")
 
-        # print(wav_path)
-        # print(des_wav)
-        # print(lab_path)
-        # print(des_lab)
-        # print(midi_path)
-        # print(des_midi)
-        # break
         copyfile(wav_path, des_wav)
         copyfile(lab_path, des_lab)
         copyfile(midi_path, des_midi)
