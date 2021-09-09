@@ -76,5 +76,4 @@ sort ${midi_scp} -o ${midi_scp}
 sort ${text_scp} -o ${text_scp}
 sort ${label_scp} -o ${label_scp}
 
-
 echo "finished making .scp or _scp files."
