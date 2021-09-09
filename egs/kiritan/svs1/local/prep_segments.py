@@ -100,6 +100,7 @@ if __name__ == "__main__":
 
     update_segments = open(os.path.join(args.scp, "segments.tmp"), "w", encoding="utf-8")
     update_label = open(os.path.join(args.scp, "label.tmp"), "w", encoding="utf-8")
+    update_text = open(os.path.join(args.scp, "text.tmp"), "w", encoding="utf-8")
 
     for wav_line in wavscp:
         label_line = label.readline()
@@ -121,7 +122,10 @@ if __name__ == "__main__":
 
             update_segments.write("{} {} {}\n".format(key, segment_begin, segment_end))
             update_label.write("{}".format(key))
+            update_text.write("{}".format(key))
 
             for v in val:
                 update_label.write(" {:.3f} {:.3f}  {}".format(v[0], v[1], v[2]))
+                update_text.write(" {}".format(v[2]))
             update_label.write("\n")
+            update_text.write("\n")
