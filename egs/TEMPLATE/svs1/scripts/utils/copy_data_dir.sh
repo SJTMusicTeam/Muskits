@@ -118,4 +118,4 @@ done
 [ ! -f $srcdir/feats.scp ] && validate_opts="$validate_opts --no-feats"
 [ ! -f $srcdir/text ] && validate_opts="$validate_opts --no-text"
 
-utils/validate_data_dir.sh $validate_opts $destdir
+scripts/utils/validate_data_dir.sh $validate_opts $destdir
