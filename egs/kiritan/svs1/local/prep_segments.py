@@ -44,7 +44,6 @@ class SegInfo(object):
                 cache_seg.append(seg)
         
         return_seg.append(cache_seg)
-
         return return_seg
 
 
@@ -69,7 +68,6 @@ def make_segment(file_id, labels, threshold=13.5, sil=["pau", "br", "sil"]):
     for label in labels:
         
         if label.label_id in sil:
-            
             if len(segment.segs) > 0: 
                 segments.extend(segment.split(threshold=threshold))
                 segment = SegInfo()
@@ -116,7 +114,6 @@ if __name__ == "__main__":
     
     for file in segments:
         for key, val in file.items():
-            print(key, val)
             segment_begin = "{:.3f}".format(val[0][0])
             segment_end = "{:.3f}".format(val[-1][1])
 
