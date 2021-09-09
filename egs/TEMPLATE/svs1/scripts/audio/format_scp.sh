@@ -80,7 +80,12 @@ mkdir -p ${logdir}
 rm -f "${dir}/${out_wavfilename}"
 rm -f "${dir}/${out_midifilename}"
 
-
+opts=
+if [ -n "${utt2ref_channels}" ]; then
+    opts="--utt2ref-channels ${utt2ref_channels} "
+elif [ -n "${ref_channels}" ]; then
+    opts="--ref-channels ${ref_channels} "
+fi
 
 if [ -n "${segments}" ]; then
     log "[info]: using ${segments}"
@@ -148,3 +153,4 @@ if "${write_utt2num_samples}"; then
 fi
 
 log "Successfully finished. [elapsed=${SECONDS}s]"
+
