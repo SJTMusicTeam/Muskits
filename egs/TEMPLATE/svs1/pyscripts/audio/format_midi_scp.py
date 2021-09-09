@@ -54,7 +54,7 @@ def main():
         help="Specify the prefix word of output file name " 'such as "wav.scp"',
     )
     parser.add_argument("--segments", default=None)
-    parser.add_argument("fs", type=np.int16, default=None, help="If the sampling rate specified, " "Change the sampling rate.")
+    parser.add_argument("--fs", type=np.int16, default=None, help="If the sampling rate specified, " "Change the sampling rate.")
     group = parser.add_mutually_exclusive_group()
     # TODO: in midi, the reference channels should be related to track, it is not implemented now
     group.add_argument("--ref-channels", default=None, type=str2int_tuple)
@@ -77,13 +77,14 @@ def main():
         utt2ref_channels = None
 
     # load segments
-    segments = {}
-    with open(args.scp+"/segments") as f:
-        for line in f:
-            if len(line) == 0:
-                continue
-            utt_id, recording_id, segment_begin, segment_end = line.strip().split(' ')
-            segments[utt_id] = recording_id, segment_begin, segment_end
+    if args.segments is not None:
+        segments = {}
+        with open(args.segments) as f:
+            for line in f:
+                if len(line) == 0:
+                    continue
+                utt_id, recording_id, segment_begin, segment_end = line.strip().split(' ')
+                segments[utt_id] = recording_id, segment_begin, segment_end
 
     Path(args.outdir).mkdir(parents=True, exist_ok=True)
     out_midiscp = Path(args.outdir) / f"{args.name}.scp"
