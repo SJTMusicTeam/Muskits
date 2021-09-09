@@ -100,9 +100,41 @@ if [ -n "${segments}" ]; then
             --fs ${fs} \
             --audio-format "${audio_format}" \
             "--segment=${logdir}/segments.JOB" \
-            "${scp}" "${outdir}/format.JOB"
+            "${scp}" "${outdir}/format_wav.JOB"
 
+    ${cmd} "JOB=1:${nj}" "${logdir}/format_wav_scp.JOB.log" \
+        pyscripts/audio/format_midi_scp.py \
+        ${opts} \
+        --fs "${fs}" \
+        "${logdir}/midi.JOB.scp" "${outdir}/format_midi.JOB"
+
+else
+    log "[info]: without segments"
+    nutt=$(<${scp} wc -l)
+    nj=$((nj<nutt?nj:nutt))
+
+    split_scps=""
+    for n in $(seq ${nj}); do
+        split_scps="${split_scps} ${logdir}/wav.${n}.scp"
+    done
+
+    utils/split_scp.pl "${scp}" ${split_scps}
+    ${cmd} "JOB=1:${nj}" "${logdir}/format_wav_scp.JOB.log" \
+        pyscripts/audio/format_wav_scp.py \
+        ${opts} \
+        --fs "${fs}" \
+        --audio-format "${audio_format}" \
+        "${logdir}/wav.JOB.scp" "${outdir}/format_wav.JOB"
+    
+    ${cmd} "JOB=1:${nj}" "${logdir}/format_wav_scp.JOB.log" \
+        pyscripts/audio/format_midi_scp.py \
+        ${opts} \
+        --fs "${fs}" \
+        "${logdir}/midi.JOB.scp" "${outdir}/format_midi.JOB"
 fi
+
+# Workaround for the NFS problem
+ls ${outdir}/format.* > /dev/null
 
 # concatenate the .scp files together.
 for n in $(seq ${nj}); do
