@@ -120,7 +120,7 @@ if __name__ == "__main__":
             segment_begin = "{:.3f}".format(val[0][0])
             segment_end = "{:.3f}".format(val[-1][1])
 
-            update_segments.write("{} {} {} {}\n".format(key.split("_")[0], key, segment_begin, segment_end))
+            update_segments.write("{} {} {} {}\n".format(key, key.split("_")[0], segment_begin, segment_end))
             update_label.write("{}".format(key))
             update_text.write("{}".format(key))
 
