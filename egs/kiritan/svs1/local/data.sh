@@ -44,7 +44,7 @@ fi
 
 if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
     log "stage -1: Dataset split "
-    python local/dataset_split.py ${KIRITAN}/kiritan_singing/wav $(`pwd`)/data 0.1 0.1
+    python local/dataset_split.py ${KIRITAN}/kiritan_singing/wav $(`pwd`)/data/local 0.1 0.1
 fi
 
 
@@ -54,13 +54,13 @@ for dataset in train dev eval1; do
   if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
       log "stage 0: Generate data directory"
       # scp files generation
-      local/data_pre.sh data/${dataset}_raw data/${dataset} 48000
+      local/data_pre.sh data/local/${dataset}_raw data/${dataset} 48000
   fi
 
   if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
       log "stage 1: Prepare segments"
       src_data=data/${dataset}
-      local/prep_segments.py --silence pau --silence sil ${src_data} 10000
+      local/prep_segments.py --silence pau --silence sil ${src_data} 10000 # in ms
       mv ${src_data}/segments.tmp ${src_data}/segments
       mv ${src_data}/label.tmp ${src_data}/label
       mv ${src_data}/text.tmp ${src_data}/text

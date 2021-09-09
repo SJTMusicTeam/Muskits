@@ -18,7 +18,7 @@ else
     opts="--audio_format flac "
 fi
 
-train_set=tr_no_dev
+train_set=train
 valid_set=dev
 test_sets="dev eval1"
 
@@ -27,6 +27,7 @@ inference_config=conf/decode.yaml
 
 ./svs.sh \
     --lang jp \
+    --stage 1 \
     --local_data_opts "--stage 0" \
     --feats_type raw \
     --fs "${fs}" \
