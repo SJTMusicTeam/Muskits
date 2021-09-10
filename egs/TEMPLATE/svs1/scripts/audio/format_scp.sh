@@ -150,9 +150,6 @@ else
         "${logdir}/midi.JOB.scp" "${outdir}/format_midi.JOB"
 fi
 
-# Workaround for the NFS problem
-ls ${outdir}/format.* > /dev/null
-
 # concatenate the .scp files together.
 for n in $(seq ${nj}); do
     cat "${outdir}/format.${n}/wav.scp" || exit 1;

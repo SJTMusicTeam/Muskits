@@ -84,7 +84,7 @@ def main():
                 if len(line) == 0:
                     continue
                 utt_id, recording_id, segment_begin, segment_end = line.strip().split(' ')
-                segments[utt_id] = recording_id, segment_begin, segment_end
+                segments[utt_id] = recording_id, float(segment_begin), float(segment_end)
 
     Path(args.outdir).mkdir(parents=True, exist_ok=True)
     out_midiscp = Path(args.outdir) / f"{args.name}.scp"
