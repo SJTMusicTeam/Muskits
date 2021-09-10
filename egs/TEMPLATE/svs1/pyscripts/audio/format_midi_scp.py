@@ -54,7 +54,12 @@ def main():
         help="Specify the prefix word of output file name " 'such as "wav.scp"',
     )
     parser.add_argument("--segments", default=None)
-    parser.add_argument("--fs", type=np.int16, default=None, help="If the sampling rate specified, " "Change the sampling rate.")
+    parser.add_argument(
+        "--fs",
+        type=np.int16,
+        default=None,
+        help="If the sampling rate specified, " "Change the sampling rate.",
+    )
     group = parser.add_mutually_exclusive_group()
     # TODO: in midi, the reference channels should be related to track, it is not implemented now
     group.add_argument("--ref-channels", default=None, type=str2int_tuple)
@@ -83,8 +88,14 @@ def main():
             for line in f:
                 if len(line) == 0:
                     continue
-                utt_id, recording_id, segment_begin, segment_end = line.strip().split(' ')
-                segments[utt_id] = recording_id, float(segment_begin), float(segment_end)
+                utt_id, recording_id, segment_begin, segment_end = line.strip().split(
+                    " "
+                )
+                segments[utt_id] = (
+                    recording_id,
+                    float(segment_begin),
+                    float(segment_end),
+                )
 
     Path(args.outdir).mkdir(parents=True, exist_ok=True)
     out_midiscp = Path(args.outdir) / f"{args.name}.scp"
@@ -107,23 +118,24 @@ def main():
                 cache = (recording, note_seq)
 
             if args.fs is not None:
-                start = int(start*args.fs)
-                end = int(end*args.fs)
+                start = int(start * args.fs)
+                end = int(end * args.fs)
                 if start < 0:
                     start = 0
                 if end > len(note_seq):
                     end = len(note_seq)
             else:
-                start = np.searchsorted([item[0] for item in note_seq], start, 'left')
-                end = np.searchsorted([item[1] for item in note_seq], end, 'left')
-            sub_note = note_seq[start: end]
+                start = np.searchsorted([item[0] for item in note_seq], start, "left")
+                end = np.searchsorted([item[1] for item in note_seq], end, "left")
+            sub_note = note_seq[start:end]
 
             writer[utt_id] = sub_note
-            
+
     else:
         # midi_scp does not need to change, when no segments is applied
         # Note things will change, after finish other todos in the script
         os.system("cp {} {}".format(args.scp, Path(args.outdir / f"{args.name}.scp")))
+
 
 if __name__ == "__main__":
     main()
