@@ -1,14 +1,6 @@
 from typing import Collection
 
-from jaconv import jaconv
-import tacotron_cleaner.cleaners
 from typeguard import check_argument_types
-
-try:
-    from vietnamese_cleaner import vietnamese_cleaners
-except ImportError:
-    vietnamese_cleaners = None
-
 
 class TextCleaner:
     """Text cleaner.
@@ -27,6 +19,16 @@ class TextCleaner:
             self.cleaner_types = [cleaner_types]
         else:
             self.cleaner_types = list(cleaner_types)
+        
+        if "jaconv" in self.cleaner_types:
+            from jaconv import jaconv
+        if "tacotron" in self.cleaner_types:
+            import tacotron_cleaner.cleaners
+        if "vietnamese" in self.cleaner_types:
+            try:
+                from vietnamese_cleaner import vietnamese_cleaners
+            except ImportError:
+                vietnamese_cleaners = None
 
     def __call__(self, text: str) -> str:
         for t in self.cleaner_types:
