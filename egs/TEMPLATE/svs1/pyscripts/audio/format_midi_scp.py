@@ -89,7 +89,7 @@ def main():
     Path(args.outdir).mkdir(parents=True, exist_ok=True)
     out_midiscp = Path(args.outdir) / f"{args.name}.scp"
     if args.segments is not None:
-        loader = MIDIScpReader(args.scp)
+        loader = MIDIScpReader(args.scp, rate=args.fs)
         writer = MIDIScpWriter(
             args.outdir,
             out_midiscp,

@@ -150,18 +150,22 @@ else
         "${logdir}/midi.JOB.scp" "${outdir}/format_midi.JOB"
 fi
 
+# Workaround for the NFS problem
+ls ${outdir}/format_midi.* > /dev/null
+ls ${outdir}/format_wav.* > /dev/null
+
 # concatenate the .scp files together.
 for n in $(seq ${nj}); do
-    cat "${outdir}/format.${n}/wav.scp" || exit 1;
+    cat "${outdir}/format_wav.${n}/wav.scp" || exit 1;
 done > "${dir}/${out_wavfilename}" || exit 1
 
 for n in $(seq ${nj}); do
-    cat "${outdir}/format.${n}/midi.scp" || exit 1;
+    cat "${outdir}/format_midi.${n}/midi.scp" || exit 1;
 done > "${dir}/${out_midifilename}" || exit 1
 
 if "${write_utt2num_samples}"; then
     for n in $(seq ${nj}); do
-        cat "${outdir}/format.${n}/utt2num_samples" || exit 1;
+        cat "${outdir}/format_wav.${n}/utt2num_samples" || exit 1;
     done > "${dir}/utt2num_samples"  || exit 1
 fi
 
