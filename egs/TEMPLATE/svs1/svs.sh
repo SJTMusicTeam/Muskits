@@ -435,7 +435,7 @@ if ! "${skip_data_prep}"; then
         # The first symbol in token_list must be "<blank>" and the last must be also sos/eos:
         # 0 is reserved for CTC-blank for ASR and also used as ignore-index in the other task
 
-        ${python} -m espnet2.bin.tokenize_text \
+        ${python} -m muskit.bin.tokenize_text \
               --token_type "${token_type}" -f 2- \
               --input "${data_feats}/srctexts" --output "${token_list}" \
               --non_linguistic_symbols "${nlsyms_txt}" \
