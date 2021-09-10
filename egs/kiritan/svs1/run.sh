@@ -5,6 +5,7 @@ set -e
 set -u
 set -o pipefail
 
+# spectrogram-related arguments
 fs=24000
 n_fft=2048
 n_shift=300
@@ -22,8 +23,13 @@ train_set=train
 valid_set=dev
 test_sets="dev eval1"
 
+# training and inference configuration
 train_config=conf/train.yaml
 inference_config=conf/decode.yaml
+
+# text related processing arguments
+g2p=none
+cleaner=none
 
 ./svs.sh \
     --lang jp \
@@ -35,6 +41,8 @@ inference_config=conf/decode.yaml
     --n_shift "${n_shift}" \
     --win_length "${win_length}" \
     --token_type phn \
+    --g2p ${g2p} \
+    --cleaner ${cleaner} \
     --train_config "${train_config}" \
     --inference_config "${inference_config}" \
     --train_set "${train_set}" \
