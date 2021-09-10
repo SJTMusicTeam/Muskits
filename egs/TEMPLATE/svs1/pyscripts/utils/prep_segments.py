@@ -3,9 +3,11 @@ import argparse
 import os
 import sys
 
+
 def pack_zero(file_id, number, length=4):
     number = str(number)
     return file_id + "_" + "0" * (length - len(number)) + number
+
 
 def get_parser():
     parser = argparse.ArgumentParser(
@@ -13,10 +15,13 @@ def get_parser():
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument("scp", type=str, help="scp folder")
-    parser.add_argument("threshold", type=int, help="threshold for silence identification.")
+    parser.add_argument(
+        "threshold", type=int, help="threshold for silence identification."
+    )
     parser.add_argument("win_size", type=int, help="window size in ms")
     parser.add_argument("win_shift", type=int, help="window shift in ms")
     return parser
+
 
 def same_split(alignment, threshold):
     size = 2
@@ -26,12 +31,16 @@ def same_split(alignment, threshold):
     start = 0
     for i in range(size - 1):
         index = start
-        while index + 1 < len(alignment) and alignment[index + 1][1] - alignment[start][0] <= threshold:
+        while (
+            index + 1 < len(alignment)
+            and alignment[index + 1][1] - alignment[start][0] <= threshold
+        ):
             index += 1
-        segments.append(alignment[start:index+1])
+        segments.append(alignment[start : index + 1])
         start = index + 1
     segments.append(alignment[start:])
     return segments, size
+
 
 def make_segment(file_id, alignment, threshold=13500 * 1e-3, sil="pau"):
     segment_info = {}
@@ -76,25 +85,26 @@ def make_segment(file_id, alignment, threshold=13500 * 1e-3, sil="pau"):
             start_id += 1
     return segment_info
 
+
 if __name__ == "__main__":
     # print(sys.path[0]+'/..')
-    os.chdir(sys.path[0]+'/..')
+    os.chdir(sys.path[0] + "/..")
     # print(os.getcwd())
     args = get_parser().parse_args(sys.argv[1:])
     args.threshold *= 1e-3
     segments = []
 
-    with open(args.scp+"/wav.scp") as f:
+    with open(args.scp + "/wav.scp") as f:
         for line in f:
             if len(line) == 0:
                 continue
-            recording_id, path = line.replace('\n', '').split(' ')
+            recording_id, path = line.replace("\n", "").split(" ")
             lab_path = path.replace("wav/", "mono_label/").replace(".wav", ".lab")
             assert os.path.exists(lab_path)
             with open(lab_path) as lab_f:
                 labels = []
                 for lin in lab_f:
-                    label = lin.replace('\n', '').split(' ')
+                    label = lin.replace("\n", "").split(" ")
                     if len(label) != 3:
                         continue
                     labels.append([float(label[0]), float(label[1]), label[2]])
@@ -105,6 +115,4 @@ if __name__ == "__main__":
             segment_begin = "{:.7f}".format(val[0][0])
             segment_end = "{:.7f}".format(val[-1][1])
 
-            sys.stdout.write(
-                "{} {} {}\n".format(key, segment_begin, segment_end)
-            )
+            sys.stdout.write("{} {} {}\n".format(key, segment_begin, segment_end))
