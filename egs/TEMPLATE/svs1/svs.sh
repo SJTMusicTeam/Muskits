@@ -52,7 +52,7 @@ use_xvector=false    # Whether to use x-vector (Require Kaldi).
 # Only used for feats_type != raw
 fs=16000          # Sampling rate.
 fmin=80           # Minimum frequency of Mel basis.
-fmax=7600         # Maximum frequency of Mel basis.
+fmax=12000        # Maximum frequency of Mel basis.
 n_mels=80         # The number of mel basis.
 n_fft=1024        # The number of fft points.
 n_shift=256       # The number of shift points.
@@ -305,7 +305,7 @@ if ! "${skip_data_prep}"; then
                 # shellcheck disable=SC2086
                 scripts/audio/format_scp.sh --nj "${nj}" --cmd "${train_cmd}" \
                     --audio-format "${audio_format}" --fs "${fs}" ${_opts} \
-                    "data/${dset}/wav.scp" "${data_feats}${_suf}/${dset}"
+                    "data/${dset}" "${data_feats}${_suf}/${dset}"
                 echo "${feats_type}" > "${data_feats}${_suf}/${dset}/feats_type"
             done
 

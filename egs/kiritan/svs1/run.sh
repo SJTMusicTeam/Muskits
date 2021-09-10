@@ -8,6 +8,7 @@ set -o pipefail
 fs=24000
 n_fft=2048
 n_shift=300
+win_length=1200
 
 opts=
 if [ "${fs}" -eq 48000 ]; then
@@ -26,12 +27,13 @@ inference_config=conf/decode.yaml
 
 ./svs.sh \
     --lang jp \
-    --stage 1 \
+    --stage 2 \
     --local_data_opts "--stage 0" \
     --feats_type raw \
     --fs "${fs}" \
     --n_fft "${n_fft}" \
     --n_shift "${n_shift}" \
+    --win_length "${win_length}" \
     --token_type phn \
     --train_config "${train_config}" \
     --inference_config "${inference_config}" \

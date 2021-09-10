@@ -36,9 +36,9 @@ find "${db}" -name "*.wav" | sort | while read -r filename; do
     id=$(basename ${filename} | sed -e "s/\.[^\.]*$//g")
     if [ "${fs}" -eq 48000 ]; then
         # default sampling rate
-        echo "${utt_prefix}${id} ${filename}" >> "${wav_scp}"
+        echo "${utt_prefix}${id} sox ${filename} -b 16 -t wav - |" >> "${wav_scp}"
     else
-        echo "${utt_prefix}${id} sox ${filename} -t wav -r ${fs} - |" >> "${wav_scp}"
+        echo "${utt_prefix}${id} sox ${filename} -b 16 -t wav -r ${fs} - |" >> "${wav_scp}"
     fi
 
     echo "${utt_prefix}${id} ${utt_prefix}" >> "${utt2spk}"
