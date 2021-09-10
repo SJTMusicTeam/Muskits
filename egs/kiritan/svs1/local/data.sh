@@ -15,7 +15,7 @@ log() {
 
 SECONDS=0
 stage=1
-stop_stage=1
+stop_stage=100
 
 log "$0 $*"
 
@@ -32,18 +32,16 @@ train_set=tr_no_dev
 train_dev=dev
 recog_set=eval1
 
-#cd /data2/qt/Muskits/egs/kiritan
-
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
-    log "stage -1: Data Download"
+    log "stage 0: Data Download"
     # The KIRITAN data should be downloaded from https://zunko.jp/kiridev/login.php
     # with Facebook authentication
 
 fi
 
 
-if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
-    log "stage -1: Dataset split "
+if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
+    log "stage 1: Dataset split "
     python local/dataset_split.py ${KIRITAN}/kiritan_singing/wav $(`pwd`)/data/local 0.1 0.1
 fi
 
@@ -51,38 +49,24 @@ fi
 for dataset in train dev eval1; do
   echo "process for subset: ${dataset}"
   # dataset=test
-  if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
-      log "stage 0: Generate data directory"
+  if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
+      log "stage 2: Generate data directory"
       # scp files generation
       local/data_pre.sh data/local/${dataset}_raw data/${dataset} 48000
   fi
 
-  if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
-      log "stage 1: Prepare segments"
+  if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
+      log "stage 3: Prepare segments"
       src_data=data/${dataset}
       local/prep_segments.py --silence pau --silence sil ${src_data} 10000 # in ms
       mv ${src_data}/segments.tmp ${src_data}/segments
       mv ${src_data}/label.tmp ${src_data}/label
-      mv ${src_data}/text ${src_data}/text.tmp
+      mv ${src_data}/text.tmp ${src_data}/text
       cat ${src_data}/segments | awk '{printf("%s kiritan\n", $1);}' > ${src_data}/utt2spk
       utils/utt2spk_to_spk2utt.pl < ${src_data}/utt2spk > ${src_data}/spk2utt
       utils/fix_data_dir.sh --utt_extra_files label ${src_data}
   fi
 
-#  if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
-#      log "stage 2: local/format_scp.py"
-#      local/format_scp.py data/${dataset} data/${dataset}_seg 22050 40
-#  fi
-
-#   if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
-#       log "stage 2: local/format_other_scp.py"
-#       local/format_other_scp.py data/${dataset} data/${dataset}_seg
-#   fi
-
-#   if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
-#     log "stage 3: local/format_wav_midi_scp.py"
-#     local/format_wav_midi_scp.py data/${dataset} data/${dataset}_seg 22050 40
-#   fi
 
 done
 
