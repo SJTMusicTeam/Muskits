@@ -3,8 +3,8 @@
 
 # Disable cupy installation
 NO_CUPY :=
-# PyTorch version: 0.4.1, 1.0.0, 1.0.1, 1.1.0, 1.2.0, 1.3.0, 1.3.1, 1.4.0, 1.5.0, 1.5.1, 1.6.0, 1.7.0, 1.7.1, 1.8.2
-TH_VERSION := 1.8.2
+# PyTorch version: 1.7.0, 1.7.1, 1.8.1
+TH_VERSION := 1.8.1
 WGET := wget --tries=3
 
 # Use pip for pytorch installation even if you have anaconda
@@ -53,7 +53,7 @@ endif
 
 all: kaldi showenv python conda_packages.done check_install
 
-python: activate_python.sh svs.done pytorch.done
+python: activate_python.sh muskit.done pytorch.done pyopenjtalk.done
 
 
 kaldi:
@@ -115,10 +115,14 @@ pytorch.done: activate_python.sh
 	touch pytorch.done
 endif
 
-# NOTE(kamo): conda_packages is not necessary for installation of svs, but add it the dependencies just in case.
-svs.done: pytorch.done conda_packages.done
+# NOTE(kamo): conda_packages is not necessary for installation of muskit, but add it the dependencies just in case.
+muskit.done: pytorch.done conda_packages.done
 	. ./activate_python.sh && python3 -m pip install -e "..[recipe]"  # Install editable mode by default
-	touch svs.done
+	touch muskit.done
+
+pyopenjtalk.done: espnet.done conda_packages.done
+	. ./activate_python.sh && ./installers/install_pyopenjtalk.sh
+	touch pyopenjtalk.done
 
 check_install: python
 ifeq ($(strip $(CPU_ONLY)),)
@@ -141,10 +145,10 @@ endif
 
 
 clean: clean_extra
-	rm -rf *.done
+	rm -rf pyopenjtalk.done
 	find . -iname "*.pyc" -delete
 
 clean_python:
-	rm -f svs.done pytorch.done
+	rm -f muskit.done pytorch.done
 	find . -iname "*.pyc" -delete
 
