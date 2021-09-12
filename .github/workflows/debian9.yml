@@ -32,7 +32,7 @@ jobs:
           # NOTE(kamo): cmake sndfile will be download using anacond:
           apt-get install -qq -y build-essential git g++-6 unzip bzip2 wget curl bc locales make sox
           localedef -f UTF-8 -i en_US en_US
-      - name: install espnet
+      - name: install muskit
         run: ./ci/install.sh
       - name: test shell
         run: ./ci/test_shell.sh

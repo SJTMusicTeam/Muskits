@@ -38,7 +38,7 @@ inference_nj=32      # The number of parallel jobs in decoding.
 gpu_inference=false  # Whether to perform gpu decoding.
 dumpdir=dump         # Directory to dump features.
 expdir=exp           # Directory to save experiments.
-python=python3       # Specify python to execute espnet commands.
+python=python3       # Specify python to execute muskit commands.
 
 # Data preparation related
 local_data_opts="" # Options to be passed to local/data.sh.
@@ -125,7 +125,7 @@ Options:
     --gpu_inference  # Whether to perform gpu decoding (default="${gpu_inference}").
     --dumpdir        # Directory to dump features (default="${dumpdir}").
     --expdir         # Directory to save experiments (default="${expdir}").
-    --python         # Specify python to execute espnet commands (default="${python}").
+    --python         # Specify python to execute muskit commands (default="${python}").
 
     # Data prep related
     --local_data_opts # Options to be passed to local/data.sh (default="${local_data_opts}").
@@ -470,7 +470,7 @@ if ! "${skip_train}"; then
         _opts=
         if [ -n "${train_config}" ]; then
             # To generate the config file: e.g.
-            #   % python3 -m espnet2.bin.svs_train --print_config --optim adam
+            #   % python3 -m muskit.bin.svs_train --print_config --optim adam
             _opts+="--config ${train_config} "
         fi
 
@@ -562,7 +562,7 @@ if ! "${skip_train}"; then
         log "SVS collect_stats started... log: '${_logdir}/stats.*.log'"
         # shellcheck disable=SC2086
         ${train_cmd} JOB=1:"${_nj}" "${_logdir}"/stats.JOB.log \
-            ${python} -m "espnet2.bin.${svs_task}_train" \
+            ${python} -m "muskit.bin.${svs_task}_train" \
                 --collect_stats true \
                 --write_collected_feats "${write_collected_feats}" \
                 --use_preprocessor true \
@@ -588,7 +588,7 @@ if ! "${skip_train}"; then
         for i in $(seq "${_nj}"); do
             _opts+="--input_dir ${_logdir}/stats.${i} "
         done
-        ${python} -m espnet2.bin.aggregate_stats_dirs ${_opts} --output_dir "${svs_stats_dir}"
+        ${python} -m muskit.bin.aggregate_stats_dirs ${_opts} --output_dir "${svs_stats_dir}"
 
         # Append the num-tokens at the last dimensions. This is used for batch-bins count
         <"${svs_stats_dir}/train/text_shape" \
@@ -610,7 +610,7 @@ if ! "${skip_train}"; then
         _opts=
         if [ -n "${train_config}" ]; then
             # To generate the config file: e.g.
-            #   % python3 -m espnet2.bin.svs_train --print_config --optim adam
+            #   % python3 -m muskit.bin.svs_train --print_config --optim adam
             _opts+="--config ${train_config} "
         fi
 
@@ -641,7 +641,7 @@ if ! "${skip_train}"; then
                 _split_dir="${svs_stats_dir}/splits${num_splits}"
                 if [ ! -f "${_split_dir}/.done" ]; then
                     rm -f "${_split_dir}/.done"
-                    ${python} -m espnet2.bin.split_scps \
+                    ${python} -m muskit.bin.split_scps \
                       --scps \
                           "${_train_dir}/text" \
                           "${_train_dir}/${_scp}" \
@@ -793,14 +793,14 @@ if ! "${skip_train}"; then
         fi
 
         # shellcheck disable=SC2086
-        ${python} -m espnet2.bin.launch \
+        ${python} -m muskit.bin.launch \
             --cmd "${cuda_cmd} --name ${jobname}" \
             --log "${svs_exp}"/train.log \
             --ngpu "${ngpu}" \
             --num_nodes "${num_nodes}" \
             --init_file_prefix "${svs_exp}"/.dist_init_ \
             --multiprocessing_distributed true -- \
-            ${python} -m "espnet2.bin.${svs_task}_train" \
+            ${python} -m "muskit.bin.${svs_task}_train" \
                 --use_preprocessor true \
                 --token_type "${token_type}" \
                 --token_list "${token_list}" \

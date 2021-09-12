@@ -13,7 +13,7 @@ def add_sos_eos(ys_pad, sos, eos, ignore_id):
     :return: padded tensor (B, Lmax)
     :rtype: torch.Tensor
     """
-    from espnet.nets.pytorch_backend.nets_utils import pad_list
+    from muskit.torch_utils.nets_utils import pad_list
 
     _sos = ys_pad.new([sos])
     _eos = ys_pad.new([eos])

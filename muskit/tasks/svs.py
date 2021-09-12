@@ -26,6 +26,7 @@ from muskit.svs.feats_extract.dio import Dio
 from muskit.svs.feats_extract.energy import Energy
 from muskit.svs.feats_extract.log_mel_fbank import LogMelFbank
 from muskit.svs.feats_extract.log_spectrogram import LogSpectrogram
+from muskit.svs.encoder_decoder.transformer.transformer import Transformer
 from muskit.utils.get_default_kwargs import get_default_kwargs
 from muskit.utils.nested_dict_action import NestedDictAction
 from muskit.utils.types import int_or_none
@@ -76,10 +77,7 @@ energy_normalize_choices = ClassChoices(
 svs_choices = ClassChoices(
     "svs",
     classes=dict(
-        tacotron2=Tacotron2,
         transformer=Transformer,
-        fastspeech=FastSpeech,
-        fastspeech2=FastSpeech2,
     ),
     type_check=AbsSVS,
     default="transformer",

@@ -121,7 +121,6 @@ class MIDIScpWriter:
         self.fscp.close()
 
 
-
 # what kind of data the downsteam task is need?
 # the midi file should convert to ?
 class MIDIScpReader(collections.abc.Mapping):
