@@ -42,7 +42,7 @@ fi
 
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     log "stage 1: Dataset split "
-    python local/dataset_split.py ${KIRITAN}/kiritan_singing/wav $(`pwd`)/data/local 0.1 0.1
+    python local/dataset_split.py ${KIRITAN}/kiritan_singing/wav data/local 0.1 0.1
 fi
 
 
