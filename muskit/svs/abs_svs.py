@@ -1,4 +1,3 @@
-
 # Copyright 2021 Tomoki Hayashi
 # Copyright 2021 Carnegie Mellon University (Jiatong Shi)
 #  Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)

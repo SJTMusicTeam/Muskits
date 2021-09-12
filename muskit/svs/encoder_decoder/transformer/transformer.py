@@ -32,7 +32,6 @@ from muskit.svs.abs_svs import AbsSVS
 from muskit.svs.gst.style_encoder import StyleEncoder
 
 
-
 class GuidedMultiHeadAttentionLoss(GuidedAttentionLoss):
     """Guided attention loss function module for multi head attention.
     Args:
