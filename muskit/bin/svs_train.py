@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from espnet2.tasks.svs import SVSTask
+from muskit.tasks.svs import SVSTask
 
 
 def get_parser():

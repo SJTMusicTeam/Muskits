@@ -8,7 +8,7 @@ cwd=$(pwd)
 test_data=test
 
 # test svs recipe
-cd ./egs/${test_data}/tts1 || exit 1
+cd ./egs/${test_data}/svs1 || exit 1
 ln -sf ${cwd}/.coverage .
 echo "==== SVS ==="
 ./run.sh --stage 1 --stop-stage 1 --python "${python}"

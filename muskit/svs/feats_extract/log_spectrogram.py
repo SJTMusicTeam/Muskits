@@ -64,8 +64,8 @@ class LogSpectrogram(AbsFeatsExtract):
         # "2" refers to the real/imag parts of Complex
         assert input_stft.shape[-1] == 2, input_stft.shape
 
-        # NOTE(kamo): We use different definition for log-spec between TTS and ASR
-        #   TTS: log_10(abs(stft))
+        # NOTE(kamo): We use different definition for log-spec between SVS and ASR
+        #   SVS: log_10(abs(stft))
         #   ASR: log_e(power(stft))
 
         # STFT -> Power spectrum
