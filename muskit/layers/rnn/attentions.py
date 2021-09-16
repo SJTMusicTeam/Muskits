@@ -365,7 +365,7 @@ class AttLoc(torch.nn.Module):
             self.mask = to_device(enc_hs_pad, make_pad_mask(enc_hs_len))
         e.masked_fill_(self.mask, -float("inf"))
 
-        # apply monotonic attention constraint (mainly for TTS)
+        # apply monotonic attention constraint (mainly for SVS)
         if last_attended_idx is not None:
             e = _apply_attention_constraint(
                 e, last_attended_idx, backward_window, forward_window
@@ -1628,7 +1628,7 @@ class AttForwardTA(torch.nn.Module):
             self.mask = to_device(enc_hs_pad, make_pad_mask(enc_hs_len))
         e.masked_fill_(self.mask, -float("inf"))
 
-        # apply monotonic attention constraint (mainly for TTS)
+        # apply monotonic attention constraint (mainly for SVS)
         if last_attended_idx is not None:
             e = _apply_attention_constraint(
                 e, last_attended_idx, backward_window, forward_window

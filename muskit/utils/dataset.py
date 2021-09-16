@@ -279,10 +279,10 @@ class AbsDataset(Dataset, ABC):
 
 
 class MuskitDataset(AbsDataset):
-    """Pytorch Dataset class for ESPNet.
+    """Pytorch Dataset class for Muskit.
 
     Examples:
-        >>> dataset = ESPnetDataset([('wav.scp', 'input', 'sound'),
+        >>> dataset = MuskitDataset([('wav.scp', 'input', 'sound'),
         ...                          ('token_int', 'output', 'text_int')],
         ...                         )
         ... uttid, data = dataset['uttid']
@@ -431,7 +431,7 @@ class MuskitDataset(AbsDataset):
             data[name] = value
 
         # 2. [Option] Apply preprocessing
-        #   e.g. espnet2.train.preprocessor:CommonPreprocessor
+        #   e.g. muskit.train.preprocessor:CommonPreprocessor
         if self.preprocess is not None:
             data = self.preprocess(uid, data)
 

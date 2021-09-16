@@ -40,9 +40,11 @@ requirements = {
         "soundfile>=0.10.2",
         "h5py>=2.10.0",
         "miditoolkit",
-        # TTS related
+        "kaldiio",
+        # SVS related
         "pyworld>=0.2.10",
         "torch_complex",
+        "g2p_en",
     ],
     "recipe": [
         "gdown",

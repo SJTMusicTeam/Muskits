@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""Initialize modules for espnet2 neural networks."""
+"""Initialize modules for muskit neural networks."""
 
 import math
 import torch
@@ -13,7 +13,7 @@ def initialize(model: torch.nn.Module, init: str):
     Parameters are initialized using the given method or distribution.
 
     Custom initialization routines can be implemented into submodules
-    as function `espnet_initialization_fn` within the custom module.
+    as function `muskit_initialization_fn` within the custom module.
 
     Args:
         model: Target.
@@ -56,8 +56,8 @@ def initialize(model: torch.nn.Module, init: str):
                     if "bias" in name:
                         n = param.size(0)
                         param.data[n // 4 : n // 2].fill_(1.0)
-            if hasattr(mod, "espnet_initialization_fn"):
-                mod.espnet_initialization_fn()
+            if hasattr(mod, "muskit_initialization_fn"):
+                mod.muskit_initialization_fn()
 
     else:
         # weight init
@@ -82,8 +82,8 @@ def initialize(model: torch.nn.Module, init: str):
         for m in model.modules():
             if isinstance(m, (torch.nn.Embedding, torch.nn.LayerNorm)):
                 m.reset_parameters()
-            if hasattr(m, "espnet_initialization_fn"):
-                m.espnet_initialization_fn()
+            if hasattr(m, "muskit_initialization_fn"):
+                m.muskit_initialization_fn()
 
         # TODO(xkc): Hacking wav2vec2 initialization
         if getattr(model, "encoder", None) and getattr(
