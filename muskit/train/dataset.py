@@ -143,6 +143,13 @@ DATA_TYPES = {
         "   utterance_id_b b.wav\n"
         "   ...",
     ),
+    # TODO(TaoQian)
+    "midi": dict(
+
+    ),
+    "duration": dict(
+
+    ),
     "kaldi_ark": dict(
         func=kaldi_loader,
         kwargs=["max_cache_fd"],
