@@ -2,12 +2,13 @@ import miditoolkit
 import numpy as np
 
 
-def midi_to_noteseq(midi_obj, dtype=np.int16, rate=22050):
+def midi_to_seq(midi_obj, dtype=np.int16, rate=22050):
     """method for midi_obj.
     Input:
         miditoolkit_object, sampling rate
     Output:
-        np.array([pitch1,pitch2....]), which length is equal to note.time*rate
+        note_seq: np.array([pitch1,pitch2....]), which length is equal to note.time*rate
+        tempo_seq:np.array([pitch1,pitch2....]), which length is equal to note.time*rate
     """
     tick_to_time = midi_obj.get_tick_to_time_mapping()
     max_time = tick_to_time[-1]
@@ -22,20 +23,33 @@ def midi_to_noteseq(midi_obj, dtype=np.int16, rate=22050):
             idx += 1
         if tick_to_time[notes[idx].start] <= real_time:
             note_seq[i] = notes[idx].pitch
-    return note_seq
+    
+    tempos = midi_obj.tempo_changes
+    tempos.sort(key=lambda x: (x.time, x.tempo) ) #tempo:time, tempo
+    tempo_seq = np.zeros(int(rate * max_time), dtype=dtype)
+    idx = 0
+    for i in range(len(tempo_seq)):
+        real_time = i / rate
+        while idx + 1 < len(tempos) and tick_to_time[tempos[idx].time] < real_time:
+            idx += 1
+        if tick_to_time[tempos[idx].time] <= real_time:
+            tempo_seq[i] = int(tempos[idx].tempo)
+    
+    return note_seq, tempo_seq
 
 
-def noteseq_to_midi(
-    note_seq, rate=22050, DEFAULT_RESOLUTION=480, DEFAULT_TEMPO=60, DEFAULT_VELOCITY=60
+def seq_to_midi(
+    note_seq, tempo_seq, rate=22050, DEFAULT_RESOLUTION=480, DEFAULT_TEMPO=60, DEFAULT_VELOCITY=60
 ):
     """method for note_seq.
     Input:
-        note_seq, sampling rate
+        note_seq, tempo_seq, sampling rate
     Output:
         miditoolkit_object with default resolution, tempo and velocity.
     """
     # get downbeat and note (no time)
     temp_notes = note_seq
+    temp_tempos = tempo_seq
 
     ticks_per_beat = DEFAULT_RESOLUTION
     ticks_per_bar = DEFAULT_RESOLUTION * 4  # assume 4/4
@@ -65,7 +79,20 @@ def noteseq_to_midi(
         i = j + 1
 
     # get specific time for tempos
-    tempos = [[0, DEFAULT_TEMPO]]
+    tempos = []
+    i = 0
+    st = 0
+    while i < len(temp_tempos):
+        bpm = temp_tempos[i]
+        j = i
+        while j + 1 < len(temp_tempos) and temp_tempos[j + 1] == bpm:
+            j += 1
+        duration = int((j - i + 1) * ticks_per_second / rate)
+        tempos.append(
+            miditoolkit.midi.containers.TempoChange(bpm, st)
+        )
+        st = st + duration
+        i = j + 1
 
     # write
     midi = miditoolkit.midi.parser.MidiFile()
@@ -75,8 +102,5 @@ def noteseq_to_midi(
     inst.notes = notes
     midi.instruments.append(inst)
     # write tempo
-    tempo_changes = []
-    for st, bpm in tempos:
-        tempo_changes.append(miditoolkit.midi.containers.TempoChange(bpm, st))
-    midi.tempo_changes = tempo_changes
+    midi.tempo_changes = tempos
     return midi

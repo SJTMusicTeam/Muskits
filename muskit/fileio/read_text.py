@@ -104,3 +104,29 @@ def load_label_sequence(path: Union[Path, str]) -> Dict[str, List[Union[float, i
             logging.error(f'Error happened with path="{path}", id="{k}", value="{v}"')
             raise
     return retval
+
+def read_label(path: Union[Path, str]) -> Dict[str, List[Union[float, int]]]:
+    """Read a text file indicating sequences of number
+    Examples:
+        key1 1 2 3
+        key2 3 4 5 6
+        >>> d = load_num_sequence_text('duration')
+        >>> np.testing.assert_array_equal(d["key1"], [0.1, 0.2, "啊"]))
+    """
+    assert check_argument_types()
+    label = open(path, "r", encoding="utf-8")
+    
+    
+    retval = {}
+    for label_line in label.readlines():
+        line = label_line.strip().split()
+        key = line[0]
+        phn_info = line[1:]
+        temp_info = []
+        for i in range(len(phn_info) // 3):
+            temp_info.append(
+                [phn_info[i * 3], phn_info[i * 3 + 1], phn_info[i * 3 + 2]]
+            )
+        retval[key] = temp_info
+    return retval
+
