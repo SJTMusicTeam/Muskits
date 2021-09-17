@@ -283,9 +283,9 @@ def pack(
     except ImportError:
         pass
     try:
-        import espnet
+        import muskit
 
-        meta_objs.update(espnet=espnet.__version__)
+        meta_objs.update(muskit=muskit.__version__)
     except ImportError:
         pass
 

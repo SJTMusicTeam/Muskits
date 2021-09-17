@@ -37,8 +37,8 @@ class AbsSVS(torch.nn.Module, ABC):
         raise NotImplementedError
 
     @property
-    def require_raw_speech(self):
-        """Return whether or not raw_speech is required."""
+    def require_raw_singing(self):
+        """Return whether or not raw_singing is required."""
         return False
 
     @property

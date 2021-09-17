@@ -231,10 +231,10 @@ class SVSTask(AbsTask):
         cls, train: bool = True, inference: bool = False
     ) -> Tuple[str, ...]:
         if not inference:
-            retval = ("text", "speech")
+            retval = ("text", "singing", "midi", "label")
         else:
             # Inference mode
-            retval = ("text",)
+            retval = ("text", "midi", "label")
         return retval
 
     @classmethod
@@ -245,7 +245,7 @@ class SVSTask(AbsTask):
             retval = ("spembs", "durations", "pitch", "energy")
         else:
             # Inference mode
-            retval = ("spembs", "speech", "durations")
+            retval = ("spembs", "singing", "durations")
         return retval
 
     @classmethod

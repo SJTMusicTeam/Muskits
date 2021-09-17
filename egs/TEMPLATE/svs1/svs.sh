@@ -105,7 +105,7 @@ cleaner=tacotron # Text cleaner.
 g2p=g2p_en       # g2p method (needed if token_type=phn).
 lang=noinfo      # The language type of corpus.
 text_fold_length=150   # fold_length for text data.
-speech_fold_length=800 # fold_length for speech data.
+singingfold_length=800 # fold_length for singing data.
 
 help_message=$(cat << EOF
 Usage: $0 --train-set "<train_set_name>" --valid-set "<valid_set_name>" --test_sets "<test_set_names>" --srctexts "<srctexts>"
@@ -189,7 +189,7 @@ Options:
     --g2p                # g2p method (default="${g2p}").
     --lang               # The language type of corpus (default="${lang}").
     --text_fold_length   # Fold length for text data (default="${text_fold_length}").
-    --speech_fold_length # Fold length for speech data (default="${speech_fold_length}").
+    --singing_fold_length # Fold length for singing data (default="${singing_fold_length}").
 EOF
 )
 
@@ -575,9 +575,9 @@ if ! "${skip_train}"; then
                 --pitch_normalize none \
                 --energy_normalize none \
                 --train_data_path_and_name_and_type "${_train_dir}/text,text,text" \
-                --train_data_path_and_name_and_type "${_train_dir}/${_scp},speech,${_type}" \
+                --train_data_path_and_name_and_type "${_train_dir}/${_scp},singing,${_type}" \
                 --valid_data_path_and_name_and_type "${_valid_dir}/text,text,text" \
-                --valid_data_path_and_name_and_type "${_valid_dir}/${_scp},speech,${_type}" \
+                --valid_data_path_and_name_and_type "${_valid_dir}/${_scp},singing,${_type}" \
                 --train_shape_file "${_logdir}/train.JOB.scp" \
                 --valid_shape_file "${_logdir}/valid.JOB.scp" \
                 --output_dir "${_logdir}/stats.JOB" \
@@ -621,7 +621,7 @@ if ! "${skip_train}"; then
             _scp=wav.scp
             # "sound" supports "wav", "flac", etc.
             _type=sound
-            _fold_length="$((speech_fold_length * n_shift))"
+            _fold_length="$((singing_fold_length * n_shift))"
             _opts+="--feats_extract ${feats_extract} "
             _opts+="--feats_extract_conf n_fft=${n_fft} "
             _opts+="--feats_extract_conf hop_length=${n_shift} "
@@ -645,7 +645,7 @@ if ! "${skip_train}"; then
                       --scps \
                           "${_train_dir}/text" \
                           "${_train_dir}/${_scp}" \
-                          "${svs_stats_dir}/train/speech_shape" \
+                          "${svs_stats_dir}/train/singing_shape" \
                           "${svs_stats_dir}/train/text_shape.${token_type}" \
                       --num_splits "${num_splits}" \
                       --output_dir "${_split_dir}"
@@ -655,21 +655,21 @@ if ! "${skip_train}"; then
                 fi
 
                 _opts+="--train_data_path_and_name_and_type ${_split_dir}/text,text,text "
-                _opts+="--train_data_path_and_name_and_type ${_split_dir}/${_scp},speech,${_type} "
+                _opts+="--train_data_path_and_name_and_type ${_split_dir}/${_scp},singing,${_type} "
                 _opts+="--train_shape_file ${_split_dir}/text_shape.${token_type} "
-                _opts+="--train_shape_file ${_split_dir}/speech_shape "
+                _opts+="--train_shape_file ${_split_dir}/singing_shape "
                 _opts+="--multiple_iterator true "
 
             else
                 _opts+="--train_data_path_and_name_and_type ${_train_dir}/text,text,text "
-                _opts+="--train_data_path_and_name_and_type ${_train_dir}/${_scp},speech,${_type} "
+                _opts+="--train_data_path_and_name_and_type ${_train_dir}/${_scp},singing,${_type} "
                 _opts+="--train_shape_file ${svs_stats_dir}/train/text_shape.${token_type} "
-                _opts+="--train_shape_file ${svs_stats_dir}/train/speech_shape "
+                _opts+="--train_shape_file ${svs_stats_dir}/train/singing_shape "
             fi
             _opts+="--valid_data_path_and_name_and_type ${_valid_dir}/text,text,text "
-            _opts+="--valid_data_path_and_name_and_type ${_valid_dir}/${_scp},speech,${_type} "
+            _opts+="--valid_data_path_and_name_and_type ${_valid_dir}/${_scp},singing,${_type} "
             _opts+="--valid_shape_file ${svs_stats_dir}/valid/text_shape.${token_type} "
-            _opts+="--valid_shape_file ${svs_stats_dir}/valid/speech_shape "
+            _opts+="--valid_shape_file ${svs_stats_dir}/valid/singing_shape "
         else
 
             #####################################
@@ -677,7 +677,7 @@ if ! "${skip_train}"; then
             #####################################
             _teacher_train_dir="${teacher_dumpdir}/${train_set}"
             _teacher_valid_dir="${teacher_dumpdir}/${valid_set}"
-            _fold_length="${speech_fold_length}"
+            _fold_length="${singing_fold_length}"
             _opts+="--train_data_path_and_name_and_type ${_train_dir}/text,text,text "
             _opts+="--train_data_path_and_name_and_type ${_teacher_train_dir}/durations,durations,text_int "
             _opts+="--train_shape_file ${svs_stats_dir}/train/text_shape.${token_type} "
@@ -689,17 +689,17 @@ if ! "${skip_train}"; then
                 # Knowledge distillation case: use the outputs of the teacher model as the target
                 _scp=feats.scp
                 _type=npy
-                _odim="$(head -n 1 "${_teacher_train_dir}/speech_shape" | cut -f 2 -d ",")"
+                _odim="$(head -n 1 "${_teacher_train_dir}/singing_shape" | cut -f 2 -d ",")"
                 _opts+="--odim=${_odim} "
-                _opts+="--train_data_path_and_name_and_type ${_teacher_train_dir}/denorm/${_scp},speech,${_type} "
-                _opts+="--train_shape_file ${_teacher_train_dir}/speech_shape "
-                _opts+="--valid_data_path_and_name_and_type ${_teacher_valid_dir}/denorm/${_scp},speech,${_type} "
-                _opts+="--valid_shape_file ${_teacher_valid_dir}/speech_shape "
+                _opts+="--train_data_path_and_name_and_type ${_teacher_train_dir}/denorm/${_scp},singing,${_type} "
+                _opts+="--train_shape_file ${_teacher_train_dir}/singing_shape "
+                _opts+="--valid_data_path_and_name_and_type ${_teacher_valid_dir}/denorm/${_scp},singing,${_type} "
+                _opts+="--valid_shape_file ${_teacher_valid_dir}/singing_shape "
             else
                 # Teacher forcing case: use groundtruth as the target
                 _scp=wav.scp
                 _type=sound
-                _fold_length="$((speech_fold_length * n_shift))"
+                _fold_length="$((singing_fold_length * n_shift))"
                 _opts+="--feats_extract ${feats_extract} "
                 _opts+="--feats_extract_conf n_fft=${n_fft} "
                 _opts+="--feats_extract_conf hop_length=${n_shift} "
@@ -710,10 +710,10 @@ if ! "${skip_train}"; then
                     _opts+="--feats_extract_conf fmax=${fmax} "
                     _opts+="--feats_extract_conf n_mels=${n_mels} "
                 fi
-                _opts+="--train_data_path_and_name_and_type ${_train_dir}/${_scp},speech,${_type} "
-                _opts+="--train_shape_file ${svs_stats_dir}/train/speech_shape "
-                _opts+="--valid_data_path_and_name_and_type ${_valid_dir}/${_scp},speech,${_type} "
-                _opts+="--valid_shape_file ${svs_stats_dir}/valid/speech_shape "
+                _opts+="--train_data_path_and_name_and_type ${_train_dir}/${_scp},singing,${_type} "
+                _opts+="--train_shape_file ${svs_stats_dir}/train/singing_shape "
+                _opts+="--valid_data_path_and_name_and_type ${_valid_dir}/${_scp},singing,${_type} "
+                _opts+="--valid_shape_file ${svs_stats_dir}/valid/singing_shape "
             fi
         fi
 
