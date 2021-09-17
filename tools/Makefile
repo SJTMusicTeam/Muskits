@@ -120,7 +120,7 @@ muskit.done: pytorch.done conda_packages.done
 	. ./activate_python.sh && python3 -m pip install -e "..[recipe]"  # Install editable mode by default
 	touch muskit.done
 
-pyopenjtalk.done: espnet.done conda_packages.done
+pyopenjtalk.done: muskit.done conda_packages.done
 	. ./activate_python.sh && ./installers/install_pyopenjtalk.sh
 	touch pyopenjtalk.done
 
