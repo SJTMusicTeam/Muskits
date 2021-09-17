@@ -2,6 +2,7 @@ from typing import Collection
 
 from typeguard import check_argument_types
 
+
 class TextCleaner:
     """Text cleaner.
     Examples:
@@ -19,7 +20,7 @@ class TextCleaner:
             self.cleaner_types = [cleaner_types]
         else:
             self.cleaner_types = list(cleaner_types)
-        
+
         if "jaconv" in self.cleaner_types:
             from jaconv import jaconv
         if "tacotron" in self.cleaner_types:
