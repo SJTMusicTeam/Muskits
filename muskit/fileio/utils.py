@@ -3,6 +3,9 @@ import numpy as np
 
 
 def get_tick_to_time_mapping(ticks_per_beat, tempo_changes, max_tick=np.int(1e6)):
+    """
+    Get mapping from ticks to seconds with tempo information
+    """
     tick_to_time = np.zeros(max_tick + 1)
     num_tempi = len(tempo_changes)
 
@@ -40,29 +43,14 @@ def midi_to_seq(midi_obj, dtype=np.int16, rate=22050):
     notes.sort(key=lambda x: (x.start, x.pitch))
 
     note_seq = np.zeros(int(rate * max_time), dtype=dtype)
-    # idx = 0
-    # for i in range(len(note_seq)):
-    #     real_time = i / rate
-    #     while idx + 1 < len(notes) and tick_to_time[notes[idx + 1].start] <= real_time:
-    #         idx += 1
-    #     if tick_to_time[notes[idx].end] >= real_time and \
-    #         tick_to_time[notes[idx].start]<= real_time:
-    #             note_seq[i] = notes[idx].pitch
     for i in range(len(notes)):
         st = int(tick_to_time[notes[i].start] * rate)
         ed = int(tick_to_time[notes[i].end] * rate)
         note_seq[st:ed+1] = notes[i].pitch
     
     tempos = midi_obj.tempo_changes
-    tempos.sort(key=lambda x: (x.time, x.tempo) ) #tempo:time, tempo
+    tempos.sort(key=lambda x: (x.time, x.tempo) )
     tempo_seq = np.zeros(int(rate * max_time), dtype=dtype)
-    # idx = 0
-    # for i in range(len(tempo_seq)):
-    #     real_time = i / rate
-    #     while idx + 1 < len(tempos) and tick_to_time[tempos[idx+1].time] < real_time:
-    #         idx += 1
-    #     if tick_to_time[tempos[idx].time] <= real_time:
-    #         tempo_seq[i] = int(tempos[idx].tempo+0.5)
     for i in range(len(tempos)-1):
         st = int(tick_to_time[tempos[i].time] * rate)
         ed = int(tick_to_time[tempos[i+1].time] * rate)
@@ -84,15 +72,8 @@ def seq_to_midi(
     # get downbeat and note (no time)
     temp_notes = note_seq
     temp_tempos = tempo_seq
-
     ticks_per_beat = DEFAULT_RESOLUTION
-    # ticks_per_bar = DEFAULT_RESOLUTION * 4  # assume 4/4
 
-    # seconds_per_beat = 60 / DEFAULT_TEMPO
-    # seconds_per_tick = seconds_per_beat / float(ticks_per_beat)
-    # ticks_per_second = float(ticks_per_beat) / seconds_per_beat
-
-    
     # get specific time for tempos
     tempos = []
     i = 0
@@ -104,9 +85,6 @@ def seq_to_midi(
         if bpm == 0 :
             bpm = DEFAULT_TEMPO
         ticks_per_second = DEFAULT_RESOLUTION * bpm / 60
-        # acc_time += ( i - last_i) / rate
-        
-        #int( i  * ticks_per_second / rate)
         j = i
         while j + 1 < len(temp_tempos) and temp_tempos[j + 1] == bpm:
             j += 1
@@ -140,8 +118,6 @@ def seq_to_midi(
         
         i = j + 1
 
-
-
     # write
     midi = miditoolkit.midi.parser.MidiFile()
     midi.ticks_per_beat = DEFAULT_RESOLUTION
@@ -152,10 +128,10 @@ def seq_to_midi(
     # write tempo
     midi.tempo_changes = tempos
     return midi
-if __name__ == "__main__":
-    path = '/data3/qt/songmass/output_res_prev/attn_model_0_music_to_music.mid'
-    midi_obj = miditoolkit.midi.parser.MidiFile(path)
-    note_seq, tempo_seq = midi_to_seq(midi_obj, np.int16, np.int16(16000))
-    midi_obj = seq_to_midi(note_seq, tempo_seq, np.int16(16000))
-    midi_path = '/data3/qt/songmass/output_res_prev/midiscp.mid'
-    midi_obj.dump(midi_path)
+# if __name__ == "__main__":
+#     path = '/data3/qt/songmass/output_res_prev/attn_model_0_music_to_music.mid'
+#     midi_obj = miditoolkit.midi.parser.MidiFile(path)
+#     note_seq, tempo_seq = midi_to_seq(midi_obj, np.int16, np.int16(16000))
+#     midi_obj = seq_to_midi(note_seq, tempo_seq, np.int16(16000))
+#     midi_path = '/data3/qt/songmass/output_res_prev/midiscp.mid'
+#     midi_obj.dump(midi_path)
