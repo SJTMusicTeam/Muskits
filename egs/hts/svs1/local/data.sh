@@ -36,7 +36,7 @@ if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
     log "stage -1: Data Download"
     # The HTS data should be downloaded from http://hts.sp.nitech.ac.jp/archives/2.3/HTS-demo_NIT-SONG070-F001.tar.bz2 HTS-demo_NIT-SONG070-F001.tar.bz2
     # with Facebook authentication
-
+    wget -c http://hts.sp.nitech.ac.jp/archives/2.3/HTS-demo_NIT-SONG070-F001.tar.bz2
 fi
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then

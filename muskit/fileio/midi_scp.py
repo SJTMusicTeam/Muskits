@@ -97,7 +97,6 @@ class MIDIScpWriter:
         note_seq, tempo_seq = value
         midi_path = self.dir / f"{key}.{self.format}"
         midi_path.parent.mkdir(parents=True, exist_ok=True)
-        note_seq = value
         midi_obj = seq_to_midi(note_seq, tempo_seq, self.rate)
         midi_obj.dump(midi_path)
 
@@ -117,3 +116,10 @@ class MIDIScpWriter:
 
     def close(self):
         self.fscp.close()
+
+# if __name__ == "__main__":
+#     path = '/data3/qt/songmass/output_res_prev/alb_esp1_format0.mid'
+#     midi_obj = miditoolkit.midi.parser.MidiFile(path)
+#     note_seq, tempo_seq = midi_to_seq(midi_obj, np.int16, np.int16(16000) )
+
+

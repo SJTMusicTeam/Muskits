@@ -30,7 +30,7 @@ def midi_to_seq(midi_obj, dtype=np.int16, rate=22050):
     idx = 0
     for i in range(len(tempo_seq)):
         real_time = i / rate
-        while idx + 1 < len(tempos) and tick_to_time[tempos[idx].time] < real_time:
+        while idx + 1 < len(tempos) and tick_to_time[tempos[idx+1].time] < real_time:
             idx += 1
         if tick_to_time[tempos[idx].time] <= real_time:
             tempo_seq[i] = int(tempos[idx].tempo)

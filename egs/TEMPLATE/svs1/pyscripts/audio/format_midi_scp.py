@@ -108,14 +108,14 @@ def main():
             rate=args.fs,
         )
 
-        cache = (None, None)
+        cache = (None, None, None)
         for utt_id, (recording, start, end) in tqdm(segments.items()):
             # TODO: specify track information here
             if recording == cache[0]:
-                note_seq = cache[1]
+                note_seq, tempo_seq = cache[1], cache[2]
             else:
-                note_seq = loader[recording]
-                cache = (recording, note_seq)
+                note_seq, tempo_seq = loader[recording]
+                cache = (recording, note_seq, tempo_seq)
 
             if args.fs is not None:
                 start = int(start * args.fs)
@@ -128,8 +128,9 @@ def main():
                 start = np.searchsorted([item[0] for item in note_seq], start, "left")
                 end = np.searchsorted([item[1] for item in note_seq], end, "left")
             sub_note = note_seq[start:end]
+            sub_tempo = tempo_seq[start:end]
 
-            writer[utt_id] = sub_note
+            writer[utt_id] = sub_note, sub_tempo
 
     else:
         # midi_scp does not need to change, when no segments is applied

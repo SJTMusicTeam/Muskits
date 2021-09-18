@@ -108,9 +108,9 @@ def load_label_sequence(path: Union[Path, str]) -> Dict[str, List[Union[float, i
 def read_label(path: Union[Path, str]) -> Dict[str, List[Union[float, int]]]:
     """Read a text file indicating sequences of number
     Examples:
-        key1 1 2 3
-        key2 3 4 5 6
-        >>> d = load_num_sequence_text('duration')
+        key1 start_time_1 end_time_1 phone_1 start_time_2 end_time_2 phone_2 ....\n
+        key2 start_time_1 end_time_1 phone_1 \n
+        >>> d = load_num_sequence_text('label')
         >>> np.testing.assert_array_equal(d["key1"], [0.1, 0.2, "啊"]))
     """
     assert check_argument_types()
