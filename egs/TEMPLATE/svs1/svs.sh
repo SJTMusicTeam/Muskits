@@ -105,7 +105,7 @@ cleaner=tacotron # Text cleaner.
 g2p=g2p_en       # g2p method (needed if token_type=phn).
 lang=noinfo      # The language type of corpus.
 text_fold_length=150   # fold_length for text data.
-singingfold_length=800 # fold_length for singing data.
+singing_fold_length=800 # fold_length for singing data.
 
 help_message=$(cat << EOF
 Usage: $0 --train-set "<train_set_name>" --valid-set "<valid_set_name>" --test_sets "<test_set_names>" --srctexts "<srctexts>"
@@ -575,8 +575,12 @@ if ! "${skip_train}"; then
                 --pitch_normalize none \
                 --energy_normalize none \
                 --train_data_path_and_name_and_type "${_train_dir}/text,text,text" \
+                --train_data_path_and_name_and_type "${_train_dir}/label,label,duration" \
+                --train_data_path_and_name_and_type "${_train_dir}/midi.scp,midi,midi" \
                 --train_data_path_and_name_and_type "${_train_dir}/${_scp},singing,${_type}" \
                 --valid_data_path_and_name_and_type "${_valid_dir}/text,text,text" \
+                --valid_data_path_and_name_and_type "${_valid_dir}/label,label,duration" \
+                --valid_data_path_and_name_and_type "${_valid_dir}/midi.scp,midi,midi" \
                 --valid_data_path_and_name_and_type "${_valid_dir}/${_scp},singing,${_type}" \
                 --train_shape_file "${_logdir}/train.JOB.scp" \
                 --valid_shape_file "${_logdir}/valid.JOB.scp" \
