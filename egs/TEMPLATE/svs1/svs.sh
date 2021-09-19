@@ -77,7 +77,9 @@ tag=""             # Suffix for training directory.
 svs_exp=""         # Specify the direcotry path for experiment. If this option is specified, tag is ignored.
 svs_stats_dir=""   # Specify the direcotry path for statistics. If empty, automatically decided.
 num_splits=1       # Number of splitting for svs corpus.
+teacher_dumpdir="" # Directory of teacher outpus
 write_collected_feats=false # Whether to dump features in stats collection.
+svs_task=svs                # SVS task (svs or gan_svs, now only support svs)
 
 # Decoding related
 inference_config="" # Config for decoding.
@@ -162,7 +164,9 @@ Options:
     --svs_stats_dir # Specify the direcotry path for statistics.
                     # If empty, automatically decided (default="${svs_stats_dir}").
     --num_splits    # Number of splitting for svs corpus (default="${num_splits}").
+    --teacher_dumpdir       # Direcotry of teacher outputs
     --write_collected_feats # Whether to dump features in statistics collection (default="${write_collected_feats}").
+    --svs_task              # SVS task (svs or gan_svs, now only support svs)
 
     # Decoding related
     --inference_config  # Config for decoding (default="${inference_config}").
