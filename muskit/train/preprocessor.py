@@ -143,15 +143,15 @@ class CommonPreprocessor(AbsPreprocessor):
         noise_scp: str = None,
         noise_apply_prob: float = 1.0,
         noise_db_range: str = "3_10",
-        speech_volume_normalize: float = None,
-        speech_name: str = "speech",
+        singing_volume_normalize: float = None,
+        singing_name: str = "singing",
         text_name: str = "text",
     ):
         super().__init__(train)
         self.train = train
-        self.speech_name = speech_name
+        self.singing_name = singing_name
         self.text_name = text_name
-        self.speech_volume_normalize = speech_volume_normalize
+        self.singing_volume_normalize = singing_volume_normalize
         self.rir_apply_prob = rir_apply_prob
         self.noise_apply_prob = noise_apply_prob
 
@@ -215,18 +215,18 @@ class CommonPreprocessor(AbsPreprocessor):
     ) -> Dict[str, np.ndarray]:
         assert check_argument_types()
 
-        if self.speech_name in data:
+        if self.singing_name in data:
             if self.train and self.rirs is not None and self.noises is not None:
-                speech = data[self.speech_name]
-                nsamples = len(speech)
+                singing = data[self.singing_name]
+                nsamples = len(singing)
 
-                # speech: (Nmic, Time)
-                if speech.ndim == 1:
-                    speech = speech[None, :]
+                # singing: (Nmic, Time)
+                if singing.ndim == 1:
+                    singing = singing[None, :]
                 else:
-                    speech = speech.T
+                    singing = singing.T
                 # Calc power on non shlence region
-                power = (speech[detect_non_silence(speech)] ** 2).mean()
+                power = (singing[detect_non_silence(singing)] ** 2).mean()
 
                 # 1. Convolve RIR
                 if self.rirs is not None and self.rir_apply_prob >= np.random.random():
@@ -239,14 +239,14 @@ class CommonPreprocessor(AbsPreprocessor):
                         # rir: (Nmic, Time)
                         rir = rir.T
 
-                        # speech: (Nmic, Time)
+                        # singing: (Nmic, Time)
                         # Note that this operation doesn't change the signal length
-                        speech = scipy.signal.convolve(speech, rir, mode="full")[
-                            :, : speech.shape[1]
+                        singing = scipy.signal.convolve(singing, rir, mode="full")[
+                            :, : singing.shape[1]
                         ]
                         # Reverse mean power to the original power
-                        power2 = (speech[detect_non_silence(speech)] ** 2).mean()
-                        speech = np.sqrt(power / max(power2, 1e-10)) * speech
+                        power2 = (singing[detect_non_silence(singing)] ** 2).mean()
+                        singing = np.sqrt(power / max(power2, 1e-10)) * singing
 
                 # 2. Add Noise
                 if (
@@ -289,18 +289,18 @@ class CommonPreprocessor(AbsPreprocessor):
                             * np.sqrt(power)
                             / np.sqrt(max(noise_power, 1e-10))
                         )
-                        speech = speech + scale * noise
+                        singing = singing + scale * noise
 
-                speech = speech.T
-                ma = np.max(np.abs(speech))
+                singing = singing.T
+                ma = np.max(np.abs(singing))
                 if ma > 1.0:
-                    speech /= ma
-                data[self.speech_name] = speech
+                    singing /= ma
+                data[self.singing_name] = singing
 
-            if self.speech_volume_normalize is not None:
-                speech = data[self.speech_name]
-                ma = np.max(np.abs(speech))
-                data[self.speech_name] = speech * self.speech_volume_normalize / ma
+            if self.singing_volume_normalize is not None:
+                singing = data[self.singing_name]
+                ma = np.max(np.abs(singing))
+                data[self.singing_name] = singing * self.singing_volume_normalize / ma
 
         if self.text_name in data and self.tokenizer is not None:
             text = data[self.text_name]
@@ -325,12 +325,12 @@ class CommonPreprocessor_multi(AbsPreprocessor):
         space_symbol: str = "<space>",
         non_linguistic_symbols: Union[Path, str, Iterable[str]] = None,
         delimiter: str = None,
-        speech_name: str = "speech",
+        singing_name: str = "singing",
         text_name: list = ["text"],
     ):
         super().__init__(train)
         self.train = train
-        self.speech_name = speech_name
+        self.singing_name = singing_name
         self.text_name = text_name
 
         if token_type is not None:
@@ -360,7 +360,7 @@ class CommonPreprocessor_multi(AbsPreprocessor):
     ) -> Dict[str, np.ndarray]:
         assert check_argument_types()
 
-        if self.speech_name in data:
+        if self.singing_name in data:
             # Nothing now: candidates:
             # - STFT
             # - Fbank

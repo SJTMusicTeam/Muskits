@@ -38,7 +38,7 @@ inference_nj=32      # The number of parallel jobs in decoding.
 gpu_inference=false  # Whether to perform gpu decoding.
 dumpdir=dump         # Directory to dump features.
 expdir=exp           # Directory to save experiments.
-python=python3       # Specify python to execute espnet commands.
+python=python3       # Specify python to execute muskit commands.
 
 # Data preparation related
 local_data_opts="" # Options to be passed to local/data.sh.
@@ -48,7 +48,11 @@ feats_type=raw       # Feature type (fbank or stft or raw).
 audio_format=wav    # Audio format: wav, flac, wav.ark, flac.ark  (only in feats_type=raw).
 min_wav_duration=0.1 # Minimum duration in second.
 max_wav_duration=20  # Maximum duration in second.
+use_sid=false        # Whether to use speaker id as the inputs (Need utt2spk in data directory).
+use_lid=false        # Whether to use language id as the inputs (Need utt2lang in data directory).
 use_xvector=false    # Whether to use x-vector (Require Kaldi).
+feats_extract=fbank        # On-the-fly feature extractor.
+feats_normalize=global_mvn # On-the-fly feature normalizer.
 # Only used for feats_type != raw
 fs=16000          # Sampling rate.
 fmin=80           # Minimum frequency of Mel basis.
@@ -86,6 +90,7 @@ inference_model=train.loss.ave.pth # Model path for decoding.
                                    # inference_model=3epoch.pth
                                    # inference_model=valid.acc.best.pth
                                    # inference_model=valid.loss.ave.pth
+vocoder_file=none  # Vocoder parameter file, If set to none, Griffin-Lim will be used.
 griffin_lim_iters=4 # the number of iterations of Griffin-Lim.
 download_model=""   # Download a model from Model Zoo and use it for decoding.
 
@@ -100,7 +105,7 @@ cleaner=tacotron # Text cleaner.
 g2p=g2p_en       # g2p method (needed if token_type=phn).
 lang=noinfo      # The language type of corpus.
 text_fold_length=150   # fold_length for text data.
-speech_fold_length=800 # fold_length for speech data.
+singing_fold_length=800 # fold_length for singing data.
 
 help_message=$(cat << EOF
 Usage: $0 --train-set "<train_set_name>" --valid-set "<valid_set_name>" --test_sets "<test_set_names>" --srctexts "<srctexts>"
@@ -120,7 +125,7 @@ Options:
     --gpu_inference  # Whether to perform gpu decoding (default="${gpu_inference}").
     --dumpdir        # Directory to dump features (default="${dumpdir}").
     --expdir         # Directory to save experiments (default="${expdir}").
-    --python         # Specify python to execute espnet commands (default="${python}").
+    --python         # Specify python to execute muskit commands (default="${python}").
 
     # Data prep related
     --local_data_opts # Options to be passed to local/data.sh (default="${local_data_opts}").
@@ -130,6 +135,8 @@ Options:
     --audio_format     # Audio format: wav, flac, wav.ark, flac.ark  (only in feats_type=raw, default="${audio_format}").
     --min_wav_duration # Minimum duration in second (default="${min_wav_duration}").
     --max_wav_duration # Maximum duration in second (default="${max_wav_duration}").
+    --use_sid          # Whether to use speaker id as the inputs (default="${use_sid}").
+    --use_lid          # Whether to use language id as the inputs (default="${use_lid}").
     --use_xvector      # Whether to use X-vector (Require Kaldi, default="${use_xvector}").
     --fs               # Sampling rate (default="${fs}").
     --fmax             # Maximum frequency of Mel basis (default="${fmax}").
@@ -164,6 +171,8 @@ Options:
                         # Note that it will overwrite args in inference config.
     --inference_tag     # Suffix for decoding directory (default="${inference_tag}").
     --inference_model   # Model path for decoding (default=${inference_model}).
+    --vocoder_file      # Vocoder paramemter file (default=${vocoder_file}).
+                        # If set to none, Griffin-Lim vocoder will be used.
     --griffin_lim_iters # The number of iterations of Griffin-Lim (default=${griffin_lim_iters}).
     --download_model    # Download a model from Model Zoo and use it for decoding (default="${download_model}").
 
@@ -180,7 +189,7 @@ Options:
     --g2p                # g2p method (default="${g2p}").
     --lang               # The language type of corpus (default="${lang}").
     --text_fold_length   # Fold length for text data (default="${text_fold_length}").
-    --speech_fold_length # Fold length for speech data (default="${speech_fold_length}").
+    --singing_fold_length # Fold length for singing data (default="${singing_fold_length}").
 EOF
 )
 
@@ -451,6 +460,369 @@ else
 fi
 
 # ========================== Data preparation is done here. ==========================
+
+if ! "${skip_train}"; then
+    if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
+        _train_dir="${data_feats}/${train_set}"
+        _valid_dir="${data_feats}/${valid_set}"
+        log "Stage 5: SVS collect stats: train_set=${_train_dir}, valid_set=${_valid_dir}"
+
+        _opts=
+        if [ -n "${train_config}" ]; then
+            # To generate the config file: e.g.
+            #   % python3 -m muskit.bin.svs_train --print_config --optim adam
+            _opts+="--config ${train_config} "
+        fi
+
+        _scp=wav.scp
+        if [[ "${audio_format}" == *ark* ]]; then
+            _type=kaldi_ark
+        else
+            # "sound" supports "wav", "flac", etc.
+            _type=sound
+        fi
+        _opts+="--feats_extract ${feats_extract} "
+        _opts+="--feats_extract_conf n_fft=${n_fft} "
+        _opts+="--feats_extract_conf hop_length=${n_shift} "
+        _opts+="--feats_extract_conf win_length=${win_length} "
+        if [ "${feats_extract}" = fbank ]; then
+            _opts+="--feats_extract_conf fs=${fs} "
+            _opts+="--feats_extract_conf fmin=${fmin} "
+            _opts+="--feats_extract_conf fmax=${fmax} "
+            _opts+="--feats_extract_conf n_mels=${n_mels} "
+        fi
+
+
+        # Add extra configs for additional inputs
+        # NOTE(kan-bayashi): We always pass this options but not used in default
+        _opts+="--pitch_extract_conf fs=${fs} "
+        _opts+="--pitch_extract_conf n_fft=${n_fft} "
+        _opts+="--pitch_extract_conf hop_length=${n_shift} "
+        _opts+="--pitch_extract_conf f0max=${f0max} "
+        _opts+="--pitch_extract_conf f0min=${f0min} "
+        _opts+="--energy_extract_conf fs=${fs} "
+        _opts+="--energy_extract_conf n_fft=${n_fft} "
+        _opts+="--energy_extract_conf hop_length=${n_shift} "
+        _opts+="--energy_extract_conf win_length=${win_length} "
+
+        if [ -n "${teacher_dumpdir}" ]; then
+            _teacher_train_dir="${teacher_dumpdir}/${train_set}"
+            _teacher_valid_dir="${teacher_dumpdir}/${valid_set}"
+            _opts+="--train_data_path_and_name_and_type ${_teacher_train_dir}/durations,durations,text_int "
+            _opts+="--valid_data_path_and_name_and_type ${_teacher_valid_dir}/durations,durations,text_int "
+        fi
+
+        if "${use_xvector}"; then
+            _xvector_train_dir="${dumpdir}/xvector/${train_set}"
+            _xvector_valid_dir="${dumpdir}/xvector/${valid_set}"
+            _opts+="--train_data_path_and_name_and_type ${_xvector_train_dir}/xvector.scp,spembs,kaldi_ark "
+            _opts+="--valid_data_path_and_name_and_type ${_xvector_valid_dir}/xvector.scp,spembs,kaldi_ark "
+        fi
+
+        if "${use_sid}"; then
+            _opts+="--train_data_path_and_name_and_type ${_train_dir}/utt2sid,sids,text_int "
+            _opts+="--valid_data_path_and_name_and_type ${_valid_dir}/utt2sid,sids,text_int "
+        fi
+
+        if "${use_lid}"; then
+            _opts+="--train_data_path_and_name_and_type ${_train_dir}/utt2lid,lids,text_int "
+            _opts+="--valid_data_path_and_name_and_type ${_valid_dir}/utt2lid,lids,text_int "
+        fi
+
+        # 1. Split the key file
+        _logdir="${svs_stats_dir}/logdir"
+        mkdir -p "${_logdir}"
+
+
+        # Get the minimum number among ${nj} and the number lines of input files
+        _nj=$(min "${nj}" "$(<${_train_dir}/${_scp} wc -l)" "$(<${_valid_dir}/${_scp} wc -l)")
+
+        key_file="${_train_dir}/${_scp}"
+        split_scps=""
+        for n in $(seq "${_nj}"); do
+            split_scps+=" ${_logdir}/train.${n}.scp"
+        done
+        # shellcheck disable=SC2086
+        utils/split_scp.pl "${key_file}" ${split_scps}
+
+        key_file="${_valid_dir}/${_scp}"
+        split_scps=""
+        for n in $(seq "${_nj}"); do
+            split_scps+=" ${_logdir}/valid.${n}.scp"
+        done
+        # shellcheck disable=SC2086
+        utils/split_scp.pl "${key_file}" ${split_scps}
+
+        # 2. Generate run.sh
+        log "Generate '${svs_stats_dir}/run.sh'. You can resume the process from stage 5 using this script"
+        mkdir -p "${svs_stats_dir}"; echo "${run_args} --stage 5 \"\$@\"; exit \$?" > "${svs_stats_dir}/run.sh"; chmod +x "${svs_stats_dir}/run.sh"
+
+
+        # 3. Submit jobs
+        log "SVS collect_stats started... log: '${_logdir}/stats.*.log'"
+        # shellcheck disable=SC2086
+        ${train_cmd} JOB=1:"${_nj}" "${_logdir}"/stats.JOB.log \
+            ${python} -m "muskit.bin.${svs_task}_train" \
+                --collect_stats true \
+                --write_collected_feats "${write_collected_feats}" \
+                --use_preprocessor true \
+                --token_type "${token_type}" \
+                --token_list "${token_list}" \
+                --non_linguistic_symbols "${nlsyms_txt}" \
+                --cleaner "${cleaner}" \
+                --g2p "${g2p}" \
+                --normalize none \
+                --pitch_normalize none \
+                --energy_normalize none \
+                --train_data_path_and_name_and_type "${_train_dir}/text,text,text" \
+                --train_data_path_and_name_and_type "${_train_dir}/label,label,duration" \
+                --train_data_path_and_name_and_type "${_train_dir}/midi.scp,midi,midi" \
+                --train_data_path_and_name_and_type "${_train_dir}/${_scp},singing,${_type}" \
+                --valid_data_path_and_name_and_type "${_valid_dir}/text,text,text" \
+                --valid_data_path_and_name_and_type "${_valid_dir}/label,label,duration" \
+                --valid_data_path_and_name_and_type "${_valid_dir}/midi.scp,midi,midi" \
+                --valid_data_path_and_name_and_type "${_valid_dir}/${_scp},singing,${_type}" \
+                --train_shape_file "${_logdir}/train.JOB.scp" \
+                --valid_shape_file "${_logdir}/valid.JOB.scp" \
+                --output_dir "${_logdir}/stats.JOB" \
+                ${_opts} ${train_args} || { cat "${_logdir}"/stats.1.log; exit 1; }
+
+        # 4. Aggregate shape files
+        _opts=
+        for i in $(seq "${_nj}"); do
+            _opts+="--input_dir ${_logdir}/stats.${i} "
+        done
+        ${python} -m muskit.bin.aggregate_stats_dirs ${_opts} --output_dir "${svs_stats_dir}"
+
+        # Append the num-tokens at the last dimensions. This is used for batch-bins count
+        <"${svs_stats_dir}/train/text_shape" \
+            awk -v N="$(<${token_list} wc -l)" '{ print $0 "," N }' \
+            >"${svs_stats_dir}/train/text_shape.${token_type}"
+
+        <"${svs_stats_dir}/valid/text_shape" \
+            awk -v N="$(<${token_list} wc -l)" '{ print $0 "," N }' \
+            >"${svs_stats_dir}/valid/text_shape.${token_type}"
+    fi
+
+
+
+    if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
+        _train_dir="${data_feats}/${train_set}"
+        _valid_dir="${data_feats}/${valid_set}"
+        log "Stage 6: SVS Training: train_set=${_train_dir}, valid_set=${_valid_dir}"
+
+        _opts=
+        if [ -n "${train_config}" ]; then
+            # To generate the config file: e.g.
+            #   % python3 -m muskit.bin.svs_train --print_config --optim adam
+            _opts+="--config ${train_config} "
+        fi
+
+        if [ -z "${teacher_dumpdir}" ]; then
+            #####################################
+            #     CASE 1: AR model training     #
+            #####################################
+            _scp=wav.scp
+            # "sound" supports "wav", "flac", etc.
+            _type=sound
+            _fold_length="$((singing_fold_length * n_shift))"
+            _opts+="--feats_extract ${feats_extract} "
+            _opts+="--feats_extract_conf n_fft=${n_fft} "
+            _opts+="--feats_extract_conf hop_length=${n_shift} "
+            _opts+="--feats_extract_conf win_length=${win_length} "
+            if [ "${feats_extract}" = fbank ]; then
+                _opts+="--feats_extract_conf fs=${fs} "
+                _opts+="--feats_extract_conf fmin=${fmin} "
+                _opts+="--feats_extract_conf fmax=${fmax} "
+                _opts+="--feats_extract_conf n_mels=${n_mels} "
+            fi
+
+            if [ "${num_splits}" -gt 1 ]; then
+                # If you met a memory error when parsing text files, this option may help you.
+                # The corpus is split into subsets and each subset is used for training one by one in order,
+                # so the memory footprint can be limited to the memory required for each dataset.
+
+                _split_dir="${svs_stats_dir}/splits${num_splits}"
+                if [ ! -f "${_split_dir}/.done" ]; then
+                    rm -f "${_split_dir}/.done"
+                    ${python} -m muskit.bin.split_scps \
+                      --scps \
+                          "${_train_dir}/text" \
+                          "${_train_dir}/${_scp}" \
+                          "${svs_stats_dir}/train/singing_shape" \
+                          "${svs_stats_dir}/train/text_shape.${token_type}" \
+                      --num_splits "${num_splits}" \
+                      --output_dir "${_split_dir}"
+                    touch "${_split_dir}/.done"
+                else
+                    log "${_split_dir}/.done exists. Spliting is skipped"
+                fi
+
+                _opts+="--train_data_path_and_name_and_type ${_split_dir}/text,text,text "
+                _opts+="--train_data_path_and_name_and_type ${_split_dir}/${_scp},singing,${_type} "
+                _opts+="--train_shape_file ${_split_dir}/text_shape.${token_type} "
+                _opts+="--train_shape_file ${_split_dir}/singing_shape "
+                _opts+="--multiple_iterator true "
+
+            else
+                _opts+="--train_data_path_and_name_and_type ${_train_dir}/text,text,text "
+                _opts+="--train_data_path_and_name_and_type ${_train_dir}/${_scp},singing,${_type} "
+                _opts+="--train_shape_file ${svs_stats_dir}/train/text_shape.${token_type} "
+                _opts+="--train_shape_file ${svs_stats_dir}/train/singing_shape "
+            fi
+            _opts+="--valid_data_path_and_name_and_type ${_valid_dir}/text,text,text "
+            _opts+="--valid_data_path_and_name_and_type ${_valid_dir}/${_scp},singing,${_type} "
+            _opts+="--valid_shape_file ${svs_stats_dir}/valid/text_shape.${token_type} "
+            _opts+="--valid_shape_file ${svs_stats_dir}/valid/singing_shape "
+        else
+
+            #####################################
+            #   CASE 2: Non-AR model training   #
+            #####################################
+            _teacher_train_dir="${teacher_dumpdir}/${train_set}"
+            _teacher_valid_dir="${teacher_dumpdir}/${valid_set}"
+            _fold_length="${singing_fold_length}"
+            _opts+="--train_data_path_and_name_and_type ${_train_dir}/text,text,text "
+            _opts+="--train_data_path_and_name_and_type ${_teacher_train_dir}/durations,durations,text_int "
+            _opts+="--train_shape_file ${svs_stats_dir}/train/text_shape.${token_type} "
+            _opts+="--valid_data_path_and_name_and_type ${_valid_dir}/text,text,text "
+            _opts+="--valid_data_path_and_name_and_type ${_teacher_valid_dir}/durations,durations,text_int "
+            _opts+="--valid_shape_file ${svs_stats_dir}/valid/text_shape.${token_type} "
+
+            if [ -e ${_teacher_train_dir}/probs ]; then
+                # Knowledge distillation case: use the outputs of the teacher model as the target
+                _scp=feats.scp
+                _type=npy
+                _odim="$(head -n 1 "${_teacher_train_dir}/singing_shape" | cut -f 2 -d ",")"
+                _opts+="--odim=${_odim} "
+                _opts+="--train_data_path_and_name_and_type ${_teacher_train_dir}/denorm/${_scp},singing,${_type} "
+                _opts+="--train_shape_file ${_teacher_train_dir}/singing_shape "
+                _opts+="--valid_data_path_and_name_and_type ${_teacher_valid_dir}/denorm/${_scp},singing,${_type} "
+                _opts+="--valid_shape_file ${_teacher_valid_dir}/singing_shape "
+            else
+                # Teacher forcing case: use groundtruth as the target
+                _scp=wav.scp
+                _type=sound
+                _fold_length="$((singing_fold_length * n_shift))"
+                _opts+="--feats_extract ${feats_extract} "
+                _opts+="--feats_extract_conf n_fft=${n_fft} "
+                _opts+="--feats_extract_conf hop_length=${n_shift} "
+                _opts+="--feats_extract_conf win_length=${win_length} "
+                if [ "${feats_extract}" = fbank ]; then
+                    _opts+="--feats_extract_conf fs=${fs} "
+                    _opts+="--feats_extract_conf fmin=${fmin} "
+                    _opts+="--feats_extract_conf fmax=${fmax} "
+                    _opts+="--feats_extract_conf n_mels=${n_mels} "
+                fi
+                _opts+="--train_data_path_and_name_and_type ${_train_dir}/${_scp},singing,${_type} "
+                _opts+="--train_shape_file ${svs_stats_dir}/train/singing_shape "
+                _opts+="--valid_data_path_and_name_and_type ${_valid_dir}/${_scp},singing,${_type} "
+                _opts+="--valid_shape_file ${svs_stats_dir}/valid/singing_shape "
+            fi
+        fi
+
+
+        # If there are dumped files of additional inputs, we use it to reduce computational cost
+        # NOTE (kan-bayashi): Use dumped files of the target features as well?
+        if [ -e "${svs_stats_dir}/train/collect_feats/pitch.scp" ]; then
+            _scp=pitch.scp
+            _type=npy
+            _train_collect_dir=${svs_stats_dir}/train/collect_feats
+            _valid_collect_dir=${svs_stats_dir}/valid/collect_feats
+            _opts+="--train_data_path_and_name_and_type ${_train_collect_dir}/${_scp},pitch,${_type} "
+            _opts+="--valid_data_path_and_name_and_type ${_valid_collect_dir}/${_scp},pitch,${_type} "
+        fi
+        if [ -e "${svs_stats_dir}/train/collect_feats/energy.scp" ]; then
+            _scp=energy.scp
+            _type=npy
+            _train_collect_dir=${svs_stats_dir}/train/collect_feats
+            _valid_collect_dir=${svs_stats_dir}/valid/collect_feats
+            _opts+="--train_data_path_and_name_and_type ${_train_collect_dir}/${_scp},energy,${_type} "
+            _opts+="--valid_data_path_and_name_and_type ${_valid_collect_dir}/${_scp},energy,${_type} "
+        fi
+
+        # Check extra statistics
+        if [ -e "${svs_stats_dir}/train/pitch_stats.npz" ]; then
+            _opts+="--pitch_extract_conf fs=${fs} "
+            _opts+="--pitch_extract_conf n_fft=${n_fft} "
+            _opts+="--pitch_extract_conf hop_length=${n_shift} "
+            _opts+="--pitch_extract_conf f0max=${f0max} "
+            _opts+="--pitch_extract_conf f0min=${f0min} "
+            _opts+="--pitch_normalize_conf stats_file=${svs_stats_dir}/train/pitch_stats.npz "
+        fi
+        if [ -e "${svs_stats_dir}/train/energy_stats.npz" ]; then
+            _opts+="--energy_extract_conf fs=${fs} "
+            _opts+="--energy_extract_conf n_fft=${n_fft} "
+            _opts+="--energy_extract_conf hop_length=${n_shift} "
+            _opts+="--energy_extract_conf win_length=${win_length} "
+            _opts+="--energy_normalize_conf stats_file=${svs_stats_dir}/train/energy_stats.npz "
+        fi
+
+
+        # Add X-vector to the inputs if needed
+        if "${use_xvector}"; then
+            _xvector_train_dir="${dumpdir}/xvector/${train_set}"
+            _xvector_valid_dir="${dumpdir}/xvector/${valid_set}"
+            _opts+="--train_data_path_and_name_and_type ${_xvector_train_dir}/xvector.scp,spembs,kaldi_ark "
+            _opts+="--valid_data_path_and_name_and_type ${_xvector_valid_dir}/xvector.scp,spembs,kaldi_ark "
+        fi
+
+        # Add spekaer ID to the inputs if needed
+        if "${use_sid}"; then
+            _opts+="--train_data_path_and_name_and_type ${_train_dir}/utt2sid,sids,text_int "
+            _opts+="--valid_data_path_and_name_and_type ${_valid_dir}/utt2sid,sids,text_int "
+        fi
+
+        # Add language ID to the inputs if needed
+        if "${use_lid}"; then
+            _opts+="--train_data_path_and_name_and_type ${_train_dir}/utt2lid,lids,text_int "
+            _opts+="--valid_data_path_and_name_and_type ${_valid_dir}/utt2lid,lids,text_int "
+        fi
+
+        if [ "${feats_normalize}" = "global_mvn" ]; then
+            _opts+="--normalize_conf stats_file=${svs_stats_dir}/train/feats_stats.npz "
+        fi
+
+        log "Generate '${svs_exp}/run.sh'. You can resume the process from stage 6 using this script"
+        mkdir -p "${svs_exp}"; echo "${run_args} --stage 6 \"\$@\"; exit \$?" > "${svs_exp}/run.sh"; chmod +x "${svs_exp}/run.sh"
+
+        # NOTE(kamo): --fold_length is used only if --batch_type=folded and it's ignored in the other case
+
+        log "SVS training started... log: '${svs_exp}/train.log'"
+        if echo "${cuda_cmd}" | grep -e queue.pl -e queue-freegpu.pl &> /dev/null; then
+            # SGE can't include "/" in a job name
+            jobname="$(basename ${svs_exp})"
+        else
+            jobname="${svs_exp}/train.log"
+        fi
+
+        # shellcheck disable=SC2086
+        ${python} -m muskit.bin.launch \
+            --cmd "${cuda_cmd} --name ${jobname}" \
+            --log "${svs_exp}"/train.log \
+            --ngpu "${ngpu}" \
+            --num_nodes "${num_nodes}" \
+            --init_file_prefix "${svs_exp}"/.dist_init_ \
+            --multiprocessing_distributed true -- \
+            ${python} -m "muskit.bin.${svs_task}_train" \
+                --use_preprocessor true \
+                --token_type "${token_type}" \
+                --token_list "${token_list}" \
+                --non_linguistic_symbols "${nlsyms_txt}" \
+                --cleaner "${cleaner}" \
+                --g2p "${g2p}" \
+                --normalize "${feats_normalize}" \
+                --resume true \
+                --fold_length "${text_fold_length}" \
+                --fold_length "${_fold_length}" \
+                --output_dir "${svs_exp}" \
+                ${_opts} ${train_args}
+
+    fi
+else
+    log "Skip training stages"
+fi
+
 ### TODO: other stages
 
 log "Successfully finished. [elapsed=${SECONDS}s]"

@@ -59,7 +59,7 @@ def get_subsequence(start_time, end_time, seq, rate):
 
 
 def segmentation(
-    key, segment_begin, segment_end, args_fs, args_outdir, rate, wave, note_seq
+    key, segment_begin, segment_end, args_fs, args_outdir, rate, wave, note_seq, tempo_seq
 ):
 
     out_wavscp = Path(args_outdir) / "wav.scp"
@@ -75,6 +75,7 @@ def segmentation(
 
     sub_wav = get_subsequence(segment_begin, segment_end, wave, rate)
     sub_note = get_subsequence(segment_begin, segment_end, note_seq, rate)
+    sub_tempo = get_subsequence(segment_begin, segment_end, tempo_seq, rate)
 
     wav_writer = SoundScpWriter(
         out_wavdir,
@@ -84,7 +85,7 @@ def segmentation(
     midi_writer = MIDIScpWriter(out_mididir, out_midiscp, format="midi", rate=args_fs)
 
     wav_writer[key] = int(rate), sub_wav
-    midi_writer[key] = sub_note
+    midi_writer[key] = sub_note, sub_tempo
 
 
 if __name__ == "__main__":
@@ -152,7 +153,7 @@ if __name__ == "__main__":
         segment_end = val[-1][1]
         uttid, seg_id = key.split("_")
         rate, wave = wav_reader[uttid]
-        note_seq = midi_reader[uttid]
+        note_seq, tempo_seq = midi_reader[uttid]
         segmentation(
-            key, segment_begin, segment_end, args.fs, args.outdir, rate, wave, note_seq
+            key, segment_begin, segment_end, args.fs, args.outdir, rate, wave, note_seq, tempo_seq
         )

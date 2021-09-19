@@ -1,4 +1,3 @@
-
 from pathlib import Path
 from typing import Dict
 
@@ -7,8 +6,8 @@ import kaldiio
 import numpy
 import soundfile
 
-from espnet.utils.cli_utils import assert_scipy_wav_style
-from espnet.utils.io_utils import SoundHDF5File
+from muskit.utils.cli_utils import assert_scipy_wav_style
+from muskit.utils.io_utils import SoundHDF5File
 
 
 def file_writer_helper(
