@@ -44,6 +44,7 @@ requirements = {
         # TTS related
         "pyworld>=0.2.10",
         "torch_complex",
+        "g2p_en"
     ],
     "recipe": [
         "gdown",
