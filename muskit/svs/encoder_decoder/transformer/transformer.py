@@ -1,4 +1,5 @@
 # Copyright 2020 Nagoya University (Tomoki Hayashi)
+#           2021 Carnegie Mellon University (Jiatong Shi)
 #  Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
 
 """Transformer-SVS related modules."""
