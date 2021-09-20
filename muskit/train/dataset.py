@@ -120,6 +120,7 @@ def sound_loader(path, float_dtype=None):
     # but ndarray is desired, so Adapter class is inserted here
     return AdapterForSoundScpReader(loader, float_dtype)
 
+
 def midi_loader(path, float_dtype=None):
     # The file is as follows:
     #   utterance_id_A /some/where/a.mid
@@ -130,6 +131,7 @@ def midi_loader(path, float_dtype=None):
     # MIDIScpReader.__getitem__() returns ndarray
     return AdapterForSoundScpReader(loader, float_dtype)
 
+
 def label_loader(path, float_dtype=None):
     # The file is as follows:
     #   utterance_id_A /some/where/a.mid
@@ -139,6 +141,7 @@ def label_loader(path, float_dtype=None):
 
     # MIDIScpReader.__getitem__() returns ndarray
     return AdapterForSoundScpReader(loader, float_dtype)
+
 
 def kaldi_loader(path, float_dtype=None, max_cache_fd: int = 0):
     loader = kaldiio.load_scp(path, max_cache_fd=max_cache_fd)

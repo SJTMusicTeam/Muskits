@@ -25,9 +25,10 @@ def get_tick_to_time_mapping(ticks_per_beat, tempo_changes, max_tick=np.int(1e6)
 
         # wrtie interval
         ticks = np.arange(end_tick - start_tick + 1)
-        tick_to_time[start_tick:end_tick + 1] = (acc_time + seconds_per_tick *ticks)
+        tick_to_time[start_tick : end_tick + 1] = acc_time + seconds_per_tick * ticks
         acc_time = tick_to_time[end_tick]
     return tick_to_time
+
 
 def midi_to_seq(midi_obj, dtype=np.int16, rate=22050):
     """method for midi_obj.
@@ -46,22 +47,27 @@ def midi_to_seq(midi_obj, dtype=np.int16, rate=22050):
     for i in range(len(notes)):
         st = int(tick_to_time[notes[i].start] * rate)
         ed = int(tick_to_time[notes[i].end] * rate)
-        note_seq[st:ed+1] = notes[i].pitch
-    
+        note_seq[st : ed + 1] = notes[i].pitch
+
     tempos = midi_obj.tempo_changes
-    tempos.sort(key=lambda x: (x.time, x.tempo) )
+    tempos.sort(key=lambda x: (x.time, x.tempo))
     tempo_seq = np.zeros(int(rate * max_time), dtype=dtype)
-    for i in range(len(tempos)-1):
+    for i in range(len(tempos) - 1):
         st = int(tick_to_time[tempos[i].time] * rate)
-        ed = int(tick_to_time[tempos[i+1].time] * rate)
-        tempo_seq[st:ed] = int(tempos[i].tempo+0.5)
+        ed = int(tick_to_time[tempos[i + 1].time] * rate)
+        tempo_seq[st:ed] = int(tempos[i].tempo + 0.5)
     st = int(tick_to_time[tempos[-1].time] * rate)
-    tempo_seq[st:] = int(tempos[-1].tempo+0.5)
+    tempo_seq[st:] = int(tempos[-1].tempo + 0.5)
     return note_seq, tempo_seq
 
 
 def seq_to_midi(
-    note_seq, tempo_seq, rate=22050, DEFAULT_RESOLUTION=480, DEFAULT_TEMPO=120, DEFAULT_VELOCITY=64
+    note_seq,
+    tempo_seq,
+    rate=22050,
+    DEFAULT_RESOLUTION=480,
+    DEFAULT_TEMPO=120,
+    DEFAULT_VELOCITY=64,
 ):
     """method for note_seq.
     Input:
@@ -82,16 +88,14 @@ def seq_to_midi(
     acc_tick = 0
     while i < len(temp_tempos):
         bpm = temp_tempos[i]
-        if bpm == 0 :
+        if bpm == 0:
             bpm = DEFAULT_TEMPO
         ticks_per_second = DEFAULT_RESOLUTION * bpm / 60
         j = i
         while j + 1 < len(temp_tempos) and temp_tempos[j + 1] == bpm:
             j += 1
-        tempos.append(
-            miditoolkit.midi.containers.TempoChange(bpm, acc_tick)
-        )
-        acc_tick += int(( j - last_i + 1)   * ticks_per_second / rate)
+        tempos.append(miditoolkit.midi.containers.TempoChange(bpm, acc_tick))
+        acc_tick += int((j - last_i + 1) * ticks_per_second / rate)
         last_i = j
         i = j + 1
     tick_to_time = get_tick_to_time_mapping(ticks_per_beat, tempos)
@@ -106,16 +110,16 @@ def seq_to_midi(
             j += 1
         st = i / rate
         ed = j / rate
-        
+
         start = np.searchsorted(tick_to_time, st, "left")
         end = np.searchsorted(tick_to_time, ed, "left")
-        if pitch > 0 and pitch <=128:
+        if pitch > 0 and pitch <= 128:
             notes.append(
                 miditoolkit.midi.containers.Note(
-                    start = start, end=end, pitch=pitch, velocity=DEFAULT_VELOCITY
+                    start=start, end=end, pitch=pitch, velocity=DEFAULT_VELOCITY
                 )
             )
-        
+
         i = j + 1
 
     # write
@@ -128,6 +132,8 @@ def seq_to_midi(
     # write tempo
     midi.tempo_changes = tempos
     return midi
+
+
 # if __name__ == "__main__":
 #     path = '/data3/qt/songmass/output_res_prev/attn_model_0_music_to_music.mid'
 #     midi_obj = miditoolkit.midi.parser.MidiFile(path)

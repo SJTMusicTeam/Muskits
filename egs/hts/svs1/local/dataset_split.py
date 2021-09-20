@@ -62,7 +62,7 @@ if __name__ == "__main__":
     makedir(data_vaild_url)
     makedir(data_test_url)
 
-    dataset = find_files_by_extensions(source_root_url, exts=['.wav'])
+    dataset = find_files_by_extensions(source_root_url, exts=[".wav"])
     # print(dataset)
     # exit(0)
     dev = int(len(dataset) * args.dev)

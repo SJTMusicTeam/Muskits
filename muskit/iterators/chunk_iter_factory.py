@@ -18,6 +18,7 @@ from typeguard import check_argument_types
 
 from muskit.iterators.abs_iter_factory import AbsIterFactory
 from muskit.iterators.sequence_iter_factory import SequenceIterFactory
+from muskit.samplers.abs_sampler import AbsSampler
 
 
 class ChunkIterFactory(AbsIterFactory):
