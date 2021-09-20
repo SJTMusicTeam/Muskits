@@ -31,7 +31,7 @@ from typeguard import check_return_type
 import wandb
 import yaml
 
-from muskit import __version__
+# from muskit import __version__
 from muskit.iterators.abs_iter_factory import AbsIterFactory
 from muskit.iterators.chunk_iter_factory import ChunkIterFactory
 from muskit.iterators.multiple_iter_factory import MultipleIterFactory
@@ -953,7 +953,7 @@ class AbsTask(ABC):
         if args is None:
             parser = cls.get_parser()
             args = parser.parse_args(cmd)
-        args.version = __version__
+        # args.version = __version__
         if args.pretrain_path is not None:
             raise RuntimeError("--pretrain_path is deprecated. Use --init_param")
         if args.print_config:
