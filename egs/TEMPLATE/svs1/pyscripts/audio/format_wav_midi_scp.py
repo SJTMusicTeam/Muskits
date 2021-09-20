@@ -59,7 +59,15 @@ def get_subsequence(start_time, end_time, seq, rate):
 
 
 def segmentation(
-    key, segment_begin, segment_end, args_fs, args_outdir, rate, wave, note_seq, tempo_seq
+    key,
+    segment_begin,
+    segment_end,
+    args_fs,
+    args_outdir,
+    rate,
+    wave,
+    note_seq,
+    tempo_seq,
 ):
 
     out_wavscp = Path(args_outdir) / "wav.scp"
@@ -155,5 +163,13 @@ if __name__ == "__main__":
         rate, wave = wav_reader[uttid]
         note_seq, tempo_seq = midi_reader[uttid]
         segmentation(
-            key, segment_begin, segment_end, args.fs, args.outdir, rate, wave, note_seq, tempo_seq
+            key,
+            segment_begin,
+            segment_end,
+            args.fs,
+            args.outdir,
+            rate,
+            wave,
+            note_seq,
+            tempo_seq,
         )

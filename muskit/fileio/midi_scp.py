@@ -10,6 +10,7 @@ import miditoolkit
 from muskit.fileio.read_text import read_2column_text
 from muskit.fileio.utils import midi_to_seq, seq_to_midi
 
+
 class MIDIScpReader(collections.abc.Mapping):
     """Reader class for 'midi.scp'.
     Examples:
@@ -39,7 +40,7 @@ class MIDIScpReader(collections.abc.Mapping):
     def __getitem__(self, key):
         # return miditoolkit.midi.parser.MidiFile(self.data[key])
         midi_obj = miditoolkit.midi.parser.MidiFile(self.data[key])
-        
+
         if self.rep == "representation":
             note_seq, tempo_seq = midi_to_seq(midi_obj, self.dtype, self.rate)
         return note_seq, tempo_seq
@@ -117,9 +118,8 @@ class MIDIScpWriter:
     def close(self):
         self.fscp.close()
 
+
 # if __name__ == "__main__":
 #     path = '/data3/qt/songmass/output_res_prev/alb_esp1_format0.mid'
 #     midi_obj = miditoolkit.midi.parser.MidiFile(path)
 #     note_seq, tempo_seq = midi_to_seq(midi_obj, np.int16, np.int16(16000) )
-
-

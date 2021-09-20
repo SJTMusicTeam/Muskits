@@ -64,7 +64,7 @@ class NaiveRNN(AbsSVS):
         spk_embed_integration_type: str = "add",
         eprenet_dropout_rate: float = 0.5,
         edropout_rate: float = 0.1,
-        ddropout_rate: float = 0.1, 
+        ddropout_rate: float = 0.1,
         postnet_dropout_rate: float = 0.5,
         init_type: str = "xavier_uniform",
         init_enc_alpha: float = 1.0,
@@ -133,11 +133,14 @@ class NaiveRNN(AbsSVS):
             self.midi_input_layer = torch.nn.Embedding(
                 num_embeddings=idim, embedding_dim=eunits, padding_idx=self.padding_idx
             )
-        
-        
+
         self.encoder = torch.nn.LSTM(
-            input_size=eunits, hidden_size=eunits, num_layers=elayers,
-            batch_first=True, dropout=edropout_rate, bidirectional=ebidirectional,
+            input_size=eunits,
+            hidden_size=eunits,
+            num_layers=elayers,
+            batch_first=True,
+            dropout=edropout_rate,
+            bidirectional=ebidirectional,
             proj_size=eunits,
         )
 
@@ -147,8 +150,12 @@ class NaiveRNN(AbsSVS):
             self.midi_projection = torch.nn.linear(2 * eunits, eunits)
 
         self.decoder = torch.nn.LSTM(
-            input_size=dunits, hidden_size=dunits, num_layers=dlayers,
-            batch_first=True, dropout=ddropout_rate, bidirectional=dbidirectional,
+            input_size=dunits,
+            hidden_size=dunits,
+            num_layers=dlayers,
+            batch_first=True,
+            dropout=ddropout_rate,
+            bidirectional=dbidirectional,
             proj_size=dunits,
         )
 
@@ -245,8 +252,8 @@ class NaiveRNN(AbsSVS):
         """
         text = text[:, : text_lengths.max()]  # for data-parallel
         feats = feats[:, : feats_lengths.max()]  # for data-parallel
-        midi = midi[:, : feats_lengths.max()] # for data-parallel
-        label = midi[:, : label_lengths.max()] # for data-parallel
+        midi = midi[:, : feats_lengths.max()]  # for data-parallel
+        label = midi[:, : label_lengths.max()]  # for data-parallel
         batch_size = text.size(0)
 
         feats_masks = self._source_mask(label_lengths)

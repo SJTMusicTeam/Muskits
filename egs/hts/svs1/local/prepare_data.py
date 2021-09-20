@@ -9,6 +9,7 @@ import pyworld as pw
 import soundfile as sf
 from dio import Dio
 
+
 def _Hz2Semitone(freq):
     """_Hz2Semitone."""
     A4 = 440
@@ -22,6 +23,7 @@ def _Hz2Semitone(freq):
         octave = h // 12
         n = h % 12
         return name[n] + "_" + str(octave)
+
 
 def pack_zero(number, length=4):
     number = str(number)
@@ -221,8 +223,12 @@ def process(args):
             signal = librosa.resample(signal, osr, args.sr)
 
         song_align = os.path.join(args.outdir, "alignment")
-        song_wav = os.path.join(args.outdir, "wav_info", pack_zero(index))#str(index))
-        song_pitch_beat = os.path.join(args.outdir, "pitch_beat_extraction", pack_zero(index))#str(index))
+        song_wav = os.path.join(
+            args.outdir, "wav_info", pack_zero(index)
+        )  # str(index))
+        song_pitch_beat = os.path.join(
+            args.outdir, "pitch_beat_extraction", pack_zero(index)
+        )  # str(index))
 
         if not os.path.exists(song_align):
             os.makedirs(song_align)
@@ -235,18 +241,18 @@ def process(args):
         # f0_floor=f0_min,
         # f0_ceil=f0_max,
         # frame_period=frame_shift * 1000,
-        fs = str(args.sr//1000)+'k'
+        fs = str(args.sr // 1000) + "k"
         _f0_layer = Dio(
-                        n_fft=128,
-                        hop_length=hop_length,
-                        f0min=f0_min,
-                        f0max=f0_max,
-                        fs=fs,
-                        use_continuous_f0=use_continuous_f0,
-                        use_log_f0=use_log_f0,
-                        use_token_averaged_f0=use_token_averaged_f0,
-                        reduction_factor=reduction_factor,
-                    )
+            n_fft=128,
+            hop_length=hop_length,
+            f0min=f0_min,
+            f0max=f0_max,
+            fs=fs,
+            use_continuous_f0=use_continuous_f0,
+            use_log_f0=use_log_f0,
+            use_token_averaged_f0=use_token_averaged_f0,
+            reduction_factor=reduction_factor,
+        )
         for seg in segments.keys():
             alignment = segments[seg]["alignment"]
             start = segments[seg]["start"]
@@ -281,8 +287,6 @@ def process(args):
 
             """extract pitch with espnet"""
 
-
-
             alignment_id = np.zeros((len(alignment)))
             for i in range(len(alignment)):
                 alignment_id[i] = phone_set.index(alignment[i])
@@ -305,10 +309,28 @@ def process(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    HTS='/data3/qt'
-    parser.add_argument("--wavdir", dest="wavdir", type=str, default=HTS+'/HTS-demo_NIT-SONG070-F001/data/raw', help="wav data directory")
-    parser.add_argument("--labdir", dest="labdir", type=str, default=HTS+'/HTS-demo_NIT-SONG070-F001/data/labels/mono', help="label data directory")
-    parser.add_argument("--outdir", dest="outdir", type=str, default='data/local/raw', help="output directory")
+    HTS = "/data3/qt"
+    parser.add_argument(
+        "--wavdir",
+        dest="wavdir",
+        type=str,
+        default=HTS + "/HTS-demo_NIT-SONG070-F001/data/raw",
+        help="wav data directory",
+    )
+    parser.add_argument(
+        "--labdir",
+        dest="labdir",
+        type=str,
+        default=HTS + "/HTS-demo_NIT-SONG070-F001/data/labels/mono",
+        help="label data directory",
+    )
+    parser.add_argument(
+        "--outdir",
+        dest="outdir",
+        type=str,
+        default="data/local/raw",
+        help="output directory",
+    )
     # parser.add_argument("wavdir", type=str, help="wav data directory")
     # parser.add_argument("labdir", type=str, help="label data directory")
     # parser.add_argument("outdir", type=str, help="output directory")
@@ -319,7 +341,7 @@ if __name__ == "__main__":
         "--shift_size", type=float, default=30, help="shift size in miliseconds"
     )
     parser.add_argument("--sr", type=int, default=48000)
-    parser.add_argument("--sil", nargs="+", default=['pau', 'sil'])
+    parser.add_argument("--sil", nargs="+", default=["pau", "sil"])
     parser.add_argument(
         "--label_type",
         type=str,
@@ -328,7 +350,7 @@ if __name__ == "__main__":
         help="label resolution - sample based or second based",
     )
     parser.add_argument("--label_extention", type=str, default=".txt")
-    parser.add_argument("--wav_extention", type=str, default="raw")#default="wav")
+    parser.add_argument("--wav_extention", type=str, default="raw")  # default="wav")
     args = parser.parse_args()
-    
+
     process(args)

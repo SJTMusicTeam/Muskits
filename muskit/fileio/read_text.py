@@ -105,6 +105,7 @@ def load_label_sequence(path: Union[Path, str]) -> Dict[str, List[Union[float, i
             raise
     return retval
 
+
 def read_label(path: Union[Path, str]) -> Dict[str, List[Union[float, int]]]:
     """Read a text file indicating sequences of number
     Examples:
@@ -115,8 +116,7 @@ def read_label(path: Union[Path, str]) -> Dict[str, List[Union[float, int]]]:
     """
     assert check_argument_types()
     label = open(path, "r", encoding="utf-8")
-    
-    
+
     retval = {}
     for label_line in label.readlines():
         line = label_line.strip().split()
@@ -129,4 +129,3 @@ def read_label(path: Union[Path, str]) -> Dict[str, List[Union[float, int]]]:
             )
         retval[key] = temp_info
     return retval
-
