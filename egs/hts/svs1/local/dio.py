@@ -42,7 +42,6 @@ class AbsFeatsExtract(torch.nn.Module, ABC):
         raise NotImplementedError
 
 
-
 def pad_list(xs, pad_value):
     """Perform padding for the list of tensors.
     Args:
@@ -67,6 +66,7 @@ def pad_list(xs, pad_value):
         pad[i, : xs[i].size(0)] = xs[i]
 
     return pad
+
 
 class Dio(AbsFeatsExtract):
     """F0 estimation with dio + stonemask algorithm.
@@ -225,6 +225,7 @@ class Dio(AbsFeatsExtract):
             for start, end in zip(d_cumsum[:-1], d_cumsum[1:])
         ]
         return torch.stack(x_avg)
+
 
 if __name__ == "__main__":
     pass

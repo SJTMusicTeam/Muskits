@@ -39,7 +39,6 @@ gpu_inference=false  # Whether to perform gpu decoding.
 dumpdir=dump         # Directory to dump features.
 expdir=exp           # Directory to save experiments.
 python=python3       # Specify python to execute muskit commands.
-svs_task=svs
 
 # Data preparation related
 local_data_opts="" # Options to be passed to local/data.sh.
@@ -78,7 +77,9 @@ tag=""             # Suffix for training directory.
 svs_exp=""         # Specify the direcotry path for experiment. If this option is specified, tag is ignored.
 svs_stats_dir=""   # Specify the direcotry path for statistics. If empty, automatically decided.
 num_splits=1       # Number of splitting for svs corpus.
+teacher_dumpdir="" # Directory of teacher outpus
 write_collected_feats=false # Whether to dump features in stats collection.
+svs_task=svs                # SVS task (svs or gan_svs, now only support svs)
 
 # Decoding related
 inference_config="" # Config for decoding.
@@ -102,7 +103,7 @@ test_sets=""     # Names of test sets. Multiple items (e.g., both dev and eval s
 srctexts=""      # Texts to create token list. Multiple items can be specified.
 nlsyms_txt=none  # Non-linguistic symbol list (needed if existing).
 token_type=phn   # Transcription type.
-cleaner=tacotron # Text cleaner.
+cleaner=none     # Text cleaner.
 g2p=g2p_en       # g2p method (needed if token_type=phn).
 lang=noinfo      # The language type of corpus.
 text_fold_length=150   # fold_length for text data.
@@ -163,7 +164,9 @@ Options:
     --svs_stats_dir # Specify the direcotry path for statistics.
                     # If empty, automatically decided (default="${svs_stats_dir}").
     --num_splits    # Number of splitting for svs corpus (default="${num_splits}").
+    --teacher_dumpdir       # Direcotry of teacher outputs
     --write_collected_feats # Whether to dump features in statistics collection (default="${write_collected_feats}").
+    --svs_task              # SVS task (svs or gan_svs, now only support svs)
 
     # Decoding related
     --inference_config  # Config for decoding (default="${inference_config}").
@@ -506,12 +509,12 @@ if ! "${skip_train}"; then
         _opts+="--energy_extract_conf hop_length=${n_shift} "
         _opts+="--energy_extract_conf win_length=${win_length} "
 
-        # if [ -n "${teacher_dumpdir}" ]; then
-        #     _teacher_train_dir="${teacher_dumpdir}/${train_set}"
-        #     _teacher_valid_dir="${teacher_dumpdir}/${valid_set}"
-        #     _opts+="--train_data_path_and_name_and_type ${_teacher_train_dir}/durations,durations,text_int "
-        #     _opts+="--valid_data_path_and_name_and_type ${_teacher_valid_dir}/durations,durations,text_int "
-        # fi
+        if [ -n "${teacher_dumpdir}" ]; then
+            _teacher_train_dir="${teacher_dumpdir}/${train_set}"
+            _teacher_valid_dir="${teacher_dumpdir}/${valid_set}"
+            _opts+="--train_data_path_and_name_and_type ${_teacher_train_dir}/durations,durations,text_int "
+            _opts+="--valid_data_path_and_name_and_type ${_teacher_valid_dir}/durations,durations,text_int "
+        fi
 
         if "${use_xvector}"; then
             _xvector_train_dir="${dumpdir}/xvector/${train_set}"
