@@ -254,7 +254,7 @@ class Tacotron2Loss(torch.nn.Module):
 
 
 # TODO
-class Tacotron2(AbsSVS):
+class ByteSing(AbsSVS):
     """Tacotron2 module for end-to-end text-to-speech.
     This is a module of Spectrogram prediction network in Tacotron2 described
     in `Natural TTS Synthesis by Conditioning WaveNet on Mel Spectrogram Predictions`_,
