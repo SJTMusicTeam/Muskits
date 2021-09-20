@@ -9,7 +9,10 @@ import logging
 import numpy as np
 import torch
 import torch.nn.functional as F
-
+from typing import Optional
+from typing import Sequence
+from typing import Tuple
+from typing import Dict
 
 from muskit.torch_utils.nets_utils import make_pad_mask
 from muskit.layers.rnn.attentions import AttForward

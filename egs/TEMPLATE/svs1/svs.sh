@@ -39,6 +39,7 @@ gpu_inference=false  # Whether to perform gpu decoding.
 dumpdir=dump         # Directory to dump features.
 expdir=exp           # Directory to save experiments.
 python=python3       # Specify python to execute muskit commands.
+svs_task=svs
 
 # Data preparation related
 local_data_opts="" # Options to be passed to local/data.sh.
@@ -505,12 +506,12 @@ if ! "${skip_train}"; then
         _opts+="--energy_extract_conf hop_length=${n_shift} "
         _opts+="--energy_extract_conf win_length=${win_length} "
 
-        if [ -n "${teacher_dumpdir}" ]; then
-            _teacher_train_dir="${teacher_dumpdir}/${train_set}"
-            _teacher_valid_dir="${teacher_dumpdir}/${valid_set}"
-            _opts+="--train_data_path_and_name_and_type ${_teacher_train_dir}/durations,durations,text_int "
-            _opts+="--valid_data_path_and_name_and_type ${_teacher_valid_dir}/durations,durations,text_int "
-        fi
+        # if [ -n "${teacher_dumpdir}" ]; then
+        #     _teacher_train_dir="${teacher_dumpdir}/${train_set}"
+        #     _teacher_valid_dir="${teacher_dumpdir}/${valid_set}"
+        #     _opts+="--train_data_path_and_name_and_type ${_teacher_train_dir}/durations,durations,text_int "
+        #     _opts+="--valid_data_path_and_name_and_type ${_teacher_valid_dir}/durations,durations,text_int "
+        # fi
 
         if "${use_xvector}"; then
             _xvector_train_dir="${dumpdir}/xvector/${train_set}"
