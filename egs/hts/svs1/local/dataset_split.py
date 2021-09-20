@@ -14,8 +14,8 @@ def get_parser():
     )
     parser.add_argument("db_root", type=str, help="source dataset midi folder path")
     parser.add_argument("save_dir", type=str, help="path of dataset split for save")
-    parser.add_argument("dev", type=float, help="absolute size of dev dataset")
-    parser.add_argument("eval1", type=float, help="absolute size of dev dataset")
+    parser.add_argument("dev", type=float, help="relative size of dev dataset")
+    parser.add_argument("eval1", type=float, help="relative size of dev dataset")
     return parser
 
 
@@ -37,9 +37,10 @@ def find_files_by_extensions(root, exts=[]):
 
 def makedir(data_url):
     if os.path.exists(data_url):
-        shutil.rmtree(data_url)
-
-    os.makedirs(data_url)
+        # shutil.rmtree(data_url)
+        pass
+    else:
+        os.makedirs(data_url)
 
 
 if __name__ == "__main__":
@@ -61,7 +62,9 @@ if __name__ == "__main__":
     makedir(data_vaild_url)
     makedir(data_test_url)
 
-    dataset = os.listdir(source_root_url)
+    dataset = find_files_by_extensions(source_root_url, exts=[".wav"])
+    # print(dataset)
+    # exit(0)
     dev = int(len(dataset) * args.dev)
     eval = int(len(dataset) * args.eval1)
     train = len(dataset) - dev - eval
@@ -103,6 +106,6 @@ def transition(dataset, des_url):
         copyfile(midi_path, des_midi)
 
 
-transition(train_set, data_train_url)
-transition(validation_set, data_vaild_url)
+# transition(train_set, data_train_url)
+# transition(validation_set, data_vaild_url)
 transition(test_set, data_test_url)

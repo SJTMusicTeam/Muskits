@@ -25,7 +25,7 @@ class DistributedOption:
     dist_launcher: Optional[str] = None
     multiprocessing_distributed: bool = True
 
-    def init(self):
+    def init_options(self):
         if self.distributed:
             if self.dist_init_method == "env://":
                 if get_master_addr(self.dist_master_addr, self.dist_launcher) is None:
@@ -83,6 +83,8 @@ class DistributedOption:
                         f"tcp://{self.dist_master_addr}:{self.dist_master_port}"
                     )
 
+    def init_torch_distributed(self):
+        if self.distributed:
             # See:
             # https://docs.nvidia.com/deeplearning/sdk/nccl-developer-guide/docs/env.html
             os.environ.setdefault("NCCL_DEBUG", "INFO")
@@ -184,11 +186,9 @@ def _int_or_none(x: Optional[str]) -> Optional[int]:
 
 def free_port():
     """Find free port using bind().
-
     There are some interval between finding this port and using it
     and the other process might catch the port by that time.
     Thus it is not guaranteed that the port is really empty.
-
     """
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.bind(("", 0))
@@ -303,11 +303,9 @@ def get_master_port(prior=None) -> Optional[int]:
 
 def get_node_rank(prior=None, launcher: str = None) -> Optional[int]:
     """Get Node Rank.
-
     Use for "multiprocessing distributed" mode.
     The initial RANK equals to the Node id in this case and
     the real Rank is set as (nGPU * NodeID) + LOCAL_RANK in torch.distributed.
-
     """
     if prior is not None:
         return prior
@@ -336,11 +334,9 @@ def get_node_rank(prior=None, launcher: str = None) -> Optional[int]:
 
 def get_num_nodes(prior=None, launcher: str = None) -> Optional[int]:
     """Get the number of nodes.
-
     Use for "multiprocessing distributed" mode.
     RANK equals to the Node id in this case and
     the real Rank is set as (nGPU * NodeID) + LOCAL_RANK in torch.distributed.
-
     """
     if prior is not None:
         return prior

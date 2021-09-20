@@ -28,7 +28,6 @@ from muskit.layers.transformer.positionwise_feed_forward import (
     PositionwiseFeedForward,  # noqa: H301
 )
 from muskit.layers.transformer.repeat import repeat
-from muskit.nets.scorer_interface import BatchScorerInterface
 
 
 def _pre_hook(
@@ -44,7 +43,7 @@ def _pre_hook(
     rename_state_dict(prefix + "output_norm.", prefix + "after_norm.", state_dict)
 
 
-class Decoder(BatchScorerInterface, torch.nn.Module):
+class Decoder(torch.nn.Module):
     """Transfomer decoder module.
     Args:
         odim (int): Output diminsion.

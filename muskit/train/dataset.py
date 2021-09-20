@@ -28,7 +28,9 @@ from muskit.fileio.rand_gen_dataset import FloatRandomGenerateDataset
 from muskit.fileio.rand_gen_dataset import IntRandomGenerateDataset
 from muskit.fileio.read_text import load_num_sequence_text
 from muskit.fileio.read_text import read_2column_text
+from muskit.fileio.read_text import read_label
 from muskit.fileio.sound_scp import SoundScpReader
+from muskit.fileio.midi_scp import MIDIScpReader
 from muskit.utils.sized_dict import SizedDict
 
 
@@ -119,6 +121,28 @@ def sound_loader(path, float_dtype=None):
     return AdapterForSoundScpReader(loader, float_dtype)
 
 
+def midi_loader(path, float_dtype=None):
+    # The file is as follows:
+    #   utterance_id_A /some/where/a.mid
+    #   utterance_id_B /some/where/b.midi
+
+    loader = MIDIScpReader(path)
+
+    # MIDIScpReader.__getitem__() returns ndarray
+    return AdapterForSoundScpReader(loader, float_dtype)
+
+
+def label_loader(path, float_dtype=None):
+    # The file is as follows:
+    #   utterance_id_A /some/where/a.mid
+    #   utterance_id_B /some/where/b.midi
+
+    loader = read_label(path)
+
+    # MIDIScpReader.__getitem__() returns ndarray
+    return AdapterForSoundScpReader(loader, float_dtype)
+
+
 def kaldi_loader(path, float_dtype=None, max_cache_fd: int = 0):
     loader = kaldiio.load_scp(path, max_cache_fd=max_cache_fd)
     return AdapterForSoundScpReader(loader, float_dtype)
@@ -141,6 +165,26 @@ DATA_TYPES = {
         "\n\n"
         "   utterance_id_a a.wav\n"
         "   utterance_id_b b.wav\n"
+        "   ...",
+    ),
+    # TODO(TaoQian)
+    "midi": dict(
+        func=midi_loader,
+        kwargs=["float_dtype"],
+        help="MIDI format types which supported by sndfile mid, midi, etc."
+        "\n\n"
+        "   utterance_id_a a.mid\n"
+        "   utterance_id_b b.mid\n"
+        "   ...",
+    ),
+    "duration": dict(
+        func=label_loader,
+        kwargs=[],
+        help="Return text as is. The text must be converted to ndarray "
+        "by 'preprocess'."
+        "\n\n"
+        "   utterance_id_A start_time_1 end_time_1 phone_1 start_time_2 end_time_2 phone_2 ...\n"
+        "   utterance_id_B start_time_1 end_time_1 phone_1 start_time_2 end_time_2 phone_2 ...\n"
         "   ...",
     ),
     "kaldi_ark": dict(

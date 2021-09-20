@@ -10,6 +10,12 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
+from typeguard import check_argument_types
+
+from typing import Dict
+from typing import Optional
+from typing import Sequence
+from typing import Tuple
 
 from muskit.torch_utils.nets_utils import make_pad_mask
 from muskit.layers.rnn.attentions import AttForward
@@ -250,7 +256,7 @@ class Tacotron2Loss(torch.nn.Module):
 
 
 # TODO
-class Tacotron2(AbsSVS):
+class ByteSing(AbsSVS):
     """Tacotron2 module for end-to-end text-to-speech.
     This is a module of Spectrogram prediction network in Tacotron2 described
     in `Natural TTS Synthesis by Conditioning WaveNet on Mel Spectrogram Predictions`_,
@@ -501,6 +507,10 @@ class Tacotron2(AbsSVS):
         text_lengths: torch.Tensor,
         feats: torch.Tensor,
         feats_lengths: torch.Tensor,
+        label: torch.Tensor,
+        label_lengths: torch.Tensor,
+        midi: torch.Tensor,
+        midi_lengths: torch.Tensor,
         spembs: Optional[torch.Tensor] = None,
         sids: Optional[torch.Tensor] = None,
         lids: Optional[torch.Tensor] = None,
@@ -508,6 +518,7 @@ class Tacotron2(AbsSVS):
     ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor], torch.Tensor]:
         """Calculate forward propagation.
         Args:
+            TBD
             text (LongTensor): Batch of padded character ids (B, T_text).
             text_lengths (LongTensor): Batch of lengths of each input batch (B,).
             feats (Tensor): Batch of padded target features (B, T_feats, odim).
@@ -630,6 +641,8 @@ class Tacotron2(AbsSVS):
     def inference(
         self,
         text: torch.Tensor,
+        label: torch.Tensor,
+        midi: torch.Tensor,
         feats: Optional[torch.Tensor] = None,
         spembs: Optional[torch.Tensor] = None,
         sids: Optional[torch.Tensor] = None,

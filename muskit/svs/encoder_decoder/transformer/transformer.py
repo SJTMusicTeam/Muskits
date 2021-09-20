@@ -1,4 +1,5 @@
 # Copyright 2020 Nagoya University (Tomoki Hayashi)
+#           2021 Carnegie Mellon University (Jiatong Shi)
 #  Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
 
 """Transformer-SVS related modules."""
@@ -425,6 +426,10 @@ class Transformer(AbsSVS):
         text_lengths: torch.Tensor,
         feats: torch.Tensor,
         feats_lengths: torch.Tensor,
+        label: torch.Tensor,
+        label_lengths: torch.Tensor,
+        midi: torch.Tensor,
+        midi_lengths: torch.Tensor,
         spembs: Optional[torch.Tensor] = None,
         sids: Optional[torch.Tensor] = None,
         lids: Optional[torch.Tensor] = None,
@@ -640,6 +645,8 @@ class Transformer(AbsSVS):
     def inference(
         self,
         text: torch.Tensor,
+        label: torch.Tensor,
+        midi: torch.Tensor,
         feats: Optional[torch.Tensor] = None,
         spembs: Optional[torch.Tensor] = None,
         sids: Optional[torch.Tensor] = None,
