@@ -177,7 +177,7 @@ DATA_TYPES = {
         "   utterance_id_b b.mid\n"
         "   ...",
     ),
-    "label": dict(
+    "duration": dict(
         func=label_loader,
         kwargs=[],
         help="Return text as is. The text must be converted to ndarray "

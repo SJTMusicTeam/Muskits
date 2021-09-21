@@ -2,7 +2,7 @@ import miditoolkit
 import numpy as np
 
 
-def get_tick_to_time_mapping(ticks_per_beat, tempo_changes, max_tick=np.int(1e6)):
+def get_tick_to_time_mapping(ticks_per_beat, tempo_changes, max_tick=np.int32(1e6)):
     """
     Get mapping from ticks to seconds with tempo information
     """
@@ -88,14 +88,17 @@ def seq_to_midi(
     acc_tick = 0
     while i < len(temp_tempos):
         bpm = temp_tempos[i]
-        if bpm == 0:
-            bpm = DEFAULT_TEMPO
         ticks_per_second = DEFAULT_RESOLUTION * bpm / 60
         j = i
         while j + 1 < len(temp_tempos) and temp_tempos[j + 1] == bpm:
             j += 1
-        tempos.append(miditoolkit.midi.containers.TempoChange(bpm, acc_tick))
-        acc_tick += int((j - last_i + 1) * ticks_per_second / rate)
+        if bpm == 0 :
+            bpm = DEFAULT_TEMPO
+        tempos.append(
+            miditoolkit.midi.containers.TempoChange(bpm, acc_tick)
+        )
+        acc_tick += int(( j - last_i + 1)   * ticks_per_second / rate)
+
         last_i = j
         i = j + 1
     tick_to_time = get_tick_to_time_mapping(ticks_per_beat, tempos)
