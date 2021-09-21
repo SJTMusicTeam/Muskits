@@ -13,7 +13,6 @@ import torch.nn.functional as F
 
 from typeguard import check_argument_types
 
-from muskit.svs.bytesing.bytesing import Tacotron2Loss as NaiveRNNLoss
 from muskit.torch_utils.nets_utils import make_non_pad_mask
 from muskit.torch_utils.nets_utils import make_pad_mask
 from muskit.svs.bytesing.encoder import Encoder as EncoderPrenet
@@ -24,6 +23,75 @@ from muskit.layers.transformer.mask import subsequent_mask
 from muskit.torch_utils.device_funcs import force_gatherable
 from muskit.torch_utils.initialize import initialize
 from muskit.svs.abs_svs import AbsSVS
+
+
+
+class NaiveRNNLoss(torch.nn.Module):
+    """Loss function module for Tacotron2."""
+
+    def __init__(
+        self, use_masking=True, use_weighted_masking=False
+    ):
+        """Initialize Tactoron2 loss module.
+        Args:
+            use_masking (bool): Whether to apply masking
+                for padded part in loss calculation.
+            use_weighted_masking (bool):
+                Whether to apply weighted masking in loss calculation.
+            bce_pos_weight (float): Weight of positive sample of stop token.
+        """
+        super(NaiveRNNLoss, self).__init__()
+        assert (use_masking != use_weighted_masking) or not use_masking
+        self.use_masking = use_masking
+        self.use_weighted_masking = use_weighted_masking
+
+        # define criterions
+        reduction = "none" if self.use_weighted_masking else "mean"
+        self.l1_criterion = torch.nn.L1Loss(reduction=reduction)
+        self.mse_criterion = torch.nn.MSELoss(reduction=reduction)
+
+        # NOTE(kan-bayashi): register pre hook function for the compatibility
+        self._register_load_state_dict_pre_hook(self._load_state_dict_pre_hook)
+
+    def forward(self, after_outs, before_outs, ys, olens):
+        """Calculate forward propagation.
+        Args:
+            after_outs (Tensor): Batch of outputs after postnets (B, Lmax, odim).
+            before_outs (Tensor): Batch of outputs before postnets (B, Lmax, odim).
+            logits (Tensor): Batch of stop logits (B, Lmax).
+            ys (Tensor): Batch of padded target features (B, Lmax, odim).
+            labels (LongTensor): Batch of the sequences of stop token labels (B, Lmax).
+            olens (LongTensor): Batch of the lengths of each target (B,).
+        Returns:
+            Tensor: L1 loss value.
+            Tensor: Mean square error loss value.
+            Tensor: Binary cross entropy loss value.
+        """
+        # make mask and apply it
+        if self.use_masking:
+            masks = make_non_pad_mask(olens).unsqueeze(-1).to(ys.device)
+            ys = ys.masked_select(masks)
+            after_outs = after_outs.masked_select(masks)
+            before_outs = before_outs.masked_select(masks)
+
+        # calculate loss
+        l1_loss = self.l1_criterion(after_outs, ys) + self.l1_criterion(before_outs, ys)
+        mse_loss = self.mse_criterion(after_outs, ys) + self.mse_criterion(
+            before_outs, ys
+        )
+
+        # make weighted mask and apply it
+        if self.use_weighted_masking:
+            masks = make_non_pad_mask(olens).unsqueeze(-1).to(ys.device)
+            weights = masks.float() / masks.sum(dim=1, keepdim=True).float()
+            out_weights = weights.div(ys.size(0) * ys.size(2))
+
+            # apply weight
+            l1_loss = l1_loss.mul(out_weights).masked_select(masks).sum()
+            mse_loss = mse_loss.mul(out_weights).masked_select(masks).sum()
+
+        return l1_loss, mse_loss
+
 
 
 class NaiveRNN(AbsSVS):
@@ -55,8 +123,7 @@ class NaiveRNN(AbsSVS):
         postnet_filts: int = 5,
         use_scaled_pos_enc: bool = True,
         use_batch_norm: bool = True,
-        encoder_normalize_before: bool = True,
-        reduction_factor: int = 1,
+        encoder_normalize_before: bool = True,        reduction_factor: int = 1,
         # extra embedding related
         spks: Optional[int] = None,
         langs: Optional[int] = None,
@@ -67,10 +134,8 @@ class NaiveRNN(AbsSVS):
         ddropout_rate: float = 0.1,
         postnet_dropout_rate: float = 0.5,
         init_type: str = "xavier_uniform",
-        init_enc_alpha: float = 1.0,
         use_masking: bool = False,
         use_weighted_masking: bool = False,
-        bce_pos_weight: float = 5.0,
         loss_type: str = "L1",
     ):
         """Initialize NaiveRNN module.
@@ -144,6 +209,16 @@ class NaiveRNN(AbsSVS):
             proj_size=eunits,
         )
 
+        self.midi_encoder = torch.nn.LSTM(
+            input_size=eunits,
+            hidden_size=eunits,
+            num_layers=elayers,
+            batch_first=True,
+            dropout=edropout_rate,
+            bidirectional=ebidirectional,
+            proj_size=eunits,
+        )
+
         if self.midi_embed_integration_type == "add":
             self.midi_projection = torch.nn.Linear(eunits, eunits)
         else:
@@ -183,7 +258,6 @@ class NaiveRNN(AbsSVS):
 
         # define final projection
         self.feat_out = torch.nn.Linear(eunits, odim * reduction_factor)
-        self.prob_out = torch.nn.Linear(eunits, reduction_factor)
 
         # define postnet
         self.postnet = (
@@ -210,10 +284,9 @@ class NaiveRNN(AbsSVS):
         # initialize parameters
         self._reset_parameters(
             init_type=init_type,
-            init_enc_alpha=init_enc_alpha,
         )
 
-    def _reset_parameters(self, init_type, init_enc_alpha=1.0):
+    def _reset_parameters(self, init_type):
         # initialize parameters
         if init_type != "pytorch":
             initialize(self, init_type)
@@ -256,4 +329,77 @@ class NaiveRNN(AbsSVS):
         label = midi[:, : label_lengths.max()]  # for data-parallel
         batch_size = text.size(0)
 
-        feats_masks = self._source_mask(label_lengths)
+        label_emb = self.encoder_input_layer(label)
+        midi_emb = self.midi_input_layer(midi)
+
+        label_emb = torch.nn.utils.rnn.pack_padded_sequence(label_emb, label_lengths, batch_first=True)
+        midi_emb = torch.nn.utils.rnn.pack_padded_sequence(label_emb, label_lengths, batch_first=True)
+
+        hs_label, (_,_) = self.encoder(label_emb)
+        hs_midi, (_,_) = self.midi_encoder(midi_emb)
+    
+        hs_label, _ = torch.nn.utils.rnn.pad_packed_sequence(hs_label, batch_first=True)
+        hs_midi, _ = torch.nn.utils.rnn.pad_packed_sequence(hs_midi, batch_first=True)
+
+        if self.midi_embed_integration_type == "add":
+            hs = hs_label + hs_midi
+            hs = self.midi_projection(hs)
+        else:
+            hs = torch.cat(hs_label, hs_midi, dim=-1)
+            hs = self.midi_projection(hs)
+        
+        # integrate spk & lang embeddings
+        if self.spks is not None:
+            sid_embs = self.sid_emb(sids.view(-1))
+            hs = hs + sid_embs.unsqueeze(1)
+        if self.langs is not None:
+            lid_embs = self.lid_emb(lids.view(-1))
+            hs = hs + lid_embs.unsqueeze(1)
+
+        # integrate speaker embedding
+        if self.spk_embed_dim is not None:
+            hs = self._integrate_with_spk_embed(hs, spembs)
+        
+        zs = torch.nn.utils.rnn.pack_padded_sequence(hs, label_lengths, batch_first=True)
+        
+        zs = zs[:, self.reduction_factor - 1 :: self.reduction_factor]
+        # (B, T_feats//r, odim * r) -> (B, T_feats//r * r, odim)
+        before_outs = self.feat_out(zs).view(zs.size(0), -1, self.odim)
+
+        # postnet -> (B, T_feats//r * r, odim)
+        if self.postnet is None:
+            after_outs = before_outs
+        else:
+            after_outs = before_outs + self.postnet(
+                before_outs.transpose(1, 2)
+            ).transpose(1, 2)
+
+        # modifiy mod part of groundtruth
+        if self.reduction_factor > 1:
+            assert feats_lengths.ge(
+                self.reduction_factor
+            ).all(), "Output length must be greater than or equal to reduction factor."
+            olens = feats_lengths.new([olen - olen % self.reduction_factor for olen in feats_lengths])
+            max_olen = max(olens)
+            ys = feats[:, :max_olen]
+
+        # calculate loss values
+        l1_loss, l2_loss = self.criterion(
+            after_outs, before_outs, ys, olens
+        )
+
+        if self.loss_type == "L1":
+            loss = l1_loss
+        elif self.loss_type == "L2":
+            loss = l2_loss
+        elif self.loss_type == "L1+L2":
+            loss = l1_loss + l2_loss
+        else:
+            raise ValueError("unknown --loss-type " + self.loss_type)
+
+        stats = dict(
+            l1_loss=l1_loss.item(),
+            l2_loss=l2_loss.item(),
+        )
+
+        return loss, stats, after_outs
