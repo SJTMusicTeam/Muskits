@@ -403,3 +403,27 @@ class NaiveRNN(AbsSVS):
         )
 
         return loss, stats, after_outs
+
+
+    def _integrate_with_spk_embed(
+        self, hs: torch.Tensor, spembs: torch.Tensor
+    ) -> torch.Tensor:
+        """Integrate speaker embedding with hidden states.
+        Args:
+            hs (Tensor): Batch of hidden state sequences (B, Tmax, adim).
+            spembs (Tensor): Batch of speaker embeddings (B, spk_embed_dim).
+        Returns:
+            Tensor: Batch of integrated hidden state sequences (B, Tmax, adim).
+        """
+        if self.spk_embed_integration_type == "add":
+            # apply projection and then add to hidden states
+            spembs = self.projection(F.normalize(spembs))
+            hs = hs + spembs.unsqueeze(1)
+        elif self.spk_embed_integration_type == "concat":
+            # concat hidden states with spk embeds and then apply projection
+            spembs = F.normalize(spembs).unsqueeze(1).expand(-1, hs.size(1), -1)
+            hs = self.projection(torch.cat([hs, spembs], dim=-1))
+        else:
+            raise NotImplementedError("support only add or concat.")
+
+        return hs
