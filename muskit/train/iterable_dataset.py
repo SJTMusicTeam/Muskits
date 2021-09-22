@@ -220,7 +220,6 @@ class IterableMuskitDataset(IterableDataset):
             # 4. Force data-precision
             for name in data:
                 value = data[name]
-                logging.info(f'{name} : {value}')
                 if not isinstance(value, (np.ndarray, tuple) ):
                     raise RuntimeError(
                         f"All values must be converted to np.ndarray object "
