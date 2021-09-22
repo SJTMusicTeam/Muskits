@@ -5,6 +5,7 @@ from typing import Tuple
 from typing import Union
 
 import numpy as np
+from numpy.lib import array_split
 import torch
 from typeguard import check_argument_types
 from typeguard import check_return_type
@@ -80,12 +81,21 @@ def common_collate_fn(
         # NOTE(kamo):
         # Each models, which accepts these values finally, are responsible
         # to repaint the pad_value to the desired value for each tasks.
-        if data[0][key].dtype.kind == "i":
-            pad_value = int_pad_value
-        else:
-            pad_value = float_pad_value
+        if  isinstance(data[0][key], np.ndarray):
+            if data[0][key].dtype.kind == "i":
+                pad_value = int_pad_value
+            else:
+                pad_value = float_pad_value
 
-        array_list = [d[key] for d in data]
+        array_list = []
+        for d in data:
+            value = d[key]
+            if isinstance(value, tuple):
+                array_list.append(value[0])
+                array_list.append(value[1])
+            else:
+                array_list.append(value)
+        # array_list = [ d[key] if isinstance(d, np.ndarray) else d[key][0] for d in data ]
 
         # Assume the first axis is length:
         # tensor_list: Batch x (Length, ...)

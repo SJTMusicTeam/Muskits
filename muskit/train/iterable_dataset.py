@@ -1,6 +1,7 @@
 import copy
 from distutils.version import LooseVersion
 from io import StringIO
+import logging
 from pathlib import Path
 from typing import Callable
 from typing import Collection
@@ -219,19 +220,20 @@ class IterableMuskitDataset(IterableDataset):
             # 4. Force data-precision
             for name in data:
                 value = data[name]
-                if not isinstance(value, np.ndarray):
+                logging.info(f'{name} : {value}')
+                if not isinstance(value, (np.ndarray, tuple) ):
                     raise RuntimeError(
                         f"All values must be converted to np.ndarray object "
                         f'by preprocessing, but "{name}" is still {type(value)}.'
                     )
-
-                # Cast to desired type
-                if value.dtype.kind == "f":
-                    value = value.astype(self.float_dtype)
-                elif value.dtype.kind == "i":
-                    value = value.astype(self.int_dtype)
-                else:
-                    raise NotImplementedError(f"Not supported dtype: {value.dtype}")
+                if isinstance(value, np.ndarray ):
+                    # Cast to desired type
+                    if value.dtype.kind == "f":
+                        value = value.astype(self.float_dtype)
+                    elif value.dtype.kind == "i":
+                        value = value.astype(self.int_dtype)
+                    else:
+                        raise NotImplementedError(f"Not supported dtype: {value.dtype}")
                 data[name] = value
 
             yield uid, data

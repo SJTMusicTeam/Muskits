@@ -156,8 +156,8 @@ class AdapterForLabelScpReader(collections.abc.Mapping):
     def __getitem__(self, key: str) -> np.ndarray:
         retval = self.loader[key]
 
-        assert isinstance(retval, list) and len(retval) % 3 == 0
-        seq_len = len(retval)//3
+        assert isinstance(retval, list)
+        seq_len = len(retval)
         sample_time = np.zeros((seq_len,2))
         sample_label = []
         for i in range(seq_len):
@@ -496,10 +496,10 @@ class MuskitDataset(AbsDataset):
         for name, loader in self.loader_dict.items():
             try:
                 value = loader[uid]
-                if isinstance(value, (list, tuple)):
+                if isinstance(value, (list)):
                     value = np.array(value)
                 if not isinstance(
-                    value, (np.ndarray, torch.Tensor, str, numbers.Number)
+                    value, (np.ndarray, torch.Tensor, str, numbers.Number, tuple)
                 ):
                     raise TypeError(
                         f"Must be ndarray, torch.Tensor, str or Number: {type(value)}"
@@ -526,24 +526,25 @@ class MuskitDataset(AbsDataset):
         # 3. Force data-precision
         for name in data:
             value = data[name]
-            if not isinstance(value, np.ndarray):
+            if not isinstance(value, (np.ndarray, tuple) ):
                 raise RuntimeError(
                     f"All values must be converted to np.ndarray object "
                     f'by preprocessing, but "{name}" is still {type(value)}.'
                 )
-
-            # Cast to desired type
-            if value.dtype.kind == "f":
-                value = value.astype(self.float_dtype)
-            elif value.dtype.kind == "i":
-                value = value.astype(self.int_dtype)
-            else:
-                raise NotImplementedError(f"Not supported dtype: {value.dtype}")
+            if isinstance(value, np.ndarray ):
+                # Cast to desired type
+                if value.dtype.kind == "f":
+                    value = value.astype(self.float_dtype)
+                elif value.dtype.kind == "i":
+                    value = value.astype(self.int_dtype)
+                else:
+                    raise NotImplementedError(f"Not supported dtype: {value.dtype}")
             data[name] = value
 
         if self.cache is not None and self.cache.size < self.max_cache_size:
             self.cache[uid] = data
 
         retval = uid, data
-        assert check_return_type(retval)
+        # TODO allow the tuple type
+        # assert check_return_type(retval)
         return retval
