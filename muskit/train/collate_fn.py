@@ -1,3 +1,4 @@
+import logging
 from typing import Collection
 from typing import Dict
 from typing import List
@@ -5,6 +6,7 @@ from typing import Tuple
 from typing import Union
 
 import numpy as np
+from numpy.lib import array_split
 import torch
 from typeguard import check_argument_types
 from typeguard import check_return_type
@@ -80,25 +82,45 @@ def common_collate_fn(
         # NOTE(kamo):
         # Each models, which accepts these values finally, are responsible
         # to repaint the pad_value to the desired value for each tasks.
-        if data[0][key].dtype.kind == "i":
-            pad_value = int_pad_value
+        if  isinstance(data[0][key], np.ndarray):
+            if data[0][key].dtype.kind == "i":
+                pad_value = int_pad_value
+            else:
+                pad_value = float_pad_value
+            
+            array_list = [ d[key] for d in data ]
+            # Assume the first axis is length:
+            # tensor_list: Batch x (Length, ...)
+            tensor_list = [torch.from_numpy(a) for a in array_list]
+            # tensor: (Batch, Length, ...)
+            tensor = pad_list(tensor_list, pad_value)
+            output[key] = tensor
         else:
-            pad_value = float_pad_value
+            if data[0][key][0].dtype.kind == "i":
+                pad_value_first = int_pad_value
+            else:
+                pad_value_first = float_pad_value
+            if data[0][key][1].dtype.kind == "i":
+                pad_value_second = int_pad_value
+            else:
+                pad_value_second = float_pad_value
 
-        array_list = [d[key] for d in data]
-
-        # Assume the first axis is length:
-        # tensor_list: Batch x (Length, ...)
-        tensor_list = [torch.from_numpy(a) for a in array_list]
-        # tensor: (Batch, Length, ...)
-        tensor = pad_list(tensor_list, pad_value)
-        output[key] = tensor
+            array_list_first = [ d[key][0] for d in data ]
+            array_list_second = [ d[key][1] for d in data ]
+            tensor_list_first = [torch.from_numpy(a) for a in array_list_first]
+            tensor_list_second = [torch.from_numpy(a) for a in array_list_second]
+            # tensor: (Batch, Length, ...)
+            tensor_first = pad_list(tensor_list_first, pad_value_first)
+            tensor_second = pad_list(tensor_list_second, pad_value_second)
+            output[key] = tensor_first, tensor_second
 
         # lens: (Batch,)
         if key not in not_sequence:
-            lens = torch.tensor([d[key].shape[0] for d in data], dtype=torch.long)
+            lens = torch.tensor([d[key].shape[0] if isinstance(d[key], np.ndarray) else d[key][0].shape[0] for d in data], dtype=torch.long)
             output[key + "_lengths"] = lens
 
     output = (uttids, output)
-    assert check_return_type(output)
+    # logging.info(f'output: {output}')
+    # TODO allow the tuple type
+    # assert check_return_type(output)
     return output
