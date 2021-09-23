@@ -496,7 +496,7 @@ class MuskitDataset(AbsDataset):
         for name, loader in self.loader_dict.items():
             try:
                 value = loader[uid]
-                if isinstance(value, (list)):
+                if isinstance(value, list):
                     value = np.array(value)
                 if not isinstance(
                     value, (np.ndarray, torch.Tensor, str, numbers.Number, tuple)
