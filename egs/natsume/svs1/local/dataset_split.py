@@ -84,9 +84,7 @@ def transition(dataset, des_url):
         makedir(p)
     for item in dataset:
         if item[-4:] != '.wav':
-            print('=========: ', item[-4:])
-            continue
-        
+            continue        
         wav_path = source_root_url + item
         lab_path = wav_path.replace("wav/", "mono_label/").replace(".wav", ".lab")
         midi_path = wav_path.replace("wav/", "midi/").replace(".wav", ".mid")
