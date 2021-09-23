@@ -22,8 +22,8 @@ from muskit.layers.conformer.encoder import (
 from muskit.svs.xiaoice.fastspeech.e2e_tts_fastspeech import (
     FeedForwardTransformerLoss as FastSpeechLoss,  # NOQA
 )
-from muskit.svs.xiaoice.fastspeech.fastspeech.duration_predictor import DurationPredictor
-from muskit.svs.xiaoice.fastspeech.fastspeech.length_regulator import LengthRegulator
+from muskit.svs.xiaoice.fastspeech.duration_predictor import DurationPredictor
+from muskit.svs.xiaoice.fastspeech.length_regulator import LengthRegulator
 
 from muskit.torch_utils.nets_utils import make_non_pad_mask
 from muskit.torch_utils.nets_utils import make_pad_mask
