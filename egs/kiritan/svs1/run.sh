@@ -33,7 +33,7 @@ cleaner=none
 
 ./svs.sh \
     --lang jp \
-    --stage 0 \
+    --stage 5 \
     --local_data_opts "--stage 0" \
     --feats_type raw \
     --fs "${fs}" \

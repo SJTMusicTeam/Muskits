@@ -6,6 +6,7 @@ from typing import Dict
 from typing import Iterable
 from typing import Union
 
+import logging
 import numpy as np
 import scipy.signal
 import soundfile
@@ -146,11 +147,13 @@ class CommonPreprocessor(AbsPreprocessor):
         singing_volume_normalize: float = None,
         singing_name: str = "singing",
         text_name: str = "text",
+        label_name: str = "label",
     ):
         super().__init__(train)
         self.train = train
         self.singing_name = singing_name
         self.text_name = text_name
+        self.label_name = label_name
         self.singing_volume_normalize = singing_volume_normalize
         self.rir_apply_prob = rir_apply_prob
         self.noise_apply_prob = noise_apply_prob
@@ -211,7 +214,7 @@ class CommonPreprocessor(AbsPreprocessor):
             self.noises = None
 
     def __call__(
-        self, uid: str, data: Dict[str, Union[str, np.ndarray]]
+        self, uid: str, data: Dict[str, Union[str, np.ndarray, tuple]]
     ) -> Dict[str, np.ndarray]:
         assert check_argument_types()
 
@@ -301,14 +304,28 @@ class CommonPreprocessor(AbsPreprocessor):
                 singing = data[self.singing_name]
                 ma = np.max(np.abs(singing))
                 data[self.singing_name] = singing * self.singing_volume_normalize / ma
-
+        
+        if self.label_name in data and self.tokenizer is not None:
+            timeseq, text = data[self.label_name]
+            if not isinstance(text, np.ndarray):
+                text = ' '.join(text)
+                text = self.text_cleaner(text)
+                tokens = self.tokenizer.text2tokens(text)
+                text_ints = self.token_id_converter.tokens2ids(tokens)
+                timeseq.astype(np.int64)
+                data[self.label_name] = timeseq, np.array(text_ints, dtype=np.int64)
+            
         if self.text_name in data and self.tokenizer is not None:
             text = data[self.text_name]
-            text = self.text_cleaner(text)
-            tokens = self.tokenizer.text2tokens(text)
-            text_ints = self.token_id_converter.tokens2ids(tokens)
-            data[self.text_name] = np.array(text_ints, dtype=np.int64)
-        assert check_return_type(data)
+            if not isinstance(text, np.ndarray):
+                text = ' '.join(text)
+                text = self.text_cleaner(text)
+                tokens = self.tokenizer.text2tokens(text)
+                text_ints = self.token_id_converter.tokens2ids(tokens)
+                timeseq.astype(np.int64)
+                data[self.text_name] = timeseq, np.array(text_ints, dtype=np.int64)
+        # TODO allow the tuple type
+        # assert check_return_type(data)
         return data
 
 
