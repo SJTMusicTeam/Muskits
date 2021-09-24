@@ -80,7 +80,8 @@ else # no segments->wav indexed by utt.
 fi
 
 if [ -f $srcdir/midi.scp ]; then
-  utils/apply_map.pl -f 1 $destdir/utt_map <$srcdir/midi.scp >$destdir/midi.scp
+  # TODO(jiatong)
+  cp $srcdir/midi.scp $destdir
 fi
 
 if [ -f $srcdir/label ]; then

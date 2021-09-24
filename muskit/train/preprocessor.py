@@ -6,6 +6,7 @@ from typing import Dict
 from typing import Iterable
 from typing import Union
 
+import logging
 import numpy as np
 import scipy.signal
 import soundfile
@@ -146,11 +147,17 @@ class CommonPreprocessor(AbsPreprocessor):
         singing_volume_normalize: float = None,
         singing_name: str = "singing",
         text_name: str = "text",
+        label_name: str = "label",
+        midi_name: str = "midi",
+        fs: np.int32 = 0,
     ):
         super().__init__(train)
         self.train = train
         self.singing_name = singing_name
         self.text_name = text_name
+        self.label_name = label_name
+        self.midi_name = midi_name
+        self.fs = fs
         self.singing_volume_normalize = singing_volume_normalize
         self.rir_apply_prob = rir_apply_prob
         self.noise_apply_prob = noise_apply_prob
@@ -211,7 +218,7 @@ class CommonPreprocessor(AbsPreprocessor):
             self.noises = None
 
     def __call__(
-        self, uid: str, data: Dict[str, Union[str, np.ndarray]]
+        self, uid: str, data: Dict[str, Union[str, np.ndarray, tuple]]
     ) -> Dict[str, np.ndarray]:
         assert check_argument_types()
 
@@ -301,14 +308,45 @@ class CommonPreprocessor(AbsPreprocessor):
                 singing = data[self.singing_name]
                 ma = np.max(np.abs(singing))
                 data[self.singing_name] = singing * self.singing_volume_normalize / ma
-
-        if self.text_name in data and self.tokenizer is not None:
-            text = data[self.text_name]
+        
+        if self.midi_name in data and self.tokenizer is not None:
+            pitchseq, temposeq = data[self.midi_name]
+            nsamples = len(pitchseq)
+            pitchseq.astype(np.int64)
+            temposeq.astype(np.int64)
+            data.pop(self.midi_name)
+            data['pitch'] = pitchseq
+            data['energy'] = temposeq
+        
+        if self.label_name in data and self.tokenizer is not None:
+            timeseq, text = data[self.label_name]
+            # if not isinstance(text, np.ndarray):
+            text = ' '.join(text)
             text = self.text_cleaner(text)
             tokens = self.tokenizer.text2tokens(text)
             text_ints = self.token_id_converter.tokens2ids(tokens)
-            data[self.text_name] = np.array(text_ints, dtype=np.int64)
-        assert check_return_type(data)
+            
+            data.pop(self.label_name)
+            labelseq = np.zeros((nsamples))
+            offset = timeseq[0,0]
+            for i in range(timeseq.shape[0]):
+                start = int((timeseq[i, 0] - offset) * self.fs)
+                end = int((timeseq[i, 1] - offset) * self.fs) + 1
+                labelseq[start: end] = text_ints[i]
+            # data[self.label_name] = timeseq, np.array(text_ints, dtype=np.int64)
+            labelseq.astype(np.int64)
+            data['durations'] = labelseq
+            
+        if self.text_name in data and self.tokenizer is not None:
+            text = data[self.text_name]
+            if not isinstance(text, np.ndarray):
+                text = ' '.join(text)
+                text = self.text_cleaner(text)
+                tokens = self.tokenizer.text2tokens(text)
+                text_ints = self.token_id_converter.tokens2ids(tokens)
+                data[self.text_name] = np.array(text_ints, dtype=np.int64)
+        # TODO allow the tuple type
+        # assert check_return_type(data)
         return data
 
 
