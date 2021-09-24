@@ -512,8 +512,8 @@ if ! "${skip_train}"; then
         if [ -n "${teacher_dumpdir}" ]; then
             _teacher_train_dir="${teacher_dumpdir}/${train_set}"
             _teacher_valid_dir="${teacher_dumpdir}/${valid_set}"
-            _opts+="--train_data_path_and_name_and_type ${_teacher_train_dir}/durations,durations,text_int "
-            _opts+="--valid_data_path_and_name_and_type ${_teacher_valid_dir}/durations,durations,text_int "
+            _opts+="--train_data_path_and_name_and_type ${_teacher_train_dir}/label,label,text_int "
+            _opts+="--valid_data_path_and_name_and_type ${_teacher_valid_dir}/label,label,text_int "
         fi
 
         if "${use_xvector}"; then
@@ -688,10 +688,10 @@ if ! "${skip_train}"; then
             _teacher_valid_dir="${teacher_dumpdir}/${valid_set}"
             _fold_length="${singing_fold_length}"
             _opts+="--train_data_path_and_name_and_type ${_train_dir}/text,text,text "
-            _opts+="--train_data_path_and_name_and_type ${_teacher_train_dir}/durations,durations,text_int "
+            _opts+="--train_data_path_and_name_and_type ${_teacher_train_dir}/label,label,text_int "
             _opts+="--train_shape_file ${svs_stats_dir}/train/text_shape.${token_type} "
             _opts+="--valid_data_path_and_name_and_type ${_valid_dir}/text,text,text "
-            _opts+="--valid_data_path_and_name_and_type ${_teacher_valid_dir}/durations,durations,text_int "
+            _opts+="--valid_data_path_and_name_and_type ${_teacher_valid_dir}/label,label,text_int "
             _opts+="--valid_shape_file ${svs_stats_dir}/valid/text_shape.${token_type} "
 
             if [ -e ${_teacher_train_dir}/probs ]; then
@@ -726,7 +726,7 @@ if ! "${skip_train}"; then
             fi
         fi
 
-
+        # TODO (jiatong): add specifics for svs
         # If there are dumped files of additional inputs, we use it to reduce computational cost
         # NOTE (kan-bayashi): Use dumped files of the target features as well?
         if [ -e "${svs_stats_dir}/train/collect_feats/pitch.scp" ]; then

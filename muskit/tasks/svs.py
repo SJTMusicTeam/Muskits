@@ -28,6 +28,7 @@ from muskit.svs.feats_extract.log_mel_fbank import LogMelFbank
 from muskit.svs.feats_extract.log_spectrogram import LogSpectrogram
 from muskit.svs.encoder_decoder.transformer.transformer import Transformer
 from muskit.svs.bytesing.bytesing import ByteSing
+from muskit.svs.naive_rnn.naive_rnn import NaiveRNN
 from muskit.utils.get_default_kwargs import get_default_kwargs
 from muskit.utils.nested_dict_action import NestedDictAction
 from muskit.utils.types import int_or_none
@@ -80,6 +81,7 @@ svs_choices = ClassChoices(
     classes=dict(
         transformer=Transformer,
         bytesing=ByteSing,
+        naive_rnn=NaiveRNN,
     ),
     type_check=AbsSVS,
     default="transformer",
