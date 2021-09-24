@@ -353,7 +353,7 @@ if ! "${skip_data_prep}"; then
                     --win_length "${win_length}" \
                     ${_opts} \
                     "${data_feats}${_suf}/${dset}"
-                utils/fix_data_dir.sh "${data_feats}${_suf}/${dset}"
+                utils/fix_data_dir.sh --utt_extra_files "midi.scp label" "${data_feats}${_suf}/${dset}"
 
                 # 3. Derive the the frame length and feature dimension
                 scripts/feats/feat_to_shape.sh --nj "${_nj}" --cmd "${train_cmd}" \
@@ -425,7 +425,7 @@ if ! "${skip_data_prep}"; then
                 awk ' { if( NF != 1 ) print $0; } ' >"${data_feats}/${dset}/text"
 
             # fix_data_dir.sh leaves only utts which exist in all files
-            utils/fix_data_dir.sh "${data_feats}/${dset}"
+            utils/fix_data_dir.sh --utt_extra_files "midi.scp label" "${data_feats}/${dset}"
 
 #            # Filter x-vector
 #            if "${use_xvector}"; then
