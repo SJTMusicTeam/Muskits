@@ -64,7 +64,7 @@ for dataset in train dev eval1; do
       mv ${src_data}/text.tmp ${src_data}/text
       cat ${src_data}/segments | awk '{printf("%s kiritan\n", $1);}' > ${src_data}/utt2spk
       utils/utt2spk_to_spk2utt.pl < ${src_data}/utt2spk > ${src_data}/spk2utt
-      utils/fix_data_dir.sh --utt_extra_files label ${src_data}
+      scripts/utils/fix_data_dir.sh ${src_data}
   fi
 
 
