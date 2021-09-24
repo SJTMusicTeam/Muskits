@@ -102,12 +102,6 @@ class MIDIScpWriter:
         midi_path.parent.mkdir(parents=True, exist_ok=True)
         midi_obj = seq_to_midi(note_seq, tempo_seq, self.rate)
         notes = midi_obj.instruments[0].notes
-        # check_midi = miditoolkit.midi.parser.MidiFile(midi_path)
-        # if len(check_midi.instruments)==0:
-        #     logging.info(f'note:{note_seq}')
-        #     logging.info(f'tempo:{tempo_seq}')
-        #     logging.info(f'inst:{len(midi_obj.instruments)}')
-        #     raise ValueError(f'error in {midi_path}')
         if len(notes)>0:
             midi_obj.dump(midi_path)
             self.fscp.write(f"{key} {midi_path}\n")
