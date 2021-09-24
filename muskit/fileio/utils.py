@@ -115,7 +115,7 @@ def seq_to_midi(
         ed = j / rate
 
         start = np.searchsorted(tick_to_time, st, "left")
-        end = np.searchsorted(tick_to_time, ed, "left")
+        end = np.searchsorted(tick_to_time, ed, "left") - 1
         if pitch > 0 and pitch <= 128:
             notes.append(
                 miditoolkit.midi.containers.Note(

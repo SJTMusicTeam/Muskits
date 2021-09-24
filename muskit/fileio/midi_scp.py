@@ -1,6 +1,8 @@
 import collections.abc
+import logging
 from pathlib import Path
 from typing import Union
+from miditoolkit import midi
 
 import numpy as np
 import soundfile
@@ -99,12 +101,22 @@ class MIDIScpWriter:
         midi_path = self.dir / f"{key}.{self.format}"
         midi_path.parent.mkdir(parents=True, exist_ok=True)
         midi_obj = seq_to_midi(note_seq, tempo_seq, self.rate)
-        midi_obj.dump(midi_path)
+        notes = midi_obj.instruments[0].notes
+        # check_midi = miditoolkit.midi.parser.MidiFile(midi_path)
+        # if len(check_midi.instruments)==0:
+        #     logging.info(f'note:{note_seq}')
+        #     logging.info(f'tempo:{tempo_seq}')
+        #     logging.info(f'inst:{len(midi_obj.instruments)}')
+        #     raise ValueError(f'error in {midi_path}')
+        if len(notes)>0:
+            midi_obj.dump(midi_path)
+            self.fscp.write(f"{key} {midi_path}\n")
+            # Store the file path
+            self.data[key] = str(midi_path)
+        else:
+            logging.warning(f'no corresponding note sequence for segments {key}. skip it')
 
-        self.fscp.write(f"{key} {midi_path}\n")
-
-        # Store the file path
-        self.data[key] = str(midi_path)
+        
 
     def get_path(self, key):
         return self.data[key]
