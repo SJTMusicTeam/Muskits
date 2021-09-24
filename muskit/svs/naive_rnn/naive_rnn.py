@@ -14,11 +14,8 @@ import torch.nn.functional as F
 from typeguard import check_argument_types
 
 from muskit.torch_utils.nets_utils import make_non_pad_mask
-from muskit.torch_utils.nets_utils import make_pad_mask
 from muskit.svs.bytesing.encoder import Encoder as EncoderPrenet
 from muskit.svs.bytesing.decoder import Postnet
-from muskit.layers.transformer.embedding import PositionalEncoding
-from muskit.layers.transformer.embedding import ScaledPositionalEncoding
 from muskit.layers.transformer.mask import subsequent_mask
 from muskit.torch_utils.device_funcs import force_gatherable
 from muskit.torch_utils.initialize import initialize
@@ -121,9 +118,8 @@ class NaiveRNN(AbsSVS):
         postnet_layers: int = 5,
         postnet_chans: int = 256,
         postnet_filts: int = 5,
-        use_scaled_pos_enc: bool = True,
         use_batch_norm: bool = True,
-        encoder_normalize_before: bool = True,        reduction_factor: int = 1,
+        reduction_factor: int = 1,
         # extra embedding related
         spks: Optional[int] = None,
         langs: Optional[int] = None,
@@ -152,7 +148,6 @@ class NaiveRNN(AbsSVS):
         self.odim = odim
         self.eos = idim - 1
         self.reduction_factor = reduction_factor
-        self.use_scaled_pos_enc = use_scaled_pos_enc
         self.loss_type = loss_type
 
         self.midi_embed_integration_type = midi_embed_integration_type
@@ -278,7 +273,6 @@ class NaiveRNN(AbsSVS):
         self.criterion = NaiveRNNLoss(
             use_masking=use_masking,
             use_weighted_masking=use_weighted_masking,
-            bce_pos_weight=bce_pos_weight,
         )
 
         # initialize parameters
@@ -307,7 +301,7 @@ class NaiveRNN(AbsSVS):
     ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor], torch.Tensor]:
         """Calculate forward propagation.
         Args:
-            text (LongTensor): Batch of padded character ids (B, Tmax).
+            text (LongTensor): Batch of padded character ids (B, Tmax). 
             text_lengths (LongTensor): Batch of lengths of each input batch (B,).
             feats (Tensor): Batch of padded target features (B, Lmax, odim).
             feats_lengths (LongTensor): Batch of the lengths of each target (B,).
@@ -327,7 +321,6 @@ class NaiveRNN(AbsSVS):
         feats = feats[:, : feats_lengths.max()]  # for data-parallel
         midi = midi[:, : feats_lengths.max()]  # for data-parallel
         label = midi[:, : label_lengths.max()]  # for data-parallel
-        batch_size = text.size(0)
 
         label_emb = self.encoder_input_layer(label)
         midi_emb = self.midi_input_layer(midi)
@@ -403,6 +396,77 @@ class NaiveRNN(AbsSVS):
         )
 
         return loss, stats, after_outs
+
+
+    def inference(
+        self,
+        text: torch.Tensor,
+        label: torch.Tensor,
+        midi: torch.Tensor,
+        feats: torch.Tensor = None,
+        spembs: Optional[torch.Tensor] = None,
+        sids: Optional[torch.Tensor] = None,
+        lids: Optional[torch.Tensor] = None,
+    ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor], torch.Tensor]:
+        """Calculate forward propagation.
+        Args:
+            text (LongTensor): Batch of padded character ids (Tmax).
+            label (Tensor)
+            midi (Tensor)
+            feats (Tensor): Batch of padded target features (Lmax, odim).
+            spembs (Optional[Tensor]): Batch of speaker embeddings (spk_embed_dim).
+            sids (Optional[Tensor]): Batch of speaker IDs (1).
+            lids (Optional[Tensor]): Batch of language IDs (1).
+
+        Returns:
+            Dict[str, Tensor]: Output dict including the following items:
+                * feat_gen (Tensor): Output sequence of features (T_feats, odim).
+        """
+        text = text.unsqueeze(0)  # for data-parallel
+        feats = feats.unsqueeze(0)  # for data-parallel
+        midi = midi.unsqueeze(0)  # for data-parallel
+        label = midi.unsqueeze(0)  # for data-parallel
+
+        label_emb = self.encoder_input_layer(label)
+        midi_emb = self.midi_input_layer(midi)
+
+        hs_label, (_,_) = self.encoder(label_emb)
+        hs_midi, (_,_) = self.midi_encoder(midi_emb)
+    
+        if self.midi_embed_integration_type == "add":
+            hs = hs_label + hs_midi
+            hs = self.midi_projection(hs)
+        else:
+            hs = torch.cat(hs_label, hs_midi, dim=-1)
+            hs = self.midi_projection(hs)
+        
+        # integrate spk & lang embeddings
+        if self.spks is not None:
+            sid_embs = self.sid_emb(sids.view(-1))
+            hs = hs + sid_embs.unsqueeze(1)
+        if self.langs is not None:
+            lid_embs = self.lid_emb(lids.view(-1))
+            hs = hs + lid_embs.unsqueeze(1)
+
+        # integrate speaker embedding
+        if self.spk_embed_dim is not None:
+            hs = self._integrate_with_spk_embed(hs, spembs)
+        
+        zs = torch.nn.utils.rnn.pack_padded_sequence(hs, label_lengths, batch_first=True)
+        
+        zs = zs[:, self.reduction_factor - 1 :: self.reduction_factor]
+        # (B, T_feats//r, odim * r) -> (B, T_feats//r * r, odim)
+        before_outs = self.feat_out(zs).view(zs.size(0), -1, self.odim)
+
+        # postnet -> (B, T_feats//r * r, odim)
+        if self.postnet is None:
+            after_outs = before_outs
+        else:
+            after_outs = before_outs + self.postnet(
+                before_outs.transpose(1, 2)
+            ).transpose(1, 2)
+        
+        return after_outs
 
 
     def _integrate_with_spk_embed(
