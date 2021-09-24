@@ -137,10 +137,16 @@ def seq_to_midi(
     return midi
 
 
-# if __name__ == "__main__":
-#     path = '/data3/qt/songmass/output_res_prev/attn_model_0_music_to_music.mid'
-#     midi_obj = miditoolkit.midi.parser.MidiFile(path)
-#     note_seq, tempo_seq = midi_to_seq(midi_obj, np.int16, np.int16(16000))
-#     midi_obj = seq_to_midi(note_seq, tempo_seq, np.int16(16000))
-#     midi_path = '/data3/qt/songmass/output_res_prev/midiscp.mid'
-#     midi_obj.dump(midi_path)
+if __name__ == "__main__":
+    import os
+    paths = os.listdir('/data3/qt/Muskits/egs/kiritan/svs1/dump/raw/org/train/data/format_midi.18/')
+    # print(paths)
+    for p in paths:
+    # path = '/data3/qt/Muskits/egs/kiritan/svs1/dump/raw/org/train/data/format_midi.18/kiritan11_0001.midi'
+        path = '/data3/qt/Muskits/egs/kiritan/svs1/dump/raw/org/train/data/format_midi.18/'+p
+        print(path)
+        midi_obj = miditoolkit.midi.parser.MidiFile(path)
+        note_seq, tempo_seq = midi_to_seq(midi_obj, np.int16, np.int16(16000))
+        midi_obj = seq_to_midi(note_seq, tempo_seq, np.int16(16000))
+        midi_path = '/data3/qt/songmass/output_res_prev/midiscp.mid'
+        midi_obj.dump(midi_path)

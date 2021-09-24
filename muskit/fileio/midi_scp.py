@@ -120,6 +120,6 @@ class MIDIScpWriter:
 
 
 # if __name__ == "__main__":
-#     path = '/data3/qt/songmass/output_res_prev/alb_esp1_format0.mid'
+#     path = '/data3/qt/Muskits/egs/kiritan/svs1/dump/raw/org/train/data/format_midi.18/kiritan11_0000.midi'
 #     midi_obj = miditoolkit.midi.parser.MidiFile(path)
 #     note_seq, tempo_seq = midi_to_seq(midi_obj, np.int16, np.int16(16000) )
