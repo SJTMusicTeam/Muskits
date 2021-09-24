@@ -353,7 +353,7 @@ if ! "${skip_data_prep}"; then
                     --win_length "${win_length}" \
                     ${_opts} \
                     "${data_feats}${_suf}/${dset}"
-                scripts/utils/fix_data_dir.sh "${data_feats}${_suf}/${dset}"
+                utils/fix_data_dir.sh "${data_feats}${_suf}/${dset}"
 
                 # 3. Derive the the frame length and feature dimension
                 scripts/feats/feat_to_shape.sh --nj "${_nj}" --cmd "${train_cmd}" \
