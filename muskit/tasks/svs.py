@@ -303,9 +303,15 @@ class SVSTask(AbsTask):
         svs = svs_class(idim=vocab_size, odim=odim, **args.svs_conf)
 
         # 4. Extra components
+        text_extract = None
+        durations_extract = None
         pitch_extract = None
+        tempo_extract = None
         energy_extract = None
+        text_normalize = None
+        durations_normalize = None
         pitch_normalize = None
+        tempo_normalize = None
         energy_normalize = None
         if getattr(args, "pitch_extract", None) is not None:
             pitch_extract_class = pitch_extractor_choices.get_class(args.pitch_extract)
@@ -344,6 +350,7 @@ class SVSTask(AbsTask):
 
         # 5. Build model
         model = MuskitSVSModel(
+            text_extract=
             feats_extract=feats_extract,
             pitch_extract=pitch_extract,
             energy_extract=energy_extract,
