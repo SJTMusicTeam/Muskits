@@ -14,19 +14,25 @@ from muskit.svs.feats_extract.abs_feats_extract import AbsFeatsExtract
 
 
 
-class FrameLabelAggregate(torch.nn.Module):
+class FrameLabelAggregate(AbsFeatsExtract):
     def __init__(
         self,
+        fs: Union[int, str] = 22050,
+        n_fft: int = 1024,
         win_length: int = 512,
         hop_length: int = 128,
+        window: str = "hann",
         center: bool = True,
         ftype: str = "frame",#syllable
     ):
         assert check_argument_types()
         super().__init__()
 
+        self.fs = fs
+        self.n_fft = n_fft
         self.win_length = win_length
         self.hop_length = hop_length
+        self.window = window
         self.center = center
         self.ftype = ftype
 
@@ -38,13 +44,29 @@ class FrameLabelAggregate(torch.nn.Module):
             f"ftype={self.ftype}, "
         )
 
+    def output_size(self) -> int:
+        return 1
+
+    def get_parameters(self) -> Dict[str, Any]:
+        return dict(
+            fs=self.fs,
+            n_fft=self.n_fft,
+            hop_length=self.hop_length,
+            window=self.window,
+            win_length=self.win_length,
+            center=self.stft.center,
+            # normalized=self.stft.normalized,
+            # use_token_averaged_energy=self.use_token_averaged_energy,
+            # reduction_factor=self.reduction_factor,
+        )
+
     def forward(
-        self, input: torch.Tensor, ilens: torch.Tensor = None
+        self, input: torch.Tensor, input_lengths: torch.Tensor = None
     ) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
         """LabelAggregate forward function.
         Args:
             input: (Batch, Nsamples, Label_dim)
-            ilens: (Batch)
+            input_lengths: (Batch)
         Returns:
             output: (Batch, Frames, Label_dim)
         """
@@ -78,12 +100,12 @@ class FrameLabelAggregate(torch.nn.Module):
         output = output.float()
 
         # Step4: process lengths
-        if ilens is not None:
+        if input_lengths is not None:
             if self.center:
                 pad = self.win_length // 2
-                ilens = ilens + 2 * pad
+                input_lengths = input_lengths + 2 * pad
 
-            olens = (ilens - self.win_length) // self.hop_length + 1
+            olens = (input_lengths - self.win_length) // self.hop_length + 1
             output.masked_fill_(make_pad_mask(olens, output, 1), 0.0)
         else:
             olens = None
