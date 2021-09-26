@@ -96,8 +96,8 @@ class FrameLabelAggregate(AbsFeatsExtract):
         )
 
         # Step3: aggregate label
-        output = torch.gt(output.sum(dim=2, keepdim=False), self.win_length // 2)
-        output = output.float()
+        # (bs, nframe, self.win_length, label_dim) => (bs, nframe)
+        output, _ = output.sum(dim=2, keepdim=False).mode(dim=-1,keepdim=False)
 
         # Step4: process lengths
         if input_lengths is not None:
