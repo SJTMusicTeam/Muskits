@@ -34,22 +34,34 @@ class MuskitSVSModel(AbsMuskitModel):
 
     def __init__(
         self,
+        text_extract: Optional[AbsFeatsExtract],
         feats_extract: Optional[AbsFeatsExtract],
+        durations_extract: Optional[AbsFeatsExtract],
         pitch_extract: Optional[AbsFeatsExtract],
+        tempo_extract: Optional[AbsFeatsExtract],
         energy_extract: Optional[AbsFeatsExtract],
         normalize: Optional[AbsNormalize and InversibleInterface],
+        # text_normalize: Optional[AbsNormalize and InversibleInterface],
+        # durations_normalize: Optional[AbsNormalize and InversibleInterface],
         pitch_normalize: Optional[AbsNormalize and InversibleInterface],
+        # tempo_normalize: Optional[AbsNormalize and InversibleInterface],
         energy_normalize: Optional[AbsNormalize and InversibleInterface],
         svs: AbsSVS,
     ):
         """Initialize MuskitSVSModel module."""
         assert check_argument_types()
         super().__init__()
+        self.text_extract = text_extract
         self.feats_extract = feats_extract
+        self.durations_extract = durations_extract
         self.pitch_extract = pitch_extract
+        self.tempo_extract = tempo_extract
         self.energy_extract = energy_extract
-        self.normalize = normalize
+        self.normalize = normalize        
+        # self.text_normalize = text_normalize
+        # self.durations_normalize = durations_normalize
         self.pitch_normalize = pitch_normalize
+        # self.tempo_normalize = tempo_normalize
         self.energy_normalize = energy_normalize
         self.svs = svs
 
@@ -63,6 +75,8 @@ class MuskitSVSModel(AbsMuskitModel):
         durations_lengths: Optional[torch.Tensor] = None,
         pitch: Optional[torch.Tensor] = None,
         pitch_lengths: Optional[torch.Tensor] = None,
+        tempo: Optional[torch.Tensor] = None,
+        tempo_lengths: Optional[torch.Tensor] = None,
         energy: Optional[torch.Tensor] = None,
         energy_lengths: Optional[torch.Tensor] = None,
         spembs: Optional[torch.Tensor] = None,
@@ -90,6 +104,11 @@ class MuskitSVSModel(AbsMuskitModel):
             Tensor: Weight tensor to summarize losses.
         """
         with autocast(False):
+            # if self.text_extract is not None and text is None:
+            #     text, text_lengths = self.text_extract(
+            #         input=text,
+            #         input_lengths=text_lengths,
+            #     )
             # Extract features
             if self.feats_extract is not None:
                 feats, feats_lengths = self.feats_extract(singing, singing_lengths)
@@ -98,14 +117,24 @@ class MuskitSVSModel(AbsMuskitModel):
                 feats, feats_lengths = singing, singing_lengths
 
             # Extract auxiliary features
+            if self.durations_extract is not None and durations is None:
+                durations, durations_lengths = self.durations_extract(
+                    input=durations.unsqueeze(-1),
+                    input_lengths=durations_lengths,
+                )
+            
             if self.pitch_extract is not None and pitch is None:
                 pitch, pitch_lengths = self.pitch_extract(
-                    singing,
-                    singing_lengths,
-                    feats_lengths=feats_lengths,
-                    durations=durations,
-                    durations_lengths=durations_lengths,
+                    input=pitch.unsqueeze(-1),
+                    input_lengths=pitch_lengths,
                 )
+            
+            if self.tempo_extract is not None and tempo is None:
+                tempo, tempo_lengths = self.tempo_extract(
+                    input=tempo.unsqueeze(-1),
+                    input_lengths=tempo_lengths,
+                )
+            
             if self.energy_extract is not None and energy is None:
                 energy, energy_lengths = self.energy_extract(
                     singing,
@@ -159,6 +188,8 @@ class MuskitSVSModel(AbsMuskitModel):
         durations_lengths: Optional[torch.Tensor] = None,
         pitch: Optional[torch.Tensor] = None,
         pitch_lengths: Optional[torch.Tensor] = None,
+        tempo: Optional[torch.Tensor] = None,
+        tempo_lengths: Optional[torch.Tensor] = None,
         energy: Optional[torch.Tensor] = None,
         energy_lengths: Optional[torch.Tensor] = None,
         spembs: Optional[torch.Tensor] = None,
@@ -175,6 +206,8 @@ class MuskitSVSModel(AbsMuskitModel):
             durations_lengths (Optional[Tensor): Duration length tensor (B,).
             pitch (Optional[Tensor): Pitch tensor.
             pitch_lengths (Optional[Tensor): Pitch length tensor (B,).
+            tempo (Optional[Tensor): Tempo tensor.
+            tempo_lengths (Optional[Tensor): Tempo length tensor (B,).
             energy (Optional[Tensor): Energy tensor.
             energy_lengths (Optional[Tensor): Energy length tensor (B,).
             spembs (Optional[Tensor]): Speaker embedding tensor (B, D).
@@ -184,18 +217,30 @@ class MuskitSVSModel(AbsMuskitModel):
             Dict[str, Tensor]: Dict of features.
         """
         # feature extraction
+        # if self.text_extract is not None:
+        #     text, text_lengths = self.text_extract(
+        #         input=text,
+        #         input_lengths=text_lengths,
+        #     )
         if self.feats_extract is not None:
             feats, feats_lengths = self.feats_extract(singing, singing_lengths)
         else:
             # Use precalculated feats (feats_type != raw case)
             feats, feats_lengths = singing, singing_lengths
+        if self.durations_extract is not None:
+            durations, durations_lengths = self.durations_extract(
+                input=durations.unsqueeze(-1),
+                input_lengths=durations_lengths,
+            )
         if self.pitch_extract is not None:
             pitch, pitch_lengths = self.pitch_extract(
-                singing,
-                singing_lengths,
-                feats_lengths=feats_lengths,
-                durations=durations,
-                durations_lengths=durations_lengths,
+                input=pitch.unsqueeze(-1),
+                input_lengths=pitch_lengths,
+            )
+        if self.tempo_extract is not None:
+            tempo, tempo_lengths = self.tempo_extract(
+                input=tempo.unsqueeze(-1),
+                input_lengths=tempo_lengths,
             )
         if self.energy_extract is not None:
             energy, energy_lengths = self.energy_extract(

@@ -48,7 +48,7 @@ class NaiveRNNLoss(torch.nn.Module):
         self.mse_criterion = torch.nn.MSELoss(reduction=reduction)
 
         # NOTE(kan-bayashi): register pre hook function for the compatibility
-        self._register_load_state_dict_pre_hook(self._load_state_dict_pre_hook)
+        # self._register_load_state_dict_pre_hook(self._load_state_dict_pre_hook)
 
     def forward(self, after_outs, before_outs, ys, olens):
         """Calculate forward propagation.
@@ -201,7 +201,7 @@ class NaiveRNN(AbsSVS):
             batch_first=True,
             dropout=edropout_rate,
             bidirectional=ebidirectional,
-            proj_size=eunits,
+            # proj_size=eunits,
         )
 
         self.midi_encoder = torch.nn.LSTM(
@@ -211,7 +211,7 @@ class NaiveRNN(AbsSVS):
             batch_first=True,
             dropout=edropout_rate,
             bidirectional=ebidirectional,
-            proj_size=eunits,
+            # proj_size=eunits,
         )
 
         if self.midi_embed_integration_type == "add":
@@ -226,7 +226,7 @@ class NaiveRNN(AbsSVS):
             batch_first=True,
             dropout=ddropout_rate,
             bidirectional=dbidirectional,
-            proj_size=dunits,
+            # proj_size=dunits,
         )
 
         # define spk and lang embedding
