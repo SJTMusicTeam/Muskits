@@ -756,7 +756,6 @@ if ! "${skip_train}"; then
 
         # Check extra statistics
         if [ -e "${svs_stats_dir}/train/pitch_stats.npz" ]; then
-            _opts+="--pitch_extract pitch_extract=${score_feats_extract} "
             _opts+="--pitch_extract_conf fs=${fs} "
             _opts+="--pitch_extract_conf n_fft=${n_fft} "
             _opts+="--pitch_extract_conf win_length=${win_length} "

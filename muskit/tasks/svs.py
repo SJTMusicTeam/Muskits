@@ -201,7 +201,7 @@ class SVSTask(AbsTask):
             default=None,
             help="Specify g2p method if --token_type=phn",
         )
-        
+
         parser.add_argument(
             "--fs",
             type=int,
@@ -240,7 +240,7 @@ class SVSTask(AbsTask):
                 non_linguistic_symbols=args.non_linguistic_symbols,
                 text_cleaner=args.cleaner,
                 g2p_type=args.g2p,
-                fs=args.fs
+                fs=args.fs,
             )
         else:
             retval = None

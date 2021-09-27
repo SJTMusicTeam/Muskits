@@ -30,7 +30,7 @@ class FrameLabelAggregate(AbsFeatsExtract):
         hop_length: int = 128,
         window: str = "hann",
         center: bool = True,
-        ftype: str = "frame",#syllable
+        ftype: str = "frame",  # syllable
     ):
         assert check_argument_types()
         super().__init__()
@@ -104,7 +104,7 @@ class FrameLabelAggregate(AbsFeatsExtract):
 
         # Step3: aggregate label
         # (bs, nframe, self.win_length, label_dim) => (bs, nframe)
-        output, _ = output.sum(dim=2, keepdim=False).mode(dim=-1,keepdim=False)
+        output, _ = output.sum(dim=2, keepdim=False).mode(dim=-1, keepdim=False)
 
         # Step4: process lengths
         if input_lengths is not None:

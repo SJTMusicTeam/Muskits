@@ -1153,7 +1153,7 @@ class AbsTask(ABC):
                 valid_key_file = args.valid_shape_file[0]
             else:
                 valid_key_file = None
-            
+
             collect_stats(
                 model=model,
                 train_iter=cls.build_streaming_iterator(
