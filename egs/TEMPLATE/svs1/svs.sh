@@ -60,7 +60,7 @@ fmax=12000        # Maximum frequency of Mel basis.
 n_mels=80         # The number of mel basis.
 n_fft=1024        # The number of fft points.
 n_shift=256       # The number of shift points.
-ftype=frame       # The type of score_feats_extract
+ftype=syllable #ftype=frame       # The type of score_feats_extract
 win_length=null   # Window length.
 score_feats_extract=score_feats_extract # The type of other feats 
 # Only used for the model using pitch features (e.g. FastSpeech2)

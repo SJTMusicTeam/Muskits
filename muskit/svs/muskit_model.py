@@ -6,6 +6,7 @@
 
 from contextlib import contextmanager
 from distutils.version import LooseVersion
+import logging
 from typing import Dict
 from typing import Optional
 from typing import Tuple
@@ -243,12 +244,12 @@ class MuskitSVSModel(AbsMuskitModel):
         else:
             # Use precalculated feats (feats_type != raw case)
             feats, feats_lengths = singing, singing_lengths
-        if self.durations_extract is not None:
+        if self.durations_extract is not None and self.durations_extract.ftype=='frame':
             durations, durations_lengths = self.durations_extract(
                 input=durations.unsqueeze(-1),
                 input_lengths=durations_lengths,
             )
-        if self.score_feats_extract is not None:
+        if self.score_feats_extract is not None and self.durations_extract.ftype=='frame':
             score, score_lengths = self.score_feats_extract(
                 input=score.unsqueeze(-1),
                 input_lengths=score_lengths,
@@ -258,7 +259,7 @@ class MuskitSVSModel(AbsMuskitModel):
                 input=pitch.unsqueeze(-1),
                 input_lengths=pitch_lengths,
             )
-        if self.tempo_extract is not None:
+        if self.tempo_extract is not None and self.durations_extract.ftype=='frame':
             tempo, tempo_lengths = self.tempo_extract(
                 input=tempo.unsqueeze(-1),
                 input_lengths=tempo_lengths,
@@ -271,6 +272,18 @@ class MuskitSVSModel(AbsMuskitModel):
                 durations=durations,
                 durations_lengths=durations_lengths,
             )
+        
+        if self.durations_extract.ftype == 'syllable' and \
+            self.score_feats_extract.ftype == 'syllable' and \
+            self.tempo_extract.ftype == 'syllable' :
+            # logging.info(f'dur:{durations}, s:{score}, t:{tempo}')
+            durations, durations_lengths, score, score_lengths, \
+                tempo, tempo_lengths = self.score_feats_extract.syllable_forward(durations=durations,\
+                                                                                durations_lengths=durations_lengths,\
+                                                                                score=score,\
+                                                                                score_lengths=score_lengths,\
+                                                                                tempo=tempo,\
+                                                                                tempo_lengths=tempo_lengths)
 
         # store in dict
         feats_dict = dict(feats=feats, feats_lengths=feats_lengths)
