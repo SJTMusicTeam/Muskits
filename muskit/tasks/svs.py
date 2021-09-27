@@ -23,6 +23,7 @@ from muskit.svs.abs_svs import AbsSVS
 from muskit.svs.muskit_model import MuskitSVSModel
 from muskit.svs.feats_extract.abs_feats_extract import AbsFeatsExtract
 from muskit.svs.feats_extract.dio import Dio
+from muskit.svs.feats_extract.score_feats_extract import FrameLabelAggregate
 from muskit.svs.feats_extract.energy import Energy
 from muskit.svs.feats_extract.log_mel_fbank import LogMelFbank
 from muskit.svs.feats_extract.log_spectrogram import LogSpectrogram
@@ -43,7 +44,7 @@ feats_extractor_choices = ClassChoices(
 )
 pitch_extractor_choices = ClassChoices(
     "pitch_extract",
-    classes=dict(dio=Dio),
+    classes=dict(dio=Dio, score_feats_extract=FrameLabelAggregate),
     type_check=AbsFeatsExtract,
     default=None,
     optional=True,
@@ -307,17 +308,19 @@ class SVSTask(AbsTask):
         energy_extract = None
         pitch_normalize = None
         energy_normalize = None
+        # logging.info(f'args.pitch_extract:{args.pitch_extract}')
         if getattr(args, "pitch_extract", None) is not None:
             pitch_extract_class = pitch_extractor_choices.get_class(args.pitch_extract)
-            if args.pitch_extract_conf.get("reduction_factor", None) is not None:
-                assert args.pitch_extract_conf.get(
-                    "reduction_factor", None
-                ) == args.svs_conf.get("reduction_factor", 1)
-            else:
-                args.pitch_extract_conf["reduction_factor"] = args.svs_conf.get(
-                    "reduction_factor", 1
-                )
+            # if args.pitch_extract_conf.get("reduction_factor", None) is not None:
+            #     assert args.pitch_extract_conf.get(
+            #         "reduction_factor", None
+            #     ) == args.svs_conf.get("reduction_factor", 1)
+            # else:
+            #     args.pitch_extract_conf["reduction_factor"] = args.svs_conf.get(
+            #         "reduction_factor", 1
+            #     )
             pitch_extract = pitch_extract_class(**args.pitch_extract_conf)
+        # logging.info(f'pitch_extract:{pitch_extract}')
         if getattr(args, "energy_extract", None) is not None:
             if args.energy_extract_conf.get("reduction_factor", None) is not None:
                 assert args.energy_extract_conf.get(
@@ -344,8 +347,11 @@ class SVSTask(AbsTask):
 
         # 5. Build model
         model = MuskitSVSModel(
+            text_extract=pitch_extract,
             feats_extract=feats_extract,
+            durations_extract=pitch_extract,
             pitch_extract=pitch_extract,
+            tempo_extract=pitch_extract,
             energy_extract=energy_extract,
             normalize=normalize,
             pitch_normalize=pitch_normalize,
