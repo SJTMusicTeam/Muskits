@@ -317,7 +317,7 @@ class SVSTask(AbsTask):
         energy_extract = None
         pitch_normalize = None
         energy_normalize = None
-        # logging.info(f'args.pitch_extract:{args.pitch_extract}')
+        logging.info(f'args:{args}')
         if getattr(args, "score_feats_extract", None) is not None:
             score_feats_extract_class = score_feats_extractor_choices.get_class(args.score_feats_extract)
             score_feats_extract = score_feats_extract_class(**args.score_feats_extract_conf)
