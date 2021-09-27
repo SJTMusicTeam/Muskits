@@ -57,7 +57,7 @@ class MuskitSVSModel(AbsMuskitModel):
         self.pitch_extract = pitch_extract
         self.tempo_extract = tempo_extract
         self.energy_extract = energy_extract
-        self.normalize = normalize        
+        self.normalize = normalize
         # self.text_normalize = text_normalize
         # self.durations_normalize = durations_normalize
         self.pitch_normalize = pitch_normalize
@@ -122,19 +122,19 @@ class MuskitSVSModel(AbsMuskitModel):
                     input=durations.unsqueeze(-1),
                     input_lengths=durations_lengths,
                 )
-            
+
             if self.pitch_extract is not None and pitch is None:
                 pitch, pitch_lengths = self.pitch_extract(
                     input=pitch.unsqueeze(-1),
                     input_lengths=pitch_lengths,
                 )
-            
+
             if self.tempo_extract is not None and tempo is None:
                 tempo, tempo_lengths = self.tempo_extract(
                     input=tempo.unsqueeze(-1),
                     input_lengths=tempo_lengths,
                 )
-            
+
             if self.energy_extract is not None and energy is None:
                 energy, energy_lengths = self.energy_extract(
                     singing,

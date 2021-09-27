@@ -102,15 +102,15 @@ class MIDIScpWriter:
         midi_path.parent.mkdir(parents=True, exist_ok=True)
         midi_obj = seq_to_midi(note_seq, tempo_seq, self.rate)
         notes = midi_obj.instruments[0].notes
-        if len(notes)>0:
+        if len(notes) > 0:
             midi_obj.dump(midi_path)
             self.fscp.write(f"{key} {midi_path}\n")
             # Store the file path
             self.data[key] = str(midi_path)
         else:
-            logging.warning(f'no corresponding note sequence for segments {key}. skip it')
-
-        
+            logging.warning(
+                f"no corresponding note sequence for segments {key}. skip it"
+            )
 
     def get_path(self, key):
         return self.data[key]
