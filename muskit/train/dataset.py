@@ -80,7 +80,7 @@ class AdapterForSoundScpReader(collections.abc.Mapping):
                 array = array.astype(self.dtype)
 
         elif isinstance(retval, list):
-            # label: [ [start, end, phone] * n ] 
+            # label: [ [start, end, phone] * n ]
             array = retval
         else:
             # Normal ark case
@@ -111,6 +111,7 @@ class H5FileWrapper:
         value = self.h5_file[key]
         return value[()]
 
+
 class AdapterForMIDIScpReader(collections.abc.Mapping):
     def __init__(self, loader):
         assert check_argument_types()
@@ -132,12 +133,13 @@ class AdapterForMIDIScpReader(collections.abc.Mapping):
         if isinstance(retval[0], np.ndarray) and isinstance(retval[1], np.ndarray):
             note_array, tempo_array = retval
         else:
-            raise RuntimeError(
-                f"Unexpected type: {type(retval[0])}, {type(retval[1])}"
-            )
+            raise RuntimeError(f"Unexpected type: {type(retval[0])}, {type(retval[1])}")
 
-        assert isinstance(note_array, np.ndarray) and isinstance(tempo_array, np.ndarray)
+        assert isinstance(note_array, np.ndarray) and isinstance(
+            tempo_array, np.ndarray
+        )
         return note_array, tempo_array
+
 
 class AdapterForLabelScpReader(collections.abc.Mapping):
     def __init__(self, loader):
@@ -158,16 +160,15 @@ class AdapterForLabelScpReader(collections.abc.Mapping):
 
         assert isinstance(retval, list)
         seq_len = len(retval)
-        sample_time = np.zeros((seq_len,2))
+        sample_time = np.zeros((seq_len, 2))
         sample_label = []
         for i in range(seq_len):
             sample_time[i, 0] = np.float32(retval[i][0])
             sample_time[i, 1] = np.float32(retval[i][1])
             sample_label.append(retval[i][2])
-        
+
         assert isinstance(sample_time, np.ndarray) and isinstance(sample_label, list)
         return sample_time, sample_label
-
 
 
 def sound_loader(path, float_dtype=None):
@@ -526,12 +527,12 @@ class MuskitDataset(AbsDataset):
         # 3. Force data-precision
         for name in data:
             value = data[name]
-            if not isinstance(value, (np.ndarray, tuple) ):
+            if not isinstance(value, (np.ndarray, tuple)):
                 raise RuntimeError(
                     f"All values must be converted to np.ndarray object "
                     f'by preprocessing, but "{name}" is still {type(value)}.'
                 )
-            if isinstance(value, np.ndarray ):
+            if isinstance(value, np.ndarray):
                 # Cast to desired type
                 if value.dtype.kind == "f":
                     value = value.astype(self.float_dtype)

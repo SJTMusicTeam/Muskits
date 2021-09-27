@@ -86,8 +86,8 @@ def common_collate_fn(
             pad_value = int_pad_value
         else:
             pad_value = float_pad_value
-        
-        array_list = [ d[key] for d in data ]
+
+        array_list = [d[key] for d in data]
         # Assume the first axis is length:
         # tensor_list: Batch x (Length, ...)
         tensor_list = [torch.from_numpy(a) for a in array_list]

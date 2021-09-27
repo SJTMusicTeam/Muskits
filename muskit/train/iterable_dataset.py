@@ -220,12 +220,12 @@ class IterableMuskitDataset(IterableDataset):
             # 4. Force data-precision
             for name in data:
                 value = data[name]
-                if not isinstance(value, (np.ndarray, tuple) ):
+                if not isinstance(value, (np.ndarray, tuple)):
                     raise RuntimeError(
                         f"All values must be converted to np.ndarray object "
                         f'by preprocessing, but "{name}" is still {type(value)}.'
                     )
-                if isinstance(value, np.ndarray ):
+                if isinstance(value, np.ndarray):
                     # Cast to desired type
                     if value.dtype.kind == "f":
                         value = value.astype(self.float_dtype)
