@@ -42,6 +42,7 @@ feats_extractor_choices = ClassChoices(
     type_check=AbsFeatsExtract,
     default="fbank",
 )
+
 pitch_extractor_choices = ClassChoices(
     "pitch_extract",
     classes=dict(dio=Dio, score_feats_extract=FrameLabelAggregate),

@@ -148,6 +148,7 @@ Options:
     --n_mels           # The number of mel basis (default="${n_mels}").
     --n_fft            # The number of fft points (default="${n_fft}").
     --n_shift          # The number of shift points (default="${n_shift}").
+    --ftype            # The type of score_feats_extract (default="${ftype}")
     --win_length       # Window length (default="${win_length}").
     --f0min            # Maximum f0 for pitch extraction (default="${f0min}").
     --f0max            # Minimum f0 for pitch extraction (default="${f0max}").
