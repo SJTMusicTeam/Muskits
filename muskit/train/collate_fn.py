@@ -1,3 +1,4 @@
+import logging
 from typing import Collection
 from typing import Dict
 from typing import List
@@ -5,6 +6,7 @@ from typing import Tuple
 from typing import Union
 
 import numpy as np
+from numpy.lib import array_split
 import torch
 from typeguard import check_argument_types
 from typeguard import check_return_type
@@ -86,7 +88,6 @@ def common_collate_fn(
             pad_value = float_pad_value
 
         array_list = [d[key] for d in data]
-
         # Assume the first axis is length:
         # tensor_list: Batch x (Length, ...)
         tensor_list = [torch.from_numpy(a) for a in array_list]
@@ -100,5 +101,7 @@ def common_collate_fn(
             output[key + "_lengths"] = lens
 
     output = (uttids, output)
-    assert check_return_type(output)
+    # logging.info(f'output:{output}')
+    # TODO allow the tuple type
+    # assert check_return_type(output)
     return output

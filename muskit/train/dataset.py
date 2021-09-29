@@ -61,6 +61,9 @@ class AdapterForSoundScpReader(collections.abc.Mapping):
             elif isinstance(retval[0], int) and isinstance(retval[1], np.ndarray):
                 # Extended ark format case
                 array, rate = retval
+            # elif isinstance(retval[0], np.ndarray) and isinstance(retval[1], np.ndarray):
+            #     # Extended ark format case
+            #     array, rate = retval
             else:
                 raise RuntimeError(
                     f"Unexpected type: {type(retval[0])}, {type(retval[1])}"
@@ -76,6 +79,9 @@ class AdapterForSoundScpReader(collections.abc.Mapping):
             if self.dtype is not None:
                 array = array.astype(self.dtype)
 
+        elif isinstance(retval, list):
+            # label: [ [start, end, phone] * n ]
+            array = retval
         else:
             # Normal ark case
             assert isinstance(retval, np.ndarray), type(retval)
@@ -83,7 +89,7 @@ class AdapterForSoundScpReader(collections.abc.Mapping):
             if self.dtype is not None:
                 array = array.astype(self.dtype)
 
-        assert isinstance(array, np.ndarray), type(array)
+        assert isinstance(array, np.ndarray) or isinstance(array, list), type(array)
         return array
 
 
@@ -104,6 +110,65 @@ class H5FileWrapper:
     def __getitem__(self, key) -> np.ndarray:
         value = self.h5_file[key]
         return value[()]
+
+
+class AdapterForMIDIScpReader(collections.abc.Mapping):
+    def __init__(self, loader):
+        assert check_argument_types()
+        self.loader = loader
+
+    def keys(self):
+        return self.loader.keys()
+
+    def __len__(self):
+        return len(self.loader)
+
+    def __iter__(self):
+        return iter(self.loader)
+
+    def __getitem__(self, key: str) -> np.ndarray:
+        retval = self.loader[key]
+
+        assert len(retval) == 2, len(retval)
+        if isinstance(retval[0], np.ndarray) and isinstance(retval[1], np.ndarray):
+            note_array, tempo_array = retval
+        else:
+            raise RuntimeError(f"Unexpected type: {type(retval[0])}, {type(retval[1])}")
+
+        assert isinstance(note_array, np.ndarray) and isinstance(
+            tempo_array, np.ndarray
+        )
+        return note_array, tempo_array
+
+
+class AdapterForLabelScpReader(collections.abc.Mapping):
+    def __init__(self, loader):
+        assert check_argument_types()
+        self.loader = loader
+
+    def keys(self):
+        return self.loader.keys()
+
+    def __len__(self):
+        return len(self.loader)
+
+    def __iter__(self):
+        return iter(self.loader)
+
+    def __getitem__(self, key: str) -> np.ndarray:
+        retval = self.loader[key]
+
+        assert isinstance(retval, list)
+        seq_len = len(retval)
+        sample_time = np.zeros((seq_len, 2))
+        sample_label = []
+        for i in range(seq_len):
+            sample_time[i, 0] = np.float32(retval[i][0])
+            sample_time[i, 1] = np.float32(retval[i][1])
+            sample_label.append(retval[i][2])
+
+        assert isinstance(sample_time, np.ndarray) and isinstance(sample_label, list)
+        return sample_time, sample_label
 
 
 def sound_loader(path, float_dtype=None):
@@ -129,7 +194,7 @@ def midi_loader(path, float_dtype=None):
     loader = MIDIScpReader(path)
 
     # MIDIScpReader.__getitem__() returns ndarray
-    return AdapterForSoundScpReader(loader, float_dtype)
+    return AdapterForMIDIScpReader(loader)
 
 
 def label_loader(path, float_dtype=None):
@@ -140,7 +205,7 @@ def label_loader(path, float_dtype=None):
     loader = read_label(path)
 
     # MIDIScpReader.__getitem__() returns ndarray
-    return AdapterForSoundScpReader(loader, float_dtype)
+    return AdapterForLabelScpReader(loader)
 
 
 def kaldi_loader(path, float_dtype=None, max_cache_fd: int = 0):
@@ -432,10 +497,10 @@ class MuskitDataset(AbsDataset):
         for name, loader in self.loader_dict.items():
             try:
                 value = loader[uid]
-                if isinstance(value, (list, tuple)):
+                if isinstance(value, list):
                     value = np.array(value)
                 if not isinstance(
-                    value, (np.ndarray, torch.Tensor, str, numbers.Number)
+                    value, (np.ndarray, torch.Tensor, str, numbers.Number, tuple)
                 ):
                     raise TypeError(
                         f"Must be ndarray, torch.Tensor, str or Number: {type(value)}"
@@ -462,24 +527,25 @@ class MuskitDataset(AbsDataset):
         # 3. Force data-precision
         for name in data:
             value = data[name]
-            if not isinstance(value, np.ndarray):
+            if not isinstance(value, (np.ndarray, tuple)):
                 raise RuntimeError(
                     f"All values must be converted to np.ndarray object "
                     f'by preprocessing, but "{name}" is still {type(value)}.'
                 )
-
-            # Cast to desired type
-            if value.dtype.kind == "f":
-                value = value.astype(self.float_dtype)
-            elif value.dtype.kind == "i":
-                value = value.astype(self.int_dtype)
-            else:
-                raise NotImplementedError(f"Not supported dtype: {value.dtype}")
+            if isinstance(value, np.ndarray):
+                # Cast to desired type
+                if value.dtype.kind == "f":
+                    value = value.astype(self.float_dtype)
+                elif value.dtype.kind == "i":
+                    value = value.astype(self.int_dtype)
+                else:
+                    raise NotImplementedError(f"Not supported dtype: {value.dtype}")
             data[name] = value
 
         if self.cache is not None and self.cache.size < self.max_cache_size:
             self.cache[uid] = data
 
         retval = uid, data
-        assert check_return_type(retval)
+        # TODO allow the tuple type
+        # assert check_return_type(retval)
         return retval

@@ -23,11 +23,13 @@ from muskit.svs.abs_svs import AbsSVS
 from muskit.svs.muskit_model import MuskitSVSModel
 from muskit.svs.feats_extract.abs_feats_extract import AbsFeatsExtract
 from muskit.svs.feats_extract.dio import Dio
+from muskit.svs.feats_extract.score_feats_extract import FrameLabelAggregate
 from muskit.svs.feats_extract.energy import Energy
 from muskit.svs.feats_extract.log_mel_fbank import LogMelFbank
 from muskit.svs.feats_extract.log_spectrogram import LogSpectrogram
 from muskit.svs.encoder_decoder.transformer.transformer import Transformer
 from muskit.svs.bytesing.bytesing import ByteSing
+from muskit.svs.naive_rnn.naive_rnn import NaiveRNN
 from muskit.utils.get_default_kwargs import get_default_kwargs
 from muskit.utils.nested_dict_action import NestedDictAction
 from muskit.utils.types import int_or_none
@@ -37,6 +39,12 @@ from muskit.utils.types import str_or_none
 feats_extractor_choices = ClassChoices(
     "feats_extract",
     classes=dict(fbank=LogMelFbank, spectrogram=LogSpectrogram),
+    type_check=AbsFeatsExtract,
+    default="fbank",
+)
+score_feats_extractor_choices = ClassChoices(
+    "score_feats_extract",
+    classes=dict(score_feats_extract=FrameLabelAggregate),
     type_check=AbsFeatsExtract,
     default="fbank",
 )
@@ -80,6 +88,7 @@ svs_choices = ClassChoices(
     classes=dict(
         transformer=Transformer,
         bytesing=ByteSing,
+        naive_rnn=NaiveRNN,
     ),
     type_check=AbsSVS,
     default="transformer",
@@ -91,6 +100,8 @@ class SVSTask(AbsTask):
 
     # Add variable objects configurations
     class_choices_list = [
+        # --score_extractor and --score_extractor_conf
+        score_feats_extractor_choices,
         # --feats_extractor and --feats_extractor_conf
         feats_extractor_choices,
         # --normalize and --normalize_conf
@@ -191,6 +202,13 @@ class SVSTask(AbsTask):
             help="Specify g2p method if --token_type=phn",
         )
 
+        parser.add_argument(
+            "--fs",
+            type=int,
+            default=16000,
+            help="sample rate",
+        )
+
         for class_choices in cls.class_choices_list:
             # Append --<name> and --<name>_conf.
             # e.g. --encoder and --encoder_conf
@@ -222,6 +240,7 @@ class SVSTask(AbsTask):
                 non_linguistic_symbols=args.non_linguistic_symbols,
                 text_cleaner=args.cleaner,
                 g2p_type=args.g2p,
+                fs=args.fs,
             )
         else:
             retval = None
@@ -293,10 +312,15 @@ class SVSTask(AbsTask):
         svs = svs_class(idim=vocab_size, odim=odim, **args.svs_conf)
 
         # 4. Extra components
+        score_feats_extract = None
         pitch_extract = None
         energy_extract = None
         pitch_normalize = None
         energy_normalize = None
+        logging.info(f'args:{args}')
+        if getattr(args, "score_feats_extract", None) is not None:
+            score_feats_extract_class = score_feats_extractor_choices.get_class(args.score_feats_extract)
+            score_feats_extract = score_feats_extract_class(**args.score_feats_extract_conf)
         if getattr(args, "pitch_extract", None) is not None:
             pitch_extract_class = pitch_extractor_choices.get_class(args.pitch_extract)
             if args.pitch_extract_conf.get("reduction_factor", None) is not None:
@@ -308,6 +332,7 @@ class SVSTask(AbsTask):
                     "reduction_factor", 1
                 )
             pitch_extract = pitch_extract_class(**args.pitch_extract_conf)
+        # logging.info(f'pitch_extract:{pitch_extract}')
         if getattr(args, "energy_extract", None) is not None:
             if args.energy_extract_conf.get("reduction_factor", None) is not None:
                 assert args.energy_extract_conf.get(
@@ -334,8 +359,12 @@ class SVSTask(AbsTask):
 
         # 5. Build model
         model = MuskitSVSModel(
+            text_extract=score_feats_extract,
             feats_extract=feats_extract,
+            score_feats_extract=score_feats_extract,
+            durations_extract=score_feats_extract,
             pitch_extract=pitch_extract,
+            tempo_extract=score_feats_extract,
             energy_extract=energy_extract,
             normalize=normalize,
             pitch_normalize=pitch_normalize,
