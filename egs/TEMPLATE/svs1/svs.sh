@@ -60,9 +60,8 @@ fmax=12000        # Maximum frequency of Mel basis.
 n_mels=80         # The number of mel basis.
 n_fft=1024        # The number of fft points.
 n_shift=256       # The number of shift points.
-ftype=syllable #ftype=frame       # The type of score_feats_extract
 win_length=null   # Window length.
-score_feats_extract=score_feats_extract # The type of other feats 
+score_feats_extract=frame_score_feats # The type of music score feats (frame_score_feats or syllable_score_feats)
 # Only used for the model using pitch features (e.g. FastSpeech2)
 f0min=80          # Maximum f0 for pitch extraction.
 f0max=400         # Minimum f0 for pitch extraction.
@@ -148,7 +147,6 @@ Options:
     --n_mels           # The number of mel basis (default="${n_mels}").
     --n_fft            # The number of fft points (default="${n_fft}").
     --n_shift          # The number of shift points (default="${n_shift}").
-    --ftype            # The type of score_feats_extract (default="${ftype}")
     --win_length       # Window length (default="${win_length}").
     --f0min            # Maximum f0 for pitch extraction (default="${f0min}").
     --f0max            # Minimum f0 for pitch extraction (default="${f0max}").
@@ -507,7 +505,6 @@ if ! "${skip_train}"; then
         _opts+="--score_feats_extract_conf n_fft=${n_fft} "
         _opts+="--score_feats_extract_conf win_length=${win_length} "
         _opts+="--score_feats_extract_conf hop_length=${n_shift} "
-        _opts+="--score_feats_extract_conf ftype=${ftype} "
         _opts+="--pitch_extract_conf fs=${fs} "
         _opts+="--pitch_extract_conf n_fft=${n_fft} "
         _opts+="--pitch_extract_conf hop_length=${n_shift} "
