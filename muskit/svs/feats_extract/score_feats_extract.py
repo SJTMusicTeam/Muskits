@@ -143,9 +143,9 @@ class FrameScoreFeats(AbsFeatsExtract):
         score, score_lengths = self.label_aggregate(score, score_lengths)
         tempo, tempo_lengths = self.label_aggregate(tempo, tempo_lengths)
         return (
-            (durations, durations_lengths),
-            (score, score_lengths),
-            (tempo, tempo_lengths)
+            durations, durations_lengths,
+            score, score_lengths,
+            tempo, tempo_lengths
         )
 
 
