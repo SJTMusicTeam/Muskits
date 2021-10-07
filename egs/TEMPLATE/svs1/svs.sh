@@ -60,7 +60,9 @@ fmax=12000        # Maximum frequency of Mel basis.
 n_mels=80         # The number of mel basis.
 n_fft=1024        # The number of fft points.
 n_shift=256       # The number of shift points.
+ftype=syllable #ftype=frame       # The type of score_feats_extract
 win_length=null   # Window length.
+score_feats_extract=score_feats_extract # The type of other feats 
 # Only used for the model using pitch features (e.g. FastSpeech2)
 f0min=80          # Maximum f0 for pitch extraction.
 f0max=400         # Minimum f0 for pitch extraction.
@@ -425,7 +427,7 @@ if ! "${skip_data_prep}"; then
                 awk ' { if( NF != 1 ) print $0; } ' >"${data_feats}/${dset}/text"
 
             # fix_data_dir.sh leaves only utts which exist in all files
-            utils/fix_data_dir.sh "${data_feats}/${dset}"
+            scripts/utils/fix_data_dir.sh "${data_feats}/${dset}"
 
 #            # Filter x-vector
 #            if "${use_xvector}"; then
@@ -499,6 +501,12 @@ if ! "${skip_train}"; then
 
         # Add extra configs for additional inputs
         # NOTE(kan-bayashi): We always pass this options but not used in default
+        _opts+="--score_feats_extract ${score_feats_extract} "
+        _opts+="--score_feats_extract_conf fs=${fs} "
+        _opts+="--score_feats_extract_conf n_fft=${n_fft} "
+        _opts+="--score_feats_extract_conf win_length=${win_length} "
+        _opts+="--score_feats_extract_conf hop_length=${n_shift} "
+        _opts+="--score_feats_extract_conf ftype=${ftype} "
         _opts+="--pitch_extract_conf fs=${fs} "
         _opts+="--pitch_extract_conf n_fft=${n_fft} "
         _opts+="--pitch_extract_conf hop_length=${n_shift} "
@@ -512,8 +520,8 @@ if ! "${skip_train}"; then
         if [ -n "${teacher_dumpdir}" ]; then
             _teacher_train_dir="${teacher_dumpdir}/${train_set}"
             _teacher_valid_dir="${teacher_dumpdir}/${valid_set}"
-            _opts+="--train_data_path_and_name_and_type ${_teacher_train_dir}/durations,durations,text_int "
-            _opts+="--valid_data_path_and_name_and_type ${_teacher_valid_dir}/durations,durations,text_int "
+            _opts+="--train_data_path_and_name_and_type ${_teacher_train_dir}/label,label,text_int "
+            _opts+="--valid_data_path_and_name_and_type ${_teacher_valid_dir}/label,label,text_int "
         fi
 
         if "${use_xvector}"; then
@@ -688,10 +696,10 @@ if ! "${skip_train}"; then
             _teacher_valid_dir="${teacher_dumpdir}/${valid_set}"
             _fold_length="${singing_fold_length}"
             _opts+="--train_data_path_and_name_and_type ${_train_dir}/text,text,text "
-            _opts+="--train_data_path_and_name_and_type ${_teacher_train_dir}/durations,durations,text_int "
+            _opts+="--train_data_path_and_name_and_type ${_teacher_train_dir}/label,label,text_int "
             _opts+="--train_shape_file ${svs_stats_dir}/train/text_shape.${token_type} "
             _opts+="--valid_data_path_and_name_and_type ${_valid_dir}/text,text,text "
-            _opts+="--valid_data_path_and_name_and_type ${_teacher_valid_dir}/durations,durations,text_int "
+            _opts+="--valid_data_path_and_name_and_type ${_teacher_valid_dir}/label,label,text_int "
             _opts+="--valid_shape_file ${svs_stats_dir}/valid/text_shape.${token_type} "
 
             if [ -e ${_teacher_train_dir}/probs ]; then
@@ -726,7 +734,7 @@ if ! "${skip_train}"; then
             fi
         fi
 
-
+        # TODO (jiatong): add specifics for svs
         # If there are dumped files of additional inputs, we use it to reduce computational cost
         # NOTE (kan-bayashi): Use dumped files of the target features as well?
         if [ -e "${svs_stats_dir}/train/collect_feats/pitch.scp" ]; then
@@ -750,9 +758,9 @@ if ! "${skip_train}"; then
         if [ -e "${svs_stats_dir}/train/pitch_stats.npz" ]; then
             _opts+="--pitch_extract_conf fs=${fs} "
             _opts+="--pitch_extract_conf n_fft=${n_fft} "
+            _opts+="--pitch_extract_conf win_length=${win_length} "
             _opts+="--pitch_extract_conf hop_length=${n_shift} "
-            _opts+="--pitch_extract_conf f0max=${f0max} "
-            _opts+="--pitch_extract_conf f0min=${f0min} "
+            _opts+="--pitch_extract_conf ftype=${ftype} "
             _opts+="--pitch_normalize_conf stats_file=${svs_stats_dir}/train/pitch_stats.npz "
         fi
         if [ -e "${svs_stats_dir}/train/energy_stats.npz" ]; then
