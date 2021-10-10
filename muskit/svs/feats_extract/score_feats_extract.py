@@ -21,7 +21,7 @@ def ListsToTensor(xs):
         ys.append(y)
     return ys
 
-class FrameLabelAggregate(AbsFeatsExtract):
+class FrameScoreFeats(AbsFeatsExtract):
     def __init__(
         self,
         fs: Union[int, str] = 22050,
@@ -30,7 +30,6 @@ class FrameLabelAggregate(AbsFeatsExtract):
         hop_length: int = 128,
         window: str = "hann",
         center: bool = True,
-        ftype: str = "frame",  # syllable
     ):
         assert check_argument_types()
         super().__init__()
@@ -41,14 +40,12 @@ class FrameLabelAggregate(AbsFeatsExtract):
         self.hop_length = hop_length
         self.window = window
         self.center = center
-        self.ftype = ftype
 
     def extra_repr(self):
         return (
             f"win_length={self.win_length}, "
             f"hop_length={self.hop_length}, "
             f"center={self.center}, "
-            f"ftype={self.ftype}, "
         )
 
     def output_size(self) -> int:
@@ -67,10 +64,10 @@ class FrameLabelAggregate(AbsFeatsExtract):
             # reduction_factor=self.reduction_factor,
         )
 
-    def forward(
+    def label_aggregate(
         self, input: torch.Tensor, input_lengths: torch.Tensor = None
     ) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
-        """LabelAggregate forward function.
+        """lage_aggregate function.
         Args:
             input: (Batch, Nsamples, Label_dim)
             input_lengths: (Batch)
@@ -118,6 +115,84 @@ class FrameLabelAggregate(AbsFeatsExtract):
             olens = None
 
         return output, olens
+    
+    def forward(
+        self, 
+        durations: Optional[torch.Tensor] = None,
+        durations_lengths: Optional[torch.Tensor] = None,
+        score: Optional[torch.Tensor] = None,
+        score_lengths: Optional[torch.Tensor] = None,
+        tempo: Optional[torch.Tensor] = None,
+        tempo_lengths: Optional[torch.Tensor] = None,
+    ) -> Tuple[torch.Tensor, torch.Tensor, \
+                torch.Tensor, torch.Tensor, \
+                torch.Tensor, torch.Tensor]:
+        """FrameScoreFeats forward function.
+        Args:
+            durations: (Batch, Nsamples)
+            durations_lengths: (Batch)
+            score: (Batch, Nsamples)
+            score_lengths: (Batch)
+            tempo: (Batch, Nsamples)
+            tempo_lengths: (Batch)
+        Returns:
+            output: (Batch, Frames)
+        """
+
+        durations, durations_lengths = self.label_aggregate(durations, durations_lengths)
+        score, score_lengths = self.label_aggregate(score, score_lengths)
+        tempo, tempo_lengths = self.label_aggregate(tempo, tempo_lengths)
+        return (
+            durations, durations_lengths,
+            score, score_lengths,
+            tempo, tempo_lengths
+        )
+
+
+
+
+class SyllableScoreFeats(AbsFeatsExtract):
+    def __init__(
+        self,
+        fs: Union[int, str] = 22050,
+        n_fft: int = 1024,
+        win_length: int = 512,
+        hop_length: int = 128,
+        window: str = "hann",
+        center: bool = True,
+    ):
+        assert check_argument_types()
+        super().__init__()
+
+        self.fs = fs
+        self.n_fft = n_fft
+        self.win_length = win_length
+        self.hop_length = hop_length
+        self.window = window
+        self.center = center
+
+    def extra_repr(self):
+        return (
+            f"win_length={self.win_length}, "
+            f"hop_length={self.hop_length}, "
+            f"center={self.center}, "
+        )
+
+    def output_size(self) -> int:
+        return 1
+
+    def get_parameters(self) -> Dict[str, Any]:
+        return dict(
+            fs=self.fs,
+            n_fft=self.n_fft,
+            hop_length=self.hop_length,
+            window=self.window,
+            win_length=self.win_length,
+            center=self.stft.center,
+            # normalized=self.stft.normalized,
+            # use_token_averaged_energy=self.use_token_averaged_energy,
+            # reduction_factor=self.reduction_factor,
+        )
 
     def get_segments(self,
         durations: Optional[torch.Tensor] = None,
@@ -155,7 +230,7 @@ class FrameLabelAggregate(AbsFeatsExtract):
             seg_tempo.append(tmp_tempo.item())
         return seg_duartion, lengths, seg_score, lengths, seg_tempo, lengths        
 
-    def syllable_forward(
+    def forward(
         self, 
         durations: Optional[torch.Tensor] = None,
         durations_lengths: Optional[torch.Tensor] = None,
@@ -166,7 +241,7 @@ class FrameLabelAggregate(AbsFeatsExtract):
     ) -> Tuple[torch.Tensor, torch.Tensor, \
                 torch.Tensor, torch.Tensor, \
                 torch.Tensor, torch.Tensor]:
-        """LabelAggregate forward function.
+        """SyllableScoreFeats forward function.
         Args:
             durations: (Batch, Nsamples)
             durations_lengths: (Batch)
@@ -215,4 +290,3 @@ class FrameLabelAggregate(AbsFeatsExtract):
         return seg_durations, seg_durations_lengths, \
                 seg_score, seg_score_lengths, \
                 seg_tempo, seg_tempo_lengths
-

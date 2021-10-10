@@ -124,28 +124,19 @@ class MuskitSVSModel(AbsMuskitModel):
                 feats, feats_lengths = singing, singing_lengths
 
             # Extract auxiliary features
-            if self.durations_extract is not None and durations is None:
-                durations, durations_lengths = self.durations_extract(
-                    input=durations.unsqueeze(-1),
-                    input_lengths=durations_lengths,
-                )
-
-            if self.score_feats_extract is not None and score is None:
-                score, score_lengths = self.score_feats_extract(
-                    input=score.unsqueeze(-1),
-                    input_lengths=score_lengths,
-                )
+            if self.score_feats_extract is not None:
+                durations, durations_lengths, score, score_lengths, \
+                    tempo, tempo_lengths = self.score_feats_extract(durations=durations.unsqueeze(-1),\
+                                                                    durations_lengths=durations_lengths,\
+                                                                    score=score.unsqueeze(-1),\
+                                                                    score_lengths=score_lengths,\
+                                                                    tempo=tempo.unsqueeze(-1),\
+                                                                    tempo_lengths=tempo_lengths)
 
             if self.pitch_extract is not None and pitch is None:
                 pitch, pitch_lengths = self.pitch_extract(
                     input=pitch.unsqueeze(-1),
                     input_lengths=pitch_lengths,
-                )
-
-            if self.tempo_extract is not None and tempo is None:
-                tempo, tempo_lengths = self.tempo_extract(
-                    input=tempo.unsqueeze(-1),
-                    input_lengths=tempo_lengths,
                 )
 
             if self.energy_extract is not None and energy is None:
@@ -244,25 +235,18 @@ class MuskitSVSModel(AbsMuskitModel):
         else:
             # Use precalculated feats (feats_type != raw case)
             feats, feats_lengths = singing, singing_lengths
-        if self.durations_extract is not None and self.durations_extract.ftype=='frame':
-            durations, durations_lengths = self.durations_extract(
-                input=durations.unsqueeze(-1),
-                input_lengths=durations_lengths,
-            )
-        if self.score_feats_extract is not None and self.durations_extract.ftype=='frame':
-            score, score_lengths = self.score_feats_extract(
-                input=score.unsqueeze(-1),
-                input_lengths=score_lengths,
-            )
+        if self.score_feats_extract is not None:
+            durations, durations_lengths, score, score_lengths, \
+                tempo, tempo_lengths = self.score_feats_extract(durations=durations.unsqueeze(-1),\
+                                                                durations_lengths=durations_lengths,\
+                                                                score=score.unsqueeze(-1),\
+                                                                score_lengths=score_lengths,\
+                                                                tempo=tempo.unsqueeze(-1),\
+                                                                tempo_lengths=tempo_lengths)
         if self.pitch_extract is not None:
             pitch, pitch_lengths = self.pitch_extract(
                 input=pitch.unsqueeze(-1),
                 input_lengths=pitch_lengths,
-            )
-        if self.tempo_extract is not None and self.durations_extract.ftype=='frame':
-            tempo, tempo_lengths = self.tempo_extract(
-                input=tempo.unsqueeze(-1),
-                input_lengths=tempo_lengths,
             )
         if self.energy_extract is not None:
             energy, energy_lengths = self.energy_extract(
@@ -273,18 +257,6 @@ class MuskitSVSModel(AbsMuskitModel):
                 durations_lengths=durations_lengths,
             )
         
-        if self.durations_extract.ftype == 'syllable' and \
-            self.score_feats_extract.ftype == 'syllable' and \
-            self.tempo_extract.ftype == 'syllable' :
-            # logging.info(f'dur:{durations}, s:{score}, t:{tempo}')
-            durations, durations_lengths, score, score_lengths, \
-                tempo, tempo_lengths = self.score_feats_extract.syllable_forward(durations=durations,\
-                                                                                durations_lengths=durations_lengths,\
-                                                                                score=score,\
-                                                                                score_lengths=score_lengths,\
-                                                                                tempo=tempo,\
-                                                                                tempo_lengths=tempo_lengths)
-
         # store in dict
         feats_dict = dict(feats=feats, feats_lengths=feats_lengths)
         if pitch is not None:
