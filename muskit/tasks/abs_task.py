@@ -305,6 +305,12 @@ class AbsTask(ABC):
             default=0,
             help="The number of gpus. 0 indicates CPU mode",
         )
+        group.add_argument(
+            "--gpu_id",
+            type=int,
+            default=0,
+            help="GPU_id, only works when ngpu=1",
+        )
         group.add_argument("--seed", type=int, default=0, help="Random seed")
         group.add_argument(
             "--num_workers",
@@ -1071,6 +1077,9 @@ class AbsTask(ABC):
             raise RuntimeError(
                 f"model must inherit {AbsMuskitModel.__name__}, but got {type(model)}"
             )
+        if args.ngpu == 1 and torch.cuda.is_available():
+            torch.cuda.set_device(args.gpu_id)
+            logging.info(f"GPU {args.gpu_id} is used")
         model = model.to(
             dtype=getattr(torch, args.train_dtype),
             device="cuda" if args.ngpu > 0 else "cpu",
@@ -1184,7 +1193,7 @@ class AbsTask(ABC):
                 write_collected_feats=args.write_collected_feats,
             )
         else:
-
+                        
             # 7. Build iterator factories
             if args.multiple_iterator:
                 train_iter_factory = cls.build_multiple_iter_factory(
