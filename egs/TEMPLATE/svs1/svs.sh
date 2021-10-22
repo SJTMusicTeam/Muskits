@@ -32,6 +32,7 @@ skip_train=false     # Skip training stages.
 skip_eval=false      # Skip decoding and evaluation stages.
 skip_upload=true     # Skip packing and uploading stages.
 ngpu=1               # The number of gpus ("0" uses cpu, otherwise use gpu).
+gpu_id=0             # GPU_id, only works when ngpu=1
 num_nodes=1          # The number of nodes.
 nj=32                # The number of parallel jobs.
 inference_nj=32      # The number of parallel jobs in decoding.
@@ -678,13 +679,23 @@ if ! "${skip_train}"; then
             else
                 _opts+="--train_data_path_and_name_and_type ${_train_dir}/text,text,text "
                 _opts+="--train_data_path_and_name_and_type ${_train_dir}/${_scp},singing,${_type} "
+                _opts+="--train_data_path_and_name_and_type ${_train_dir}/label,label,duration "
+                _opts+="--train_data_path_and_name_and_type ${_train_dir}/midi.scp,midi,midi "
+                # echo "svs_stats_dir: ${svs_stats_dir}"
+                
                 _opts+="--train_shape_file ${svs_stats_dir}/train/text_shape.${token_type} "
                 _opts+="--train_shape_file ${svs_stats_dir}/train/singing_shape "
+                _opts+="--train_shape_file ${svs_stats_dir}/train/durations_shape "
+                _opts+="--train_shape_file ${svs_stats_dir}/train/score_shape "
             fi
             _opts+="--valid_data_path_and_name_and_type ${_valid_dir}/text,text,text "
             _opts+="--valid_data_path_and_name_and_type ${_valid_dir}/${_scp},singing,${_type} "
+            _opts+="--valid_data_path_and_name_and_type ${_valid_dir}/label,label,duration "
+            _opts+="--valid_data_path_and_name_and_type ${_valid_dir}/midi.scp,midi,midi "
             _opts+="--valid_shape_file ${svs_stats_dir}/valid/text_shape.${token_type} "
             _opts+="--valid_shape_file ${svs_stats_dir}/valid/singing_shape "
+            _opts+="--valid_shape_file ${svs_stats_dir}/valid/durations_shape "
+            _opts+="--valid_shape_file ${svs_stats_dir}/valid/score_shape "
         else
 
             #####################################
