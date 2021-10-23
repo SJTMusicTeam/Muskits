@@ -9,6 +9,6 @@ if [[ "$(hostname -d)" == clsp.jhu.edu ]]; then
 fi
 
 # For only venus environment
-if [[ `hostname` == venus_qt_2251 ]]; then
+if [[ `hostname` == venus_qt_2241 ]]; then
     KIRITAN=/data3/qt/
 fi

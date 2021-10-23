@@ -3,150 +3,230 @@
 
 """Transformer-SVS related modules."""
 
+import logging
+
 from typing import Dict
 from typing import Optional
 from typing import Sequence
 from typing import Tuple
 
+import numpy as np
 import torch
 import torch.nn.functional as F
 
-import logging
 from typeguard import check_argument_types
 
-from muskit.torch_utils.nets_utils import make_non_pad_mask
-from muskit.svs.bytesing.encoder import Encoder as EncoderPrenet
-from muskit.svs.bytesing.decoder import Postnet
-from muskit.layers.transformer.mask import subsequent_mask
+from muskit.torch_utils.nets_utils import make_pad_mask
+from muskit.layers.rnn.attentions import AttForward
+from muskit.layers.rnn.attentions import AttForwardTA
+from muskit.layers.rnn.attentions import AttLoc
+from muskit.svs.bytesing.decoder import Decoder
+from muskit.svs.bytesing.encoder import Encoder
 from muskit.torch_utils.device_funcs import force_gatherable
-from muskit.torch_utils.initialize import initialize
 from muskit.svs.abs_svs import AbsSVS
+from muskit.svs.gst.style_encoder import StyleEncoder
 
+SCALE_WEIGHT = 0.5 ** 0.5
 
-class NaiveRNNLoss(torch.nn.Module):
-    """Loss function module for Tacotron2."""
+class GatedConv(torch.nn.Module):
+    """GatedConv."""
 
-    def __init__(self, use_masking=True, use_weighted_masking=False):
-        """Initialize Tactoron2 loss module.
-        Args:
-            use_masking (bool): Whether to apply masking
-                for padded part in loss calculation.
-            use_weighted_masking (bool):
-                Whether to apply weighted masking in loss calculation.
-            bce_pos_weight (float): Weight of positive sample of stop token.
-        """
-        super(NaiveRNNLoss, self).__init__()
-        assert (use_masking != use_weighted_masking) or not use_masking
-        self.use_masking = use_masking
-        self.use_weighted_masking = use_weighted_masking
-
-        # define criterions
-        reduction = "none" if self.use_weighted_masking else "mean"
-        self.l1_criterion = torch.nn.L1Loss(reduction=reduction)
-        self.mse_criterion = torch.nn.MSELoss(reduction=reduction)
-
-        # NOTE(kan-bayashi): register pre hook function for the compatibility
-        # self._register_load_state_dict_pre_hook(self._load_state_dict_pre_hook)
-
-    def forward(self, after_outs, before_outs, ys, olens):
-        """Calculate forward propagation.
-        Args:
-            after_outs (Tensor): Batch of outputs after postnets (B, Lmax, odim).
-            before_outs (Tensor): Batch of outputs before postnets (B, Lmax, odim).
-            logits (Tensor): Batch of stop logits (B, Lmax).
-            ys (Tensor): Batch of padded target features (B, Lmax, odim).
-            labels (LongTensor): Batch of the sequences of stop token labels (B, Lmax).
-            olens (LongTensor): Batch of the lengths of each target (B,).
-        Returns:
-            Tensor: L1 loss value.
-            Tensor: Mean square error loss value.
-            Tensor: Binary cross entropy loss value.
-        """
-        # make mask and apply it
-        if self.use_masking:
-            masks = make_non_pad_mask(olens).unsqueeze(-1).to(ys.device)
-            ys = ys.masked_select(masks)
-            after_outs = after_outs.masked_select(masks)
-            before_outs = before_outs.masked_select(masks)
-
-        # calculate loss
-        l1_loss = self.l1_criterion(after_outs, ys) + self.l1_criterion(before_outs, ys)
-        mse_loss = self.mse_criterion(after_outs, ys) + self.mse_criterion(
-            before_outs, ys
+    def __init__(self, input_size, width=3, dropout=0.2, nopad=False):
+        """init."""
+        super(GatedConv, self).__init__()
+        self.conv = nn.Conv2d(
+            in_channels=input_size,
+            out_channels=2 * input_size,
+            kernel_size=(width, 1),
+            stride=(1, 1),
+            padding=(width // 2 * (1 - nopad), 0),
         )
+        init.xavier_uniform_(self.conv.weight, gain=(4 * (1 - dropout)) ** 0.5)
+        self.dropout = nn.Dropout(dropout)
 
-        # make weighted mask and apply it
-        if self.use_weighted_masking:
-            masks = make_non_pad_mask(olens).unsqueeze(-1).to(ys.device)
-            weights = masks.float() / masks.sum(dim=1, keepdim=True).float()
-            out_weights = weights.div(ys.size(0) * ys.size(2))
-
-            # apply weight
-            l1_loss = l1_loss.mul(out_weights).masked_select(masks).sum()
-            mse_loss = mse_loss.mul(out_weights).masked_select(masks).sum()
-
-        return l1_loss, mse_loss
+    def forward(self, x_var):
+        """forward."""
+        x_var = self.dropout(x_var)
+        x_var = self.conv(x_var)
+        out, gate = x_var.split(int(x_var.size(1) / 2), 1)
+        out = out * torch.sigmoid(gate)
+        return out
 
 
-class NaiveRNN(AbsSVS):
-    """NaiveRNN-SVS module
-    This is an implementation of naive RNN for singing voice synthesis
-    The features are processed directly over time-domain from music score and
-    predict the singing voice features
-    """
+class StackedCNN(torch.nn.Module):
+    """Stacked CNN class."""
+
+    def __init__(self, num_layers, input_size, cnn_kernel_width=3, dropout=0.2):
+        """init."""
+        super(StackedCNN, self).__init__()
+        self.dropout = dropout
+        self.num_layers = num_layers
+        self.layers = nn.ModuleList()
+        for _ in range(num_layers):
+            self.layers.append(GatedConv(input_size, cnn_kernel_width, dropout))
+
+    def forward(self, x):
+        """forward."""
+        for conv in self.layers:
+            x = x + conv(x)
+            x *= SCALE_WEIGHT
+        return x
+
+class GLU(torch.nn.Module):
+    """GLU."""
+
+    def __init__(self, num_layers, hidden_size, cnn_kernel_width, dropout, input_size):
+        """init."""
+        super(GLU, self).__init__()
+        self.linear = torch.nn.Linear(input_size, hidden_size)
+        self.cnn = StackedCNN(num_layers, hidden_size, cnn_kernel_width, dropout)
+
+    def forward(self, emb):
+        """forward."""
+        emb_reshape = emb.view(emb.size(0) * emb.size(1), -1)
+        emb_remap = self.linear(emb_reshape)
+        emb_remap = emb_remap.view(emb.size(0), emb.size(1), -1)
+
+        emb_remap = _shape_transform(emb_remap)
+        out = self.cnn(emb_remap)
+
+        return out.squeeze(3).contiguous()
+
+class GLUEncoder(torch.nn.Module):
+    """Encoder Network."""
 
     def __init__(
         self,
-        # network structure related
-        idim: int,
-        midi_dim: int,
-        odim: int,
-        embed_dim: int = 512,
-        eprenet_conv_layers: int = 3,
-        eprenet_conv_chans: int = 256,
-        eprenet_conv_filts: int = 5,
-        elayers: int = 3,
-        eunits: int = 1024,
-        ebidirectional: bool = True,
-        midi_embed_integration_type: str = "add",
-        dlayers: int = 3,
-        dunits: int = 1024,
-        dbidirectional: bool = True,
-        postnet_layers: int = 5,
-        postnet_chans: int = 256,
-        postnet_filts: int = 5,
-        use_batch_norm: bool = True,
-        reduction_factor: int = 1,
-        # extra embedding related
-        spks: Optional[int] = None,
-        langs: Optional[int] = None,
-        spk_embed_dim: Optional[int] = None,
-        spk_embed_integration_type: str = "add",
-        eprenet_dropout_rate: float = 0.5,
-        edropout_rate: float = 0.1,
-        ddropout_rate: float = 0.1,
-        postnet_dropout_rate: float = 0.5,
-        init_type: str = "xavier_uniform",
-        use_masking: bool = False,
-        use_weighted_masking: bool = False,
-        loss_type: str = "L1",
+        phone_size,
+        embed_size,
+        hidden_size,
+        dropout,
+        GLU_num,
+        num_layers=1,
+        glu_kernel=3,
     ):
-        """Initialize NaiveRNN module.
-        Args: TODO
-        """
+        """init."""
+        # :param para: dictionary that contains all parameters
+        super(Encoder, self).__init__()
+
+        self.emb_phone = nn.Embedding(phone_size, embed_size)
+        # full connected
+        self.fc_1 = nn.Linear(embed_size, hidden_size)
+
+        self.GLU_list = nn.ModuleList()
+        for i in range(int(GLU_num)):
+            self.GLU_list.append(
+                module.GLU(num_layers, hidden_size, glu_kernel, dropout, hidden_size)
+            )
+        # self.GLU =
+        # module.GLU(num_layers, hidden_size, glu_kernel, dropout, hidden_size)
+
+        self.fc_2 = nn.Linear(hidden_size, embed_size)
+
+    def forward(self, text_phone, pos=None):
+        """forward."""
+        # text_phone dim: [batch_size, text_phone_length]
+        # output dim : [batch_size, text_phone_length, embedded_dim]
+
+        # don't use pos in glu, but leave the field for uniform interface
+        embedded_phone = self.emb_phone(text_phone)
+        glu_in = self.fc_1(embedded_phone)
+
+        batch_size = glu_in.shape[0]
+        text_phone_length = glu_in.shape[1]
+        embedded_dim = glu_in.shape[2]
+
+        for glu in self.GLU_list:
+            glu_out = glu(glu_in)
+            glu_in = glu_out.reshape(batch_size, text_phone_length, embedded_dim)
+
+        glu_out = self.fc_2(glu_in)
+
+        out = embedded_phone + glu_out
+
+        out = out * math.sqrt(0.5)
+        return out, text_phone
+
+
+class GLUDecoder(torch.nn.Module):
+    """Decoder Network."""
+
+    def __init__(
+        self,
+        num_block,
+        hidden_size,
+        output_dim,
+        nhead=4,
+        dropout=0.1,
+        activation="relu",
+        glu_kernel=3,
+        local_gaussian=False,
+        device="cuda",
+    ):
+        """init."""
+        super(Decoder, self).__init__()
+        self.input_norm = module.LayerNorm(hidden_size)
+        decoder_layer = module.TransformerGLULayer(
+            hidden_size,
+            nhead,
+            dropout,
+            activation,
+            glu_kernel,
+            local_gaussian=local_gaussian,
+            device=device,
+        )
+        self.decoder = module.TransformerEncoder(decoder_layer, num_block)
+        self.output_fc = nn.Linear(hidden_size, output_dim)
+
+        self.hidden_size = hidden_size
+
+    def forward(self, src, pos):
+        """forward."""
+        if self.training:
+            query_mask = pos.ne(0).type(torch.float)
+        else:
+            query_mask = None
+        mask = pos.eq(0).unsqueeze(1).repeat(1, src.size(1), 1)
+
+        src = self.input_norm(src)
+        memory, att_weight = self.decoder(src, mask=mask, query_mask=query_mask)
+        output = self.output_fc(memory)
+        return output, att_weight
+
+# /muskit/layers/transformer
+class GLU_Transformer(AbsSVS):
+    """Transformer Network."""
+
+    def __init__(
+        # network structure related
+        self,
+        idim,# phone_size,
+        odim,#output_dim,
+        midi_dim,
+        embed_dim,
+        hidden_dim,
+        glu_num_layers,
+        dropout,
+        dec_num_block,
+        dec_nhead,
+        n_mels=-1,
+        double_mel_loss=True,
+        local_gaussian=False,
+        semitone_size=59,
+        Hz2semitone=False,
+        init_type: str = "xavier_uniform",
+        device="cuda",
+    ):
+        """init."""
         assert check_argument_types()
         super().__init__()
-
         # store hyperparameters
         self.idim = idim
         self.midi_dim = midi_dim
-        self.eunits = eunits
+        # self.eunits = eunits
         self.odim = odim
         self.eos = idim - 1
-        self.reduction_factor = reduction_factor
-        self.loss_type = loss_type
 
-        self.midi_embed_integration_type = midi_embed_integration_type
 
         # use idx 0 as padding idx
         self.padding_idx = 0
@@ -190,92 +270,47 @@ class NaiveRNN(AbsSVS):
                 num_embeddings=idim, embedding_dim=eunits, padding_idx=self.padding_idx
             )
 
-        self.encoder = torch.nn.LSTM(
-            input_size=eunits,
-            hidden_size=eunits,
-            num_layers=elayers,
-            batch_first=True,
-            dropout=edropout_rate,
-            bidirectional=ebidirectional,
-            # proj_size=eunits,
+        self.encoder = Encoder(
+            phone_size,
+            embed_size,
+            hidden_size,
+            dropout,
+            glu_num_layers,
+            num_layers=1,
+            glu_kernel=3,
         )
+        self.enc_postnet = Encoder_Postnet(embed_size, semitone_size, Hz2semitone)
 
-        self.midi_encoder = torch.nn.LSTM(
-            input_size=eunits,
-            hidden_size=eunits,
-            num_layers=elayers,
-            batch_first=True,
-            dropout=edropout_rate,
-            bidirectional=ebidirectional,
-            # proj_size=eunits,
-        )
-
-        dim_direction = 2 if ebidirectional == True else 1
-        if self.midi_embed_integration_type == "add":
-            self.midi_projection = torch.nn.Linear(eunits * dim_direction, eunits)
+        self.use_mel = n_mels > 0
+        if self.use_mel:
+            self.double_mel_loss = double_mel_loss
         else:
-            self.midi_projection = torch.nn.linear(2 * eunits * dim_direction, eunits)
+            self.double_mel_loss = False
 
-        self.decoder = torch.nn.LSTM(
-            input_size=eunits,
-            hidden_size=eunits,
-            num_layers=dlayers,
-            batch_first=True,
-            dropout=ddropout_rate,
-            bidirectional=dbidirectional,
-            # proj_size=dunits,
-        )
-
-        # define spk and lang embedding
-        self.spks = None
-        if spks is not None and spks > 1:
-            self.spks = spks
-            self.sid_emb = torch.nn.Embedding(spks, eunits)
-        self.langs = None
-        if langs is not None and langs > 1:
-            # TODO (not encode yet)
-            self.langs = langs
-            self.lid_emb = torch.nn.Embedding(langs, eunits)
-
-        # define projection layer
-        self.spk_embed_dim = None
-        if spk_embed_dim is not None and spk_embed_dim > 0:
-            self.spk_embed_dim = spk_embed_dim
-            self.spk_embed_integration_type = spk_embed_integration_type
-        if self.spk_embed_dim is not None:
-            if self.spk_embed_integration_type == "add":
-                self.projection = torch.nn.Linear(self.spk_embed_dim, eunits)
-            else:
-                self.projection = torch.nn.Linear(eunits + self.spk_embed_dim, eunits)
-
-        # define final projection
-        self.feat_out = torch.nn.Linear(eunits * dim_direction, odim * reduction_factor)
-
-        # define postnet
-        self.postnet = (
-            None
-            if postnet_layers == 0
-            else Postnet(
-                idim=idim,
-                odim=odim,
-                n_layers=postnet_layers,
-                n_chans=postnet_chans,
-                n_filts=postnet_filts,
-                use_batch_norm=use_batch_norm,
-                dropout_rate=postnet_dropout_rate,
+        if self.use_mel:
+            self.decoder = Decoder(
+                dec_num_block,
+                embed_size,
+                n_mels,
+                dec_nhead,
+                dropout,
+                local_gaussian=local_gaussian,
+                device=device,
             )
-        )
-
-        # define loss function
-        self.criterion = NaiveRNNLoss(
-            use_masking=use_masking,
-            use_weighted_masking=use_weighted_masking,
-        )
-
-        # initialize parameters
-        self._reset_parameters(
-            init_type=init_type,
-        )
+            if self.double_mel_loss:
+                self.double_mel = module.PostNet(n_mels, n_mels, n_mels)
+            self.postnet = module.PostNet(n_mels, output_dim, (output_dim // 2 * 2))
+        else:
+            self.decoder = Decoder(
+                dec_num_block,
+                embed_size,
+                output_dim,
+                dec_nhead,
+                dropout,
+                local_gaussian=local_gaussian,
+                device=device,
+            )
+            self.postnet = module.PostNet(output_dim, output_dim, (output_dim // 2 * 2))
 
     def _reset_parameters(self, init_type):
         # initialize parameters
@@ -292,6 +327,8 @@ class NaiveRNN(AbsSVS):
         label_lengths: torch.Tensor,
         midi: torch.Tensor,
         midi_lengths: torch.Tensor,
+        tempo: torch.Tensor,
+        tempo_lengths: torch.Tensor,
         spembs: Optional[torch.Tensor] = None,
         sids: Optional[torch.Tensor] = None,
         lids: Optional[torch.Tensor] = None,
@@ -327,18 +364,8 @@ class NaiveRNN(AbsSVS):
         label_emb = self.encoder_input_layer(label)   # FIX ME: label Float to Int
         midi_emb = self.midi_encoder_input_layer(midi)
 
-        label_emb = torch.nn.utils.rnn.pack_padded_sequence(
-            label_emb, label_lengths.to("cpu"), batch_first=True, enforce_sorted=False
-        )
-        midi_emb = torch.nn.utils.rnn.pack_padded_sequence(
-            midi_emb, midi_lengths.to("cpu"), batch_first=True, enforce_sorted=False
-        )
 
-        hs_label, (_, _) = self.encoder(label_emb)
-        hs_midi, (_, _) = self.midi_encoder(midi_emb)
-
-        hs_label, _ = torch.nn.utils.rnn.pad_packed_sequence(hs_label, batch_first=True)
-        hs_midi, _ = torch.nn.utils.rnn.pad_packed_sequence(hs_midi, batch_first=True)
+        # encoder
 
         if self.midi_embed_integration_type == "add":
             hs = hs_label + hs_midi
@@ -359,12 +386,7 @@ class NaiveRNN(AbsSVS):
         if self.spk_embed_dim is not None:
             hs = self._integrate_with_spk_embed(hs, spembs)
         
-        hs_emb = torch.nn.utils.rnn.pack_padded_sequence(
-            hs, label_lengths.to("cpu"), batch_first=True, enforce_sorted=False
-        )
-
-        zs, (_, _) = self.decoder(hs_emb)
-        zs, _ = torch.nn.utils.rnn.pad_packed_sequence(zs, batch_first=True)
+        # decoder
 
         zs = zs[:, self.reduction_factor - 1 :: self.reduction_factor]
 
@@ -414,6 +436,29 @@ class NaiveRNN(AbsSVS):
             (loss, stats, batch_size), loss.device
         )
         return loss, stats, weight
+    
+    # def forward(
+    #     self,
+    #     characters,
+    #     phone,
+    #     pitch,
+    #     beat,
+    #     pos_text=True,
+    #     pos_char=None,
+    #     pos_spec=None,
+    # ):
+    #     """forward."""
+    #     encoder_out, text_phone = self.encoder(characters.squeeze(2), pos=pos_char)
+    #     post_out = self.enc_postnet(encoder_out, phone, text_phone, pitch, beat)
+    #     mel_output, att_weight = self.decoder(post_out, pos=pos_spec)
+
+    #     if self.double_mel_loss:
+    #         mel_output2 = self.double_mel(mel_output)
+    #     else:
+    #         mel_output2 = mel_output
+    #     output = self.postnet(mel_output2)
+
+    #     return output, att_weight, mel_output, mel_output2
 
     def inference(
         self,
@@ -505,6 +550,30 @@ class NaiveRNN(AbsSVS):
             # concat hidden states with spk embeds and then apply projection
             spembs = F.normalize(spembs).unsqueeze(1).expand(-1, hs.size(1), -1)
             hs = self.projection(torch.cat([hs, spembs], dim=-1))
+        else:
+            raise NotImplementedError("support only add or concat.")
+
+        return hs
+
+    def _integrate_with_spk_embed(
+        self, hs: torch.Tensor, spembs: torch.Tensor
+    ) -> torch.Tensor:
+        """Integrate speaker embedding with hidden states.
+        Args:
+            hs (Tensor): Batch of hidden state sequences (B, Tmax, eunits).
+            spembs (Tensor): Batch of speaker embeddings (B, spk_embed_dim).
+        Returns:
+            Tensor: Batch of integrated hidden state sequences (B, Tmax, eunits) if
+                integration_type is "add" else (B, Tmax, eunits + spk_embed_dim).
+        """
+        if self.spk_embed_integration_type == "add":
+            # apply projection and then add to hidden states
+            spembs = self.projection(F.normalize(spembs))
+            hs = hs + spembs.unsqueeze(1)
+        elif self.spk_embed_integration_type == "concat":
+            # concat hidden states with spk embeds
+            spembs = F.normalize(spembs).unsqueeze(1).expand(-1, hs.size(1), -1)
+            hs = torch.cat([hs, spembs], dim=-1)
         else:
             raise NotImplementedError("support only add or concat.")
 
