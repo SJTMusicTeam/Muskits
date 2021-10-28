@@ -28,7 +28,7 @@ svs_conf:                        # keyword arguments for the selected model
     postnet_dropout_rate: 0.5    # postnet dropout_rate
     init_type: pytorch           # parameter initialization
     use_masking: true            # whether to apply masking for padded part in loss calculation
-    loss_type: l1
+    loss_type: L1
 
 
 ##########################################################
@@ -53,7 +53,7 @@ batch_bins: 1000000         # batch bins (for feats_type=raw, *= n_shift / n_mel
 batch_type: numel           # how to make batch
 sort_in_batch: descending   # how to sort data in making batch
 sort_batch: descending      # how to sort created batches
-num_workers: 1              # number of workers of data loader
+num_workers: 6              # number of workers of data loader
 train_dtype: float32        # dtype in training
 log_interval: null          # log interval in iterations
 keep_nbest_models: 5        # number of models to keep
@@ -66,3 +66,5 @@ best_model_criterion:
 -   - train
     - loss
     - min
+
+gpu_id: 1

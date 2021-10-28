@@ -11,6 +11,7 @@ from typing import Tuple
 import torch
 import torch.nn.functional as F
 
+import logging
 from typeguard import check_argument_types
 
 from muskit.torch_utils.nets_utils import make_non_pad_mask
@@ -186,7 +187,7 @@ class NaiveRNN(AbsSVS):
             self.encoder_input_layer = torch.nn.Embedding(
                 num_embeddings=idim, embedding_dim=eunits, padding_idx=self.padding_idx
             )
-            self.midi_input_layer = torch.nn.Embedding(
+            self.midi_encoder_input_layer = torch.nn.Embedding(
                 num_embeddings=idim, embedding_dim=eunits, padding_idx=self.padding_idx
             )
 
@@ -210,14 +211,15 @@ class NaiveRNN(AbsSVS):
             # proj_size=eunits,
         )
 
+        dim_direction = 2 if ebidirectional == True else 1
         if self.midi_embed_integration_type == "add":
-            self.midi_projection = torch.nn.Linear(eunits, eunits)
+            self.midi_projection = torch.nn.Linear(eunits * dim_direction, eunits)
         else:
-            self.midi_projection = torch.nn.linear(2 * eunits, eunits)
+            self.midi_projection = torch.nn.linear(2 * eunits * dim_direction, eunits)
 
         self.decoder = torch.nn.LSTM(
-            input_size=dunits,
-            hidden_size=dunits,
+            input_size=eunits,
+            hidden_size=eunits,
             num_layers=dlayers,
             batch_first=True,
             dropout=ddropout_rate,
@@ -248,7 +250,7 @@ class NaiveRNN(AbsSVS):
                 self.projection = torch.nn.Linear(eunits + self.spk_embed_dim, eunits)
 
         # define final projection
-        self.feat_out = torch.nn.Linear(eunits, odim * reduction_factor)
+        self.feat_out = torch.nn.Linear(eunits * dim_direction, odim * reduction_factor)
 
         # define postnet
         self.postnet = (
@@ -302,12 +304,16 @@ class NaiveRNN(AbsSVS):
             feats (Tensor): Batch of padded target features (B, Lmax, odim).
             feats_lengths (LongTensor): Batch of the lengths of each target (B,).
             label
-            label_lenths
+            label_lengths
             midi
             midi_lengths
             spembs (Optional[Tensor]): Batch of speaker embeddings (B, spk_embed_dim).
             sids (Optional[Tensor]): Batch of speaker IDs (B, 1).
             lids (Optional[Tensor]): Batch of language IDs (B, 1).
+        GS Fix:
+            arguements from forward func. V.S. **batch from muskit_model.py
+            label == durations
+
         Returns:
             Tensor: Loss scalar value.
             Dict: Statistics to be monitored.
@@ -315,17 +321,18 @@ class NaiveRNN(AbsSVS):
         """
         text = text[:, : text_lengths.max()]  # for data-parallel
         feats = feats[:, : feats_lengths.max()]  # for data-parallel
-        midi = midi[:, : feats_lengths.max()]  # for data-parallel
-        label = midi[:, : label_lengths.max()]  # for data-parallel
+        midi = midi[:, : midi_lengths.max()]  # for data-parallel
+        label = label[:, : label_lengths.max()]  # for data-parallel
+        batch_size = text.size(0)
 
-        label_emb = self.encoder_input_layer(label)
-        midi_emb = self.midi_input_layer(midi)
+        label_emb = self.encoder_input_layer(label)   # FIX ME: label Float to Int
+        midi_emb = self.midi_encoder_input_layer(midi)
 
         label_emb = torch.nn.utils.rnn.pack_padded_sequence(
-            label_emb, label_lengths, batch_first=True
+            label_emb, label_lengths.to("cpu"), batch_first=True, enforce_sorted=False
         )
         midi_emb = torch.nn.utils.rnn.pack_padded_sequence(
-            label_emb, label_lengths, batch_first=True
+            midi_emb, midi_lengths.to("cpu"), batch_first=True, enforce_sorted=False
         )
 
         hs_label, (_, _) = self.encoder(label_emb)
@@ -352,12 +359,16 @@ class NaiveRNN(AbsSVS):
         # integrate speaker embedding
         if self.spk_embed_dim is not None:
             hs = self._integrate_with_spk_embed(hs, spembs)
-
-        zs = torch.nn.utils.rnn.pack_padded_sequence(
-            hs, label_lengths, batch_first=True
+        
+        hs_emb = torch.nn.utils.rnn.pack_padded_sequence(
+            hs, label_lengths.to("cpu"), batch_first=True, enforce_sorted=False
         )
 
+        zs, (_, _) = self.decoder(hs_emb)
+        zs, _ = torch.nn.utils.rnn.pad_packed_sequence(zs, batch_first=True)
+
         zs = zs[:, self.reduction_factor - 1 :: self.reduction_factor]
+
         # (B, T_feats//r, odim * r) -> (B, T_feats//r * r, odim)
         before_outs = self.feat_out(zs).view(zs.size(0), -1, self.odim)
 
@@ -379,9 +390,12 @@ class NaiveRNN(AbsSVS):
             )
             max_olen = max(olens)
             ys = feats[:, :max_olen]
+        else:
+            ys = feats
+            olens = feats_lengths
 
         # calculate loss values
-        l1_loss, l2_loss = self.criterion(after_outs, before_outs, ys, olens)
+        l1_loss, l2_loss = self.criterion(after_outs[:, : olens.max()], before_outs[:, : olens.max()], ys, olens)
 
         if self.loss_type == "L1":
             loss = l1_loss
@@ -397,7 +411,10 @@ class NaiveRNN(AbsSVS):
             l2_loss=l2_loss.item(),
         )
 
-        return loss, stats, after_outs
+        loss, stats, weight = force_gatherable(
+            (loss, stats, batch_size), loss.device
+        )
+        return loss, stats, weight
 
     def inference(
         self,
@@ -429,7 +446,7 @@ class NaiveRNN(AbsSVS):
         label = midi.unsqueeze(0)  # for data-parallel
 
         label_emb = self.encoder_input_layer(label)
-        midi_emb = self.midi_input_layer(midi)
+        midi_emb = self.midi_encoder_input_layer(midi)
 
         hs_label, (_, _) = self.encoder(label_emb)
         hs_midi, (_, _) = self.midi_encoder(midi_emb)

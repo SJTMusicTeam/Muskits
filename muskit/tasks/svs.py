@@ -23,7 +23,8 @@ from muskit.svs.abs_svs import AbsSVS
 from muskit.svs.muskit_model import MuskitSVSModel
 from muskit.svs.feats_extract.abs_feats_extract import AbsFeatsExtract
 from muskit.svs.feats_extract.dio import Dio
-from muskit.svs.feats_extract.score_feats_extract import FrameLabelAggregate
+from muskit.svs.feats_extract.score_feats_extract import FrameScoreFeats
+from muskit.svs.feats_extract.score_feats_extract import SyllableScoreFeats
 from muskit.svs.feats_extract.energy import Energy
 from muskit.svs.feats_extract.log_mel_fbank import LogMelFbank
 from muskit.svs.feats_extract.log_spectrogram import LogSpectrogram
@@ -42,12 +43,14 @@ feats_extractor_choices = ClassChoices(
     type_check=AbsFeatsExtract,
     default="fbank",
 )
+
 score_feats_extractor_choices = ClassChoices(
     "score_feats_extract",
-    classes=dict(score_feats_extract=FrameLabelAggregate),
+    classes=dict(frame_score_feats=FrameScoreFeats, syllable_score_feats=SyllableScoreFeats),
     type_check=AbsFeatsExtract,
-    default="fbank",
+    default="frame_score_feats",
 )
+
 pitch_extractor_choices = ClassChoices(
     "pitch_extract",
     classes=dict(dio=Dio),
