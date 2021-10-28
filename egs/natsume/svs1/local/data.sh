@@ -34,7 +34,7 @@ recog_set=eval1
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     log "stage 0: Data Download"
-    # The Natsume data should be downloaded from Webset
+    log "The Natsume data should be downloaded from Webset: https://bowlroll.net/file/224647"
 fi
 
 
