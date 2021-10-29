@@ -282,15 +282,15 @@ class Encoder_Postnet(torch.nn.Module):
         """init."""
         super(Encoder_Postnet, self).__init__()
 
-        self.Hz2semitone = Hz2semitone
-        if self.Hz2semitone:
-            self.emb_pitch = torch.nn.Embedding(semitone_size, embed_size)
-        else:
-            self.fc_pitch = torch.nn.Linear(1, embed_size)
+        # self.Hz2semitone = Hz2semitone
+        # if self.Hz2semitone:
+        #     self.emb_pitch = torch.nn.Embedding(semitone_size, embed_size)
+        # else:
+        #     self.fc_pitch = torch.nn.Linear(1, embed_size)
         # Remember! embed_size must be even!!
         self.fc_pos = torch.nn.Linear(embed_size, embed_size)
         # only 0 and 1 two possibilities
-        self.emb_beats = torch.nn.Embedding(2, embed_size)
+        # self.emb_beats = torch.nn.Embedding(2, embed_size)
         self.pos = PositionalEncoding(embed_size)
 
     def aligner(self, encoder_out, align_phone, text_phone):
@@ -330,14 +330,15 @@ class Encoder_Postnet(torch.nn.Module):
         # embedded_dim = encoder_out.shape[2]
 
         aligner_out = self.aligner(encoder_out, align_phone, text_phone)
-
-        if self.Hz2semitone:
-            pitch = self.emb_pitch(pitch.squeeze(-1))
-        else:
-            pitch = self.fc_pitch(pitch)
+        # logging.info(f'aligner_out:{aligner_out.shape}')
+        # logging.info(f'pitch:{pitch.shape}')
+        # if self.Hz2semitone:
+        #     pitch = self.emb_pitch(pitch.squeeze(-1))
+        # else:
+        #     pitch = self.fc_pitch(pitch)
         out = aligner_out + pitch
 
-        beats = self.emb_beats(beats.squeeze(2))
+        # beats = self.emb_beats(beats.squeeze(2))
         out = out + beats
 
         pos_encode = self.pos(torch.transpose(aligner_out, 0, 1))
@@ -876,9 +877,9 @@ class GLU_Transformer(AbsSVS):
             glu_kernel=glu_kernel,
         )
         if self.embed_integration_type == "add":
-            self.projection = torch.nn.Linear(eunits, eunits)
+            self.projection = torch.nn.Linear(embed_dim, eunits)
         else:
-            self.projection = torch.nn.linear(3 * eunits, eunits)
+            self.projection = torch.nn.linear(3 * embed_dim, eunits)
 
         self.enc_postnet = Encoder_Postnet(embed_dim, semitone_size, Hz2semitone)
 
@@ -967,6 +968,29 @@ class GLU_Transformer(AbsSVS):
             init_type=init_type,
         )
 
+        # define spk and lang embedding
+        self.spks = None
+        if spks is not None and spks > 1:
+            self.spks = spks
+            self.sid_emb = torch.nn.Embedding(spks, eunits)
+        self.langs = None
+        if langs is not None and langs > 1:
+            # TODO (not encode yet)
+            self.langs = langs
+            self.lid_emb = torch.nn.Embedding(langs, eunits)
+
+        # define projection layer
+        self.spk_embed_dim = None
+        if spk_embed_dim is not None and spk_embed_dim > 0:
+            self.spk_embed_dim = spk_embed_dim
+            self.spk_embed_integration_type = spk_embed_integration_type
+        if self.spk_embed_dim is not None:
+            if self.spk_embed_integration_type == "add":
+                self.projection = torch.nn.Linear(self.spk_embed_dim, eunits)
+            else:
+                self.projection = torch.nn.Linear(eunits + self.spk_embed_dim, eunits)
+
+
     def _reset_parameters(self, init_type):
         # initialize parameters
         if init_type != "pytorch":
@@ -1014,24 +1038,23 @@ class GLU_Transformer(AbsSVS):
         feats = feats[:, : feats_lengths.max()]  # for data-parallel
         midi = midi[:, : midi_lengths.max()]  # for data-parallel
         label = label[:, : label_lengths.max()]  # for data-parallel
-        if tempo is not None:
-            tempo = tempo[:, : tempo_lengths.max()]  # for data-parallel
+        tempo = tempo[:, : tempo_lengths.max()]  # for data-parallel
         batch_size = text.size(0)
 
         # label_emb = self.label_encoder_input_layer(label)   # FIX ME: label Float to Int
         # midi_emb = self.midi_encoder_input_layer(midi)
         # tempo_emb = self.tempo_encoder_input_layer(tempo)
 
-        hs_label, _ = self.label_encoder_input_layer(label)   # FIX ME: label Float to Int
+        hs_label, text_phone = self.label_encoder_input_layer(label)   # FIX ME: label Float to Int
         hs_midi, _ = self.midi_encoder_input_layer(midi)
         hs_tempo, _ = self.tempo_encoder_input_layer(tempo)
         # encoder
         # hs_label = self.label_encoder(label_emb)
         # hs_midi = self.midi_encoder(midi_emb)
         # hs_tempo = self.tempo_encoder(tempo_emb)
-        logging.info(f'Tao - hs_label:{hs_label.shape}')
-        logging.info(f'Tao - hs_midi:{hs_midi.shape}')
-        logging.info(f'Tao - hs_tempo:{hs_tempo.shape}')
+        # logging.info(f'Tao - hs_label:{hs_label.shape}')
+        # logging.info(f'Tao - hs_midi:{hs_midi.shape}')
+        # logging.info(f'Tao - hs_tempo:{hs_tempo.shape}')
 
         if self.embed_integration_type == "add":
             # hs = hs_label + hs_midi
@@ -1042,8 +1065,6 @@ class GLU_Transformer(AbsSVS):
             hs = torch.cat(hs_label, hs_midi, dim=-1)
             # if hs_tempo is not None:
             hs = torch.cat(hs, hs_tempo, dim=-1)
-        logging.info(f'Tao - hs:{hs}')
-        hs = self.projection(hs)
 
         # integrate spk & lang embeddings
         if self.spks is not None:
@@ -1057,8 +1078,12 @@ class GLU_Transformer(AbsSVS):
         if self.spk_embed_dim is not None:
             hs = self._integrate_with_spk_embed(hs, spembs)
         
+        hs = self.enc_postnet(hs, label, text_phone, hs_midi, hs_tempo)# encoder_out, align_phone, text_phone, pitch, beats
+        logging.info(f'Tao - hs:{hs.shape}')
+        logging.info(f'Tao - self.projection:{self.projection}')
+        
         # decoder
-        mel_output, att_weight = self.decoder(post_out, pos=pos_spec)
+        mel_output, att_weight = self.decoder(hs, pos=pos_spec)
         if self.double_mel_loss:
             mel_output2 = self.double_mel(mel_output)
         else:
