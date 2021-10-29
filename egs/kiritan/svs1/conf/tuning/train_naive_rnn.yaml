@@ -14,7 +14,7 @@ svs_conf:                        # keyword arguments for the selected model
     eprenet_conv_chans: 256      # prenet (from bytesing) conv channels numbers
     eprenet_conv_filts: 3        # prenet (from bytesing) conv filters size
     elayers: 3                   # number of glu_transformer layers in encoder
-    eunits: 512                  # number of glu_transformer units hidden_size
+    eunits: 256                  # number of glu_transformer units hidden_size
     glu_num_layers: 3
     glu_kernel: 3
     edropout_rate: 0.1
@@ -22,7 +22,7 @@ svs_conf:                        # keyword arguments for the selected model
     dlayers: 6
     dhead: 4
     postnet_layers: 5            # number of layers in postnet
-    postnet_chans: 512           # number of channels in postnet
+    postnet_chans: 256           # number of channels in postnet
     postnet_filts: 5             # filter size of postnet layer    n_mels: -1
     double_mel_loss: true
     local_gaussian: false
@@ -75,7 +75,7 @@ best_model_criterion:
     - loss
     - min
 
-gpu_id: 1
+gpu_id: 0
 
 # ##########################################################
 # #                  SVS MODEL SETTING                     #

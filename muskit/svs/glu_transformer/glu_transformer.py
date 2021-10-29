@@ -13,6 +13,7 @@ from typing import Tuple
 import numpy as np
 import torch
 import math
+import copy
 import torch.nn.functional as F
 
 from typeguard import check_argument_types
@@ -23,7 +24,7 @@ from muskit.layers.rnn.attentions import AttForwardTA
 from muskit.layers.rnn.attentions import AttLoc
 # from muskit.layers.transformer.attention import MultiHeadedAttention
 # from muskit.svs.bytesing.encoder import Encoder as EncoderPrenet
-# from muskit.svs.bytesing.decoder import Postnet
+from muskit.svs.bytesing.decoder import Postnet
 from muskit.svs.naive_rnn.naive_rnn import NaiveRNNLoss
 from muskit.torch_utils.device_funcs import force_gatherable
 from muskit.svs.abs_svs import AbsSVS
@@ -43,6 +44,10 @@ def _get_activation_fn(activation):
         return F.gelu
     else:
         raise RuntimeError("activation should be relu/gelu, not %s." % activation)
+
+def _get_clones(module, N):
+    """_get_clones."""
+    return torch.nn.ModuleList([copy.deepcopy(module) for i in range(N)])
 
 class PostNet(torch.nn.Module):
     """CBHG Network (mel --> linear)."""
@@ -278,7 +283,7 @@ class PositionalEncoding(torch.nn.Module):
 class Encoder_Postnet(torch.nn.Module):
     """Encoder Postnet."""
 
-    def __init__(self, embed_size, semitone_size=59, Hz2semitone=False):
+    def __init__(self, embed_size):#, semitone_size=59, Hz2semitone=False):
         """init."""
         super(Encoder_Postnet, self).__init__()
 
@@ -298,33 +303,45 @@ class Encoder_Postnet(torch.nn.Module):
         # align_phone = [batch_size, align_phone_length]
         # text_phone = [batch_size, text_phone_length]
         # align_phone_length( = frame_num) > text_phone_length
-        # batch
+        batch = encoder_out.size()[0]
+        align_phone_length = align_phone.size()[1]
+        emb_dim = encoder_out.size()[2]
+        # logging.info(f'encoder_out:{encoder_out.shape}')
+        # logging.info(f'align_phone:{align_phone.shape}')
+        # logging.info(f'text_phone:{text_phone.shape}')
         align_phone = align_phone.long()
+        out = torch.zeros((batch, align_phone_length, emb_dim), dtype=torch.float, device=encoder_out.device)
         for i in range(align_phone.shape[0]):
             before_text_phone = text_phone[i][0]
             encoder_ind = 0
-            line = encoder_out[i][0].unsqueeze(0)
+            out[i, 0, :] = encoder_out[i][0]
+            # line = encoder_out[i][0].unsqueeze(0)
+            # logging.info(f'bef-line:{line.shape}')
             # frame
             for j in range(1, align_phone.shape[1]):
                 if align_phone[i][j] == before_text_phone:
-                    temp = encoder_out[i][encoder_ind]
-                    line = torch.cat((line, temp.unsqueeze(0)), dim=0)
+                    out[i, j, :] = encoder_out[i][encoder_ind]
+                    # temp = encoder_out[i][encoder_ind]
+                    # line = torch.cat((line, temp.unsqueeze(0)), dim=0)
                 else:
                     encoder_ind += 1
                     if encoder_ind >= text_phone[i].size()[0]:
                         break
                     before_text_phone = text_phone[i][encoder_ind]
-                    temp = encoder_out[i][encoder_ind]
-                    line = torch.cat((line, temp.unsqueeze(0)), dim=0)
-            if i == 0:
-                out = line.unsqueeze(0)
-            else:
-                out = torch.cat((out, line.unsqueeze(0)), dim=0)
+                    out[i, j, :] = encoder_out[i][encoder_ind]
+                    # temp = encoder_out[i][encoder_ind]
+                    # line = torch.cat((line, temp.unsqueeze(0)), dim=0)
+            # logging.info(f'aft-line:{line.shape}')
+            # if i == 0:
+            #     out = line.unsqueeze(0)
+            # else:
+            #     out = torch.cat((out, line.unsqueeze(0)), dim=0)
+            # logging.info(f'out:{out.shape}')
 
         return out
 
     def forward(self, encoder_out, align_phone, text_phone, pitch, beats):
-        """pitch/beats:[batch_size, frame_num]->[batch_size, frame_num，1]."""
+        """pitch/beats:[batch_size, frame_num]->[batch_size, frame_num, 1]."""
         # batch_size = pitch.shape[0]
         # frame_num = pitch.shape[1]
         # embedded_dim = encoder_out.shape[2]
@@ -679,6 +696,46 @@ class GLUEncoder(torch.nn.Module):
         out = out * math.sqrt(0.5)
         return out, text_phone
 
+class TransformerEncoder(torch.nn.Module):
+    """TransformerEncoder is a stack of N encoder layers.
+    Args:
+        encoder_layer: an instance of the
+            TransformerEncoderLayer() class (required).
+        num_layers: the number of sub-encoder-layers in the encoder (required).
+        norm: the layer normalization component (optional).
+    """
+
+    __constants__ = ["norm"]
+
+    def __init__(self, encoder_layer, num_layers, norm=None):
+        """init."""
+        super(TransformerEncoder, self).__init__()
+        assert num_layers > 0
+        self.layers = _get_clones(encoder_layer, num_layers)
+        self.num_layers = num_layers
+        self.norm = norm
+
+    def forward(self, src, mask=None, query_mask=None):
+        """Pass the input through the encoder layers in turn.
+        Args:
+            src: the sequence to the encoder (required).
+            mask: the mask for the src sequence (optional).
+            src_key_padding_mask:
+                the mask for the src keys per batch (optional).
+        Shape:
+            see the docs in Transformer class.
+        """
+        # #type: (Tensor, Optional[Tensor], Optional[Tensor]) -> Tensor
+
+        output = src
+
+        for mod in self.layers:
+            output, att_weight = mod(output, mask=mask, query_mask=query_mask)
+
+        if self.norm is not None:
+            output = self.norm(output)
+
+        return output, att_weight
 
 class GLUDecoder(torch.nn.Module):
     """Decoder Network."""
@@ -707,7 +764,7 @@ class GLUDecoder(torch.nn.Module):
             local_gaussian=local_gaussian,
             device=device,
         )
-        self.decoder = torch.nn.TransformerEncoder(decoder_layer, num_block)
+        self.decoder = TransformerEncoder(decoder_layer, num_block)
         self.output_fc = torch.nn.Linear(hidden_size, output_dim)
 
         self.hidden_size = hidden_size
@@ -846,7 +903,7 @@ class GLU_Transformer(AbsSVS):
         #         num_embeddings=tempo_dim, embedding_dim=eunits, padding_idx=self.padding_idx
         #     )
 
-        self.label_encoder_input_layer = GLUEncoder(
+        self.phone_encoder = GLUEncoder(
             phone_size=idim,
             embed_size=embed_dim,
             padding_idx=self.padding_idx,
@@ -856,106 +913,121 @@ class GLU_Transformer(AbsSVS):
             num_layers=elayers,
             glu_kernel=glu_kernel,
         )
-        self.midi_encoder_input_layer = GLUEncoder(
-            phone_size=midi_dim,
-            embed_size=embed_dim,
-            padding_idx=self.padding_idx,
-            hidden_size=eunits,
-            dropout=edropout_rate,
-            GLU_num=glu_num_layers,
-            num_layers=elayers,
-            glu_kernel=glu_kernel,
+        # self.label_encoder_input_layer = torch.nn.Embedding(
+        #     num_embeddings=idim, embedding_dim=embed_dim, padding_idx=self.padding_idx
+        # )
+        self.midi_encoder_input_layer = torch.nn.Embedding(
+            num_embeddings=midi_dim, embedding_dim=embed_dim, padding_idx=self.padding_idx
         )
-        self.tempo_encoder_input_layer = GLUEncoder(
-            phone_size=tempo_dim,
-            embed_size=embed_dim,
-            padding_idx=self.padding_idx,
-            hidden_size=eunits,
-            dropout=edropout_rate,
-            GLU_num=glu_num_layers,
-            num_layers=elayers,
-            glu_kernel=glu_kernel,
+        self.tempo_encoder_input_layer = torch.nn.Embedding(
+            num_embeddings=tempo_dim, embedding_dim=embed_dim, padding_idx=self.padding_idx
         )
+        
         if self.embed_integration_type == "add":
             self.projection = torch.nn.Linear(embed_dim, eunits)
         else:
             self.projection = torch.nn.linear(3 * embed_dim, eunits)
 
-        self.enc_postnet = Encoder_Postnet(embed_dim, semitone_size, Hz2semitone)
+        self.enc_postnet = Encoder_Postnet(embed_dim)#, semitone_size, Hz2semitone)
 
-        self.use_mel = n_mels > 0
-        if self.use_mel:
-            self.double_mel_loss = double_mel_loss
-        else:
-            self.double_mel_loss = False
+        # self.use_mel = n_mels > 0
+        # if self.use_mel:
+        #     self.double_mel_loss = double_mel_loss
+        # else:
+        #     self.double_mel_loss = False
         
-        if self.use_mel:
-            self.decoder = GLUDecoder(
-                num_block=dlayers,
-                hidden_size=eunits,
-                output_dim=n_mels,
-                nhead=dhead,
-                dropout=ddropout_rate,
-                glu_kernel=glu_kernel,
-                local_gaussian=local_gaussian
-            )
-            if self.double_mel_loss:
-                self.double_mel = PostNet(n_mels, n_mels, n_mels)
-                # # define postnet
-                # self.double_mel_loss = (
-                #     None
-                #     if postnet_layers == 0
-                #     else Postnet(
-                #         idim=n_mels,
-                #         odim=n_mels,
-                #         n_layers=postnet_layers,
-                #         n_chans=postnet_chans,
-                #         n_filts=postnet_filts,
-                #         use_batch_norm=use_batch_norm,
-                #         dropout_rate=postnet_dropout_rate,
-                #     )
-                # )
-            self.postnet = PostNet(n_mels, odim, (odim // 2 * 2))
-            # # define postnet
-            # self.postnet = (
-            #     None
-            #     if postnet_layers == 0
-            #     else Postnet(
-            #         idim=n_mels,
-            #         odim=odim,
-            #         n_layers=postnet_layers,
-            #         n_chans=postnet_chans,
-            #         n_filts=postnet_filts,
-            #         use_batch_norm=use_batch_norm,
-            #         dropout_rate=postnet_dropout_rate,
-            #     )
-            # )
-        else:
-            self.decoder = GLUDecoder(
-                num_block=dlayers,
-                hidden_size=eunits,
-                output_dim=odim,
-                nhead=dhead,
-                dropout=ddropout_rate,
-                glu_kernel=glu_kernel,
-                local_gaussian=local_gaussian
-            )
-            self.postnet = PostNet(odim, odim, (odim // 2 * 2))
+        # if self.use_mel:
+        #     self.decoder = GLUDecoder(
+        #         num_block=dlayers,
+        #         hidden_size=eunits,
+        #         output_dim=n_mels,
+        #         nhead=dhead,
+        #         dropout=ddropout_rate,
+        #         glu_kernel=glu_kernel,
+        #         local_gaussian=local_gaussian
+        #     )
+        #     if self.double_mel_loss:
+        #         self.double_mel = PostNet(n_mels, n_mels, n_mels)
+        #         # # define postnet
+        #         # self.double_mel_loss = (
+        #         #     None
+        #         #     if postnet_layers == 0
+        #         #     else Postnet(
+        #         #         idim=n_mels,
+        #         #         odim=n_mels,
+        #         #         n_layers=postnet_layers,
+        #         #         n_chans=postnet_chans,
+        #         #         n_filts=postnet_filts,
+        #         #         use_batch_norm=use_batch_norm,
+        #         #         dropout_rate=postnet_dropout_rate,
+        #         #     )
+        #         # )
+        #     self.postnet = PostNet(n_mels, odim, (odim // 2 * 2))
+        #     # # define postnet
+        #     # self.postnet = (
+        #     #     None
+        #     #     if postnet_layers == 0
+        #     #     else Postnet(
+        #     #         idim=n_mels,
+        #     #         odim=odim,
+        #     #         n_layers=postnet_layers,
+        #     #         n_chans=postnet_chans,
+        #     #         n_filts=postnet_filts,
+        #     #         use_batch_norm=use_batch_norm,
+        #     #         dropout_rate=postnet_dropout_rate,
+        #     #     )
+        #     # )
+        # else:
+        #     self.decoder = GLUDecoder(
+        #         num_block=dlayers,
+        #         hidden_size=eunits,
+        #         output_dim=odim,
+        #         nhead=dhead,
+        #         dropout=ddropout_rate,
+        #         glu_kernel=glu_kernel,
+        #         local_gaussian=local_gaussian
+        #     )
+        #     self.postnet = PostNet(odim, odim, (odim // 2 * 2))
+        self.decoder = GLUDecoder(
+            num_block=dlayers,
+            hidden_size=eunits,
+            output_dim=odim,
+            nhead=dhead,
+            dropout=ddropout_rate,
+            glu_kernel=glu_kernel,
+            local_gaussian=local_gaussian
+        )
 
-            # # define postnet
-            # self.postnet = (
-            #     None
-            #     if postnet_layers == 0
-            #     else Postnet(
-            #         idim=odim,
-            #         odim=odim,
-            #         n_layers=postnet_layers,
-            #         n_chans=postnet_chans,
-            #         n_filts=postnet_filts,
-            #         use_batch_norm=use_batch_norm,
-            #         dropout_rate=postnet_dropout_rate,
-            #     )
-            # )
+        # # self.double_mel = PostNet(n_mels, n_mels, n_mels)
+        # # define postnet
+        # self.double_mel_loss = (
+        #     None
+        #     if postnet_layers == 0
+        #     else Postnet(
+        #         idim=n_mels,
+        #         odim=n_mels,
+        #         n_layers=postnet_layers,
+        #         n_chans=postnet_chans,
+        #         n_filts=postnet_filts,
+        #         use_batch_norm=use_batch_norm,
+        #         dropout_rate=postnet_dropout_rate,
+        #     )
+        # )
+        # self.postnet = PostNet(odim, odim, (odim // 2 * 2))
+        # define postnet
+        self.postnet = (
+            None
+            if postnet_layers == 0
+            else Postnet(
+                idim=odim,
+                odim=odim,
+                n_layers=postnet_layers,
+                n_chans=postnet_chans,
+                n_filts=postnet_filts,
+                use_batch_norm=use_batch_norm,
+                dropout_rate=postnet_dropout_rate,
+            )
+        )
         # self.feat_out = torch.nn.Linear(eunits, odim * reduction_factor)
         # define loss function
         self.criterion = NaiveRNNLoss(
@@ -1044,10 +1116,11 @@ class GLU_Transformer(AbsSVS):
         # label_emb = self.label_encoder_input_layer(label)   # FIX ME: label Float to Int
         # midi_emb = self.midi_encoder_input_layer(midi)
         # tempo_emb = self.tempo_encoder_input_layer(tempo)
-
-        hs_label, text_phone = self.label_encoder_input_layer(label)   # FIX ME: label Float to Int
-        hs_midi, _ = self.midi_encoder_input_layer(midi)
-        hs_tempo, _ = self.tempo_encoder_input_layer(tempo)
+        hs_phone, _ = self.phone_encoder(text)
+        # label_emb = self.label_encoder_input_layer(label)   # FIX ME: label Float to Int
+        midi_emb = self.midi_encoder_input_layer(midi)
+        tempo_emb = self.tempo_encoder_input_layer(tempo)
+        emb_dim = midi_emb.size()[-1]
         # encoder
         # hs_label = self.label_encoder(label_emb)
         # hs_midi = self.midi_encoder(midi_emb)
@@ -1055,12 +1128,15 @@ class GLU_Transformer(AbsSVS):
         # logging.info(f'Tao - hs_label:{hs_label.shape}')
         # logging.info(f'Tao - hs_midi:{hs_midi.shape}')
         # logging.info(f'Tao - hs_tempo:{hs_tempo.shape}')
+        hs = self.enc_postnet(hs_phone, label, text, midi_emb, tempo_emb)# encoder_out, align_phone, text_phone, pitch, beats
+        logging.info(f'Tao - hs:{hs.shape}')
+        
 
         if self.embed_integration_type == "add":
             # hs = hs_label + hs_midi
             # if hs_tempo is not None:
             #     hs = hs + hs_tempo
-            hs = hs_label + hs_midi + hs_tempo
+            hs = hs + midi_emb + tempo_emb
         else:
             hs = torch.cat(hs_label, hs_midi, dim=-1)
             # if hs_tempo is not None:
@@ -1078,16 +1154,11 @@ class GLU_Transformer(AbsSVS):
         if self.spk_embed_dim is not None:
             hs = self._integrate_with_spk_embed(hs, spembs)
         
-        hs = self.enc_postnet(hs, label, text_phone, hs_midi, hs_tempo)# encoder_out, align_phone, text_phone, pitch, beats
-        logging.info(f'Tao - hs:{hs.shape}')
-        logging.info(f'Tao - self.projection:{self.projection}')
-        
+        # hs = self.projection(hs)
+        logging.info(f'hs:{hs.shape}')
         # decoder
-        mel_output, att_weight = self.decoder(hs, pos=pos_spec)
-        if self.double_mel_loss:
-            mel_output2 = self.double_mel(mel_output)
-        else:
-            mel_output2 = mel_output
+        mel_output, att_weight = self.decoder(hs.reshape(-1, emb_dim), pos=label_lengths)
+        # mel_output2 = self.double_mel(mel_output)
         zs = self.postnet(mel_output2)
 
         # zs = zs[:, self.reduction_factor - 1 :: self.reduction_factor]
