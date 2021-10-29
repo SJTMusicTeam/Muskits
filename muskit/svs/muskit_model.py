@@ -133,7 +133,7 @@ class MuskitSVSModel(AbsMuskitModel):
                                                                     tempo=tempo.unsqueeze(-1),\
                                                                     tempo_lengths=tempo_lengths)
                 # score : 128 midi pitch
-                # tempo : bpm
+                # tempo : bpm 
                 # duration : 
                 #   input-> phone-id seqence | output -> frame level(取众数 from window) or syllable level
 
@@ -181,6 +181,9 @@ class MuskitSVSModel(AbsMuskitModel):
         if score is not None:
             score = score.to(dtype=torch.long)
             batch.update(midi=score, midi_lengths=score_lengths)
+        if tempo is not None:
+            tempo = tempo.to(dtype=torch.long)
+            batch.update(tempo=tempo, tempo_lengths=tempo_lengths)
         if self.pitch_extract is not None and pitch is not None:
             batch.update(pitch=pitch, pitch_lengths=pitch_lengths)
         if self.energy_extract is not None and energy is not None:
