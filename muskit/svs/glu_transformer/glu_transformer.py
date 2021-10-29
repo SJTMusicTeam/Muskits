@@ -24,11 +24,16 @@ from muskit.layers.rnn.attentions import AttLoc
 # from muskit.layers.transformer.attention import MultiHeadedAttention
 # from muskit.svs.bytesing.encoder import Encoder as EncoderPrenet
 # from muskit.svs.bytesing.decoder import Postnet
+from muskit.svs.naive_rnn.naive_rnn import NaiveRNNLoss
 from muskit.torch_utils.device_funcs import force_gatherable
 from muskit.svs.abs_svs import AbsSVS
 from muskit.svs.gst.style_encoder import StyleEncoder
 
 SCALE_WEIGHT = 0.5 ** 0.5
+
+def _shape_transform(x):
+    """Tranform the size of the tensors to fit for conv input."""
+    return torch.unsqueeze(torch.transpose(x, 1, 2), 3)
 
 def _get_activation_fn(activation):
     """_get_activation_fn."""
@@ -1013,31 +1018,27 @@ class GLU_Transformer(AbsSVS):
             tempo = tempo[:, : tempo_lengths.max()]  # for data-parallel
         batch_size = text.size(0)
 
-        label_emb = self.label_encoder_input_layer(label)   # FIX ME: label Float to Int
-        midi_emb = self.midi_encoder_input_layer(midi)
-        if tempo is not None:
-            tempo_emb = self.tempo_encoder_input_layer(tempo)
-        else:
-            tempo_emb = None
+        # label_emb = self.label_encoder_input_layer(label)   # FIX ME: label Float to Int
+        # midi_emb = self.midi_encoder_input_layer(midi)
+        # tempo_emb = self.tempo_encoder_input_layer(tempo)
 
-
+        hs_label = self.label_encoder_input_layer(label)   # FIX ME: label Float to Int
+        hs_midi = self.midi_encoder_input_layer(midi)
+        hs_tempo = self.tempo_encoder_input_layer(tempo)
         # encoder
-        hs_label = self.encoder(label_emb)
-        hs_midi = self.midi_encoder(midi_emb)
-        if tempo_emb is not None:
-            hs_tempo = self.tempo_encoder(tempo_emb)
-        else:
-            hs_tempo = None
+        # hs_label = self.label_encoder(label_emb)
+        # hs_midi = self.midi_encoder(midi_emb)
+        # hs_tempo = self.tempo_encoder(tempo_emb)
 
         if self.embed_integration_type == "add":
-            hs = hs_label + hs_midi
-            if hs_tempo is not None:
-                hs = hs + hs_tempo
-            # hs = hs_label + hs_midi + hs_tempo
+            # hs = hs_label + hs_midi
+            # if hs_tempo is not None:
+            #     hs = hs + hs_tempo
+            hs = hs_label + hs_midi + hs_tempo
         else:
             hs = torch.cat(hs_label, hs_midi, dim=-1)
-            if hs_tempo is not None:
-                hs = torch.cat(hs, hs_tempo, dim=-1)
+            # if hs_tempo is not None:
+            hs = torch.cat(hs, hs_tempo, dim=-1)
         
         hs = self.projection(hs)
 
@@ -1160,7 +1161,7 @@ class GLU_Transformer(AbsSVS):
         text = text.unsqueeze(0)  # for data-parallel
         feats = feats.unsqueeze(0)  # for data-parallel
         midi = midi.unsqueeze(0)  # for data-parallel
-        label = midi.unsqueeze(0)  # for data-parallel
+        label = label.unsqueeze(0)  # for data-parallel
 
         label_emb = self.encoder_input_layer(label)
         midi_emb = self.midi_encoder_input_layer(midi)
