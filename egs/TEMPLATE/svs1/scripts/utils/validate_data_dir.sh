@@ -102,6 +102,30 @@ function partial_diff {
   echo "[Lengths are $1=$n1 versus $2=$n2]"
 }
 
+
+# =========================== By Nan ==========================================
+function check_sorted {
+  file=$1
+  sort -k1,1 -u <$file >$file.tmp
+  if ! cmp -s $file $file.tmp; then
+    echo "$0: file $1 is not in sorted order or not unique, sorting it"
+    mv $file.tmp $file
+  else
+    rm $file.tmp
+  fi
+}
+
+for x in utt2spk spk2utt feats.scp text segments wav.scp cmvn.scp vad.scp \
+    reco2file_and_channel spk2gender utt2lang utt2uniq utt2dur reco2dur \
+    utt2num_frames label midi.scp; do
+  if [ -f $data/$x ]; then
+    cp $data/$x $data/.backup/$x
+    check_sorted $data/$x
+  fi
+done
+
+# =========================== By Nan ==========================================
+
 check_sorted_and_uniq $data/utt2spk
 
 if ! $no_spk_sort; then
