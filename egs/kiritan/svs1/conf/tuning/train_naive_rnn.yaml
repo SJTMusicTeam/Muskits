@@ -7,7 +7,7 @@ svs: glu_transformer             # model architecture
 svs_conf:                        # keyword arguments for the selected model
     #idim: 68 #phone_size
     midi_dim: 129                # midi dimension (note number + silence)
-    tempo_dim: 128               # tempo dimension tempo number
+    tempo_dim: 300               # tempo dimension tempo number
     # odim:  #output_dim
     embed_dim: 256 # embed_size  # char or phn embedding dimension
     eprenet_conv_layers: 3       # prenet (from bytesing) conv layers

@@ -1022,13 +1022,16 @@ class GLU_Transformer(AbsSVS):
         # midi_emb = self.midi_encoder_input_layer(midi)
         # tempo_emb = self.tempo_encoder_input_layer(tempo)
 
-        hs_label = self.label_encoder_input_layer(label)   # FIX ME: label Float to Int
-        hs_midi = self.midi_encoder_input_layer(midi)
-        hs_tempo = self.tempo_encoder_input_layer(tempo)
+        hs_label, _ = self.label_encoder_input_layer(label)   # FIX ME: label Float to Int
+        hs_midi, _ = self.midi_encoder_input_layer(midi)
+        hs_tempo, _ = self.tempo_encoder_input_layer(tempo)
         # encoder
         # hs_label = self.label_encoder(label_emb)
         # hs_midi = self.midi_encoder(midi_emb)
         # hs_tempo = self.tempo_encoder(tempo_emb)
+        logging.info(f'Tao - hs_label:{hs_label.shape}')
+        logging.info(f'Tao - hs_midi:{hs_midi.shape}')
+        logging.info(f'Tao - hs_tempo:{hs_tempo.shape}')
 
         if self.embed_integration_type == "add":
             # hs = hs_label + hs_midi
@@ -1039,7 +1042,7 @@ class GLU_Transformer(AbsSVS):
             hs = torch.cat(hs_label, hs_midi, dim=-1)
             # if hs_tempo is not None:
             hs = torch.cat(hs, hs_tempo, dim=-1)
-        
+        logging.info(f'Tao - hs:{hs}')
         hs = self.projection(hs)
 
         # integrate spk & lang embeddings
@@ -1169,12 +1172,12 @@ class GLU_Transformer(AbsSVS):
         hs_label, (_, _) = self.encoder(label_emb)
         hs_midi, (_, _) = self.midi_encoder(midi_emb)
 
-        if self.midi_embed_integration_type == "add":
+        if self.embed_integration_type == "add":
             hs = hs_label + hs_midi
-            hs = self.midi_projection(hs)
+            hs = self.projection(hs)
         else:
             hs = torch.cat(hs_label, hs_midi, dim=-1)
-            hs = self.midi_projection(hs)
+            hs = self.projection(hs)
 
         # integrate spk & lang embeddings
         if self.spks is not None:
