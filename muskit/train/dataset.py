@@ -186,12 +186,12 @@ def sound_loader(path, float_dtype=None):
     return AdapterForSoundScpReader(loader, float_dtype)
 
 
-def midi_loader(path, float_dtype=None):
+def midi_loader(path, float_dtype=None, rate=np.int16(24000)):
     # The file is as follows:
     #   utterance_id_A /some/where/a.mid
     #   utterance_id_B /some/where/b.midi
 
-    loader = MIDIScpReader(path)
+    loader = MIDIScpReader(fname=path,rate=rate)
 
     # MIDIScpReader.__getitem__() returns ndarray
     return AdapterForMIDIScpReader(loader)
@@ -523,6 +523,16 @@ class MuskitDataset(AbsDataset):
         #   e.g. muskit.train.preprocessor:CommonPreprocessor
         if self.preprocess is not None:
             data = self.preprocess(uid, data)
+        
+        length = min(len(data["singing"]), len(data["score"]), len(data["tempo"]), len(data["durations"]))
+        data["singing"] = data["singing"][:length]
+        data["score"] = data["score"][:length]
+        data["tempo"] = data["tempo"][:length]
+        data["durations"] = data["durations"][:length]
+
+        # for name in data:
+        #     logging.info(f"name: {name}, shape: {len(data[name])}")
+        # quit()
 
         # 3. Force data-precision
         for name in data:

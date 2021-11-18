@@ -43,10 +43,10 @@ class Dio(AbsFeatsExtract):
         hop_length: int = 256,
         f0min: int = 80,
         f0max: int = 400,
-        use_token_averaged_f0: bool = True,
+        use_token_averaged_f0: bool = False,
         use_continuous_f0: bool = True,
         use_log_f0: bool = True,
-        reduction_factor: int = None,
+        reduction_factor: int = 1,
     ):
         assert check_argument_types()
         super().__init__()

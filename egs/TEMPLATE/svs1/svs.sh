@@ -55,14 +55,15 @@ use_xvector=false    # Whether to use x-vector (Require Kaldi).
 feats_extract=fbank        # On-the-fly feature extractor.
 feats_normalize=global_mvn # On-the-fly feature normalizer.
 # Only used for feats_type != raw
-fs=16000          # Sampling rate.
+fs=24000          # Sampling rate.
 fmin=80           # Minimum frequency of Mel basis.
-fmax=12000        # Maximum frequency of Mel basis.
+fmax=7600        # Maximum frequency of Mel basis.
 n_mels=80         # The number of mel basis.
 n_fft=1024        # The number of fft points.
 n_shift=256       # The number of shift points.
 win_length=null   # Window length.
 score_feats_extract=frame_score_feats # The type of music score feats (frame_score_feats or syllable_score_feats)
+pitch_extract=dio
 # Only used for the model using pitch features (e.g. FastSpeech2)
 f0min=80          # Maximum f0 for pitch extraction.
 f0max=400         # Minimum f0 for pitch extraction.
@@ -638,15 +639,28 @@ if ! "${skip_train}"; then
             # "sound" supports "wav", "flac", etc.
             _type=sound
             _fold_length="$((singing_fold_length * n_shift))"
+            _opts+="--score_feats_extract ${score_feats_extract} "
+            _opts+="--score_feats_extract_conf fs=${fs} "
+            _opts+="--score_feats_extract_conf n_fft=${n_fft} "
+            _opts+="--score_feats_extract_conf win_length=${win_length} "
+            _opts+="--score_feats_extract_conf hop_length=${n_shift} "
             _opts+="--feats_extract ${feats_extract} "
             _opts+="--feats_extract_conf n_fft=${n_fft} "
             _opts+="--feats_extract_conf hop_length=${n_shift} "
             _opts+="--feats_extract_conf win_length=${win_length} "
+            _opts+="--pitch_extract ${pitch_extract} "
             if [ "${feats_extract}" = fbank ]; then
                 _opts+="--feats_extract_conf fs=${fs} "
                 _opts+="--feats_extract_conf fmin=${fmin} "
                 _opts+="--feats_extract_conf fmax=${fmax} "
                 _opts+="--feats_extract_conf n_mels=${n_mels} "
+            fi
+            if [ "${pitch_extract}" = dio ]; then
+                _opts+="--pitch_extract_conf fs=${fs} "
+                _opts+="--pitch_extract_conf n_fft=${n_fft} "
+                _opts+="--pitch_extract_conf hop_length=${n_shift} "
+                _opts+="--pitch_extract_conf f0max=${f0max} "
+                _opts+="--pitch_extract_conf f0min=${f0min} "
             fi
 
             if [ "${num_splits}" -gt 1 ]; then
