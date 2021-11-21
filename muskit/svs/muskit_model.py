@@ -124,15 +124,6 @@ class MuskitSVSModel(AbsMuskitModel):
                 # Use precalculated feats (feats_type != raw case)
                 feats, feats_lengths = singing, singing_lengths
 
-            # logging.info(f"pitch_lengths - DIO: {pitch_lengths}")
-            # logging.info(f"score_lengths - midi: {score_lengths}")
-            # logging.info(f"singing_lengths: {singing_lengths}")
-
-            # logging.info(f"phone_lengths: {durations_lengths}")
-            # logging.info(f"feats_lengths: {feats_lengths}")
-            
-            # quit()
-
             # Extract auxiliary features
             if self.score_feats_extract is not None:
                 durations, durations_lengths, score, score_lengths, \
@@ -146,12 +137,6 @@ class MuskitSVSModel(AbsMuskitModel):
                 # tempo : bpm
                 # duration : 
                 #   input-> phone-id seqence | output -> frame level(取众数 from window) or syllable level
-
-            # # print(f"singing: {singing}")
-            # print(f"singing.shape: {singing.shape}")
-            # print(f"singing_lengths: {singing_lengths}")
-            # # print(f"score.shape: {score.shape}")
-            # print(f"score_lengths: {score_lengths}")
 
             if self.pitch_extract is not None and pitch is None:
                 pitch, pitch_lengths = self.pitch_extract(
@@ -186,30 +171,6 @@ class MuskitSVSModel(AbsMuskitModel):
             flag_IsValid = flag_IsValid,
         )
 
-        # logging.info(f"pitch_lengths - DIO: {pitch_lengths}")
-        # logging.info(f"score_lengths - midi: {score_lengths}")
-
-        # logging.info(f"phone_lengths: {durations_lengths}")
-        # logging.info(f"feats_lengths: {feats_lengths}")
-
-        # quit()
-        
-        # batch_size = text.size(0)
-        # for index in range(batch_size):
-        #     if durations_lengths[index] != feats_lengths[index]:
-        #         if score is not None and pitch is None:
-        #             length = min(score_lengths[index], durations_lengths[index], feats_lengths[index])
-        #         if self.pitch_extract is not None and pitch is not None:
-        #             length = min(pitch_lengths[index], score_lengths[index], durations_lengths[index], feats_lengths[index])
-        #             pitch[index][length : pitch_lengths[index]] = 0
-        #             pitch_lengths[index] = length
-        #         score[index][length : score_lengths[index]] = 0
-        #         durations[index][length : durations_lengths[index]] = 0
-        #         feats[index][length : feats_lengths[index]] = 0
-        #         score_lengths[index], durations_lengths[index], feats_lengths[index] = length, length, length
-
-        
-
         # Update batch for additional auxiliary inputs
         if spembs is not None:
             batch.update(spembs=spembs)
@@ -224,7 +185,6 @@ class MuskitSVSModel(AbsMuskitModel):
             score = score.to(dtype=torch.long)
             batch.update(midi=score, midi_lengths=score_lengths)
         if self.pitch_extract is not None and pitch is not None:
-            # batch.update(pitch=pitch, pitch_lengths=pitch_lengths)
             batch.update(midi=pitch, midi_lengths=pitch_lengths)
         if self.energy_extract is not None and energy is not None:
             batch.update(energy=energy, energy_lengths=energy_lengths)
