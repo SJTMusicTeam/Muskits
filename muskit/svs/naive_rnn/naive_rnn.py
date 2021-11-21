@@ -33,7 +33,6 @@ class NaiveRNNLoss(torch.nn.Module):
                 for padded part in loss calculation.
             use_weighted_masking (bool):
                 Whether to apply weighted masking in loss calculation.
-            bce_pos_weight (float): Weight of positive sample of stop token.
         """
         super(NaiveRNNLoss, self).__init__()
         assert (use_masking != use_weighted_masking) or not use_masking
@@ -53,14 +52,11 @@ class NaiveRNNLoss(torch.nn.Module):
         Args:
             after_outs (Tensor): Batch of outputs after postnets (B, Lmax, odim).
             before_outs (Tensor): Batch of outputs before postnets (B, Lmax, odim).
-            logits (Tensor): Batch of stop logits (B, Lmax).
             ys (Tensor): Batch of padded target features (B, Lmax, odim).
-            labels (LongTensor): Batch of the sequences of stop token labels (B, Lmax).
             olens (LongTensor): Batch of the lengths of each target (B,).
         Returns:
             Tensor: L1 loss value.
             Tensor: Mean square error loss value.
-            Tensor: Binary cross entropy loss value.
         """
         # make mask and apply it
         if self.use_masking:
@@ -188,7 +184,7 @@ class NaiveRNN(AbsSVS):
                 num_embeddings=idim, embedding_dim=eunits, padding_idx=self.padding_idx
             )
             self.midi_encoder_input_layer = torch.nn.Embedding(
-                num_embeddings=idim, embedding_dim=eunits, padding_idx=self.padding_idx
+                num_embeddings=midi_dim, embedding_dim=eunits, padding_idx=self.padding_idx
             )
 
         self.encoder = torch.nn.LSTM(
@@ -296,6 +292,7 @@ class NaiveRNN(AbsSVS):
         spembs: Optional[torch.Tensor] = None,
         sids: Optional[torch.Tensor] = None,
         lids: Optional[torch.Tensor] = None,
+        flag_IsValid = False,
     ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor], torch.Tensor]:
         """Calculate forward propagation.
         Args:
@@ -312,8 +309,8 @@ class NaiveRNN(AbsSVS):
             lids (Optional[Tensor]): Batch of language IDs (B, 1).
         GS Fix:
             arguements from forward func. V.S. **batch from muskit_model.py
-            label == durations
-
+            label == durations ｜ phone sequence
+            midi -> pitch sequence
         Returns:
             Tensor: Loss scalar value.
             Dict: Statistics to be monitored.
@@ -343,10 +340,10 @@ class NaiveRNN(AbsSVS):
 
         if self.midi_embed_integration_type == "add":
             hs = hs_label + hs_midi
-            hs = self.midi_projection(hs)
+            hs = F.leaky_relu(self.midi_projection(hs))
         else:
             hs = torch.cat(hs_label, hs_midi, dim=-1)
-            hs = self.midi_projection(hs)
+            hs = F.leaky_relu(self.midi_projection(hs))
 
         # integrate spk & lang embeddings
         if self.spks is not None:
@@ -370,7 +367,8 @@ class NaiveRNN(AbsSVS):
         zs = zs[:, self.reduction_factor - 1 :: self.reduction_factor]
 
         # (B, T_feats//r, odim * r) -> (B, T_feats//r * r, odim)
-        before_outs = self.feat_out(zs).view(zs.size(0), -1, self.odim)
+        before_outs = F.leaky_relu(self.feat_out(zs).view(zs.size(0), -1, self.odim))
+        # before_outs = F.leaky_relu(self.feat_out(hs).view(hs.size(0), -1, self.odim))
 
         # postnet -> (B, T_feats//r * r, odim)
         if self.postnet is None:
@@ -407,6 +405,7 @@ class NaiveRNN(AbsSVS):
             raise ValueError("unknown --loss-type " + self.loss_type)
 
         stats = dict(
+            loss=loss.item(),
             l1_loss=l1_loss.item(),
             l2_loss=l2_loss.item(),
         )
@@ -414,7 +413,13 @@ class NaiveRNN(AbsSVS):
         loss, stats, weight = force_gatherable(
             (loss, stats, batch_size), loss.device
         )
-        return loss, stats, weight
+
+        if flag_IsValid == False:
+            return loss, stats, weight
+        else:
+            return loss, stats, weight, after_outs[:, : olens.max()], ys, olens
+
+        
 
     def inference(
         self,

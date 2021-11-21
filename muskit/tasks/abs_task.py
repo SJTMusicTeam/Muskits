@@ -440,6 +440,28 @@ class AbsTask(ABC):
 
         group = parser.add_argument_group("Trainer related")
         group.add_argument(
+            "--vocoder_checkpoint",
+            default="",
+            type=str,
+            help="checkpoint file to be loaded.",
+        )
+        group.add_argument(
+            "--vocoder_config",
+            default="",
+            type=str,
+            help="yaml format configuration file. if not explicitly provided, "
+            "it will be searched in the checkpoint directory. (default=None)",
+        )
+        group.add_argument(
+            "--vocoder_normalize_before",
+            default=False,
+            action="store_true",
+            help="whether to perform feature normalization before input to the model. "
+            "if true, it assumes that the feature is de-normalized. this is useful when "
+            "text2mel model and vocoder use different feature statistics.",
+        )
+
+        group.add_argument(
             "--max_epoch",
             type=int,
             default=40,
