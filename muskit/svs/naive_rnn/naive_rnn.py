@@ -33,7 +33,6 @@ class NaiveRNNLoss(torch.nn.Module):
                 for padded part in loss calculation.
             use_weighted_masking (bool):
                 Whether to apply weighted masking in loss calculation.
-            bce_pos_weight (float): Weight of positive sample of stop token.
         """
         super(NaiveRNNLoss, self).__init__()
         assert (use_masking != use_weighted_masking) or not use_masking
@@ -58,7 +57,6 @@ class NaiveRNNLoss(torch.nn.Module):
         Returns:
             Tensor: L1 loss value.
             Tensor: Mean square error loss value.
-            Tensor: Binary cross entropy loss value.
         """
         # make mask and apply it
         if self.use_masking:
@@ -211,7 +209,7 @@ class NaiveRNN(AbsSVS):
 
         dim_direction = 2 if ebidirectional == True else 1
         if self.midi_embed_integration_type == "add":
-            self.midi_projection = torch.nn.Linear(eunits * dim_direction, eunits * 2)
+            self.midi_projection = torch.nn.Linear(eunits * dim_direction, eunits)
         else:
             self.midi_projection = torch.nn.linear(2 * eunits * dim_direction, eunits)
 
@@ -359,18 +357,18 @@ class NaiveRNN(AbsSVS):
         if self.spk_embed_dim is not None:
             hs = self._integrate_with_spk_embed(hs, spembs)
         
-        # hs_emb = torch.nn.utils.rnn.pack_padded_sequence(
-        #     hs, label_lengths.to("cpu"), batch_first=True, enforce_sorted=False
-        # )
+        hs_emb = torch.nn.utils.rnn.pack_padded_sequence(
+            hs, label_lengths.to("cpu"), batch_first=True, enforce_sorted=False
+        )
 
-        # zs, (_, _) = self.decoder(hs_emb)
-        # zs, _ = torch.nn.utils.rnn.pad_packed_sequence(zs, batch_first=True)
+        zs, (_, _) = self.decoder(hs_emb)
+        zs, _ = torch.nn.utils.rnn.pad_packed_sequence(zs, batch_first=True)
 
-        # zs = zs[:, self.reduction_factor - 1 :: self.reduction_factor]
+        zs = zs[:, self.reduction_factor - 1 :: self.reduction_factor]
 
         # (B, T_feats//r, odim * r) -> (B, T_feats//r * r, odim)
-        # before_outs = self.feat_out(zs).view(zs.size(0), -1, self.odim)
-        before_outs = F.leaky_relu(self.feat_out(hs).view(hs.size(0), -1, self.odim))
+        before_outs = F.leaky_relu(self.feat_out(zs).view(zs.size(0), -1, self.odim))
+        # before_outs = F.leaky_relu(self.feat_out(hs).view(hs.size(0), -1, self.odim))
 
         # postnet -> (B, T_feats//r * r, odim)
         if self.postnet is None:
@@ -407,6 +405,7 @@ class NaiveRNN(AbsSVS):
             raise ValueError("unknown --loss-type " + self.loss_type)
 
         stats = dict(
+            loss=loss.item(),
             l1_loss=l1_loss.item(),
             l2_loss=l2_loss.item(),
         )
