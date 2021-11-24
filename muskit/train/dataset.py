@@ -523,7 +523,7 @@ class MuskitDataset(AbsDataset):
         #   e.g. muskit.train.preprocessor:CommonPreprocessor
         if self.preprocess is not None:
             data = self.preprocess(uid, data)
-        
+        logging.info(f'data.key:{data.keys()}')
         length = min(len(data["singing"]), len(data["score"]), len(data["tempo"]), len(data["durations"]))
         data["singing"] = data["singing"][:length]
         data["score"] = data["score"][:length]

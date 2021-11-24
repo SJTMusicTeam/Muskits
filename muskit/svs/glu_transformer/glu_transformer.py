@@ -256,7 +256,7 @@ class PositionalEncoding(torch.nn.Module):
         self.dropout = torch.nn.Dropout(p=dropout)
 
         pe = torch.zeros(max_len, d_model)
-        pe = pe.to(device)
+        # pe = pe.to(device)
         position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
         div_term = torch.exp(
             torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model)
@@ -265,6 +265,7 @@ class PositionalEncoding(torch.nn.Module):
         pe[:, 1::2] = torch.cos(position * div_term)
         pe = pe.unsqueeze(0).transpose(0, 1)
         self.register_buffer("pe", pe)
+        self.dev = device
 
     def forward(self, x):
         """Input of forward function.
@@ -274,7 +275,7 @@ class PositionalEncoding(torch.nn.Module):
             x: [sequence length, batch size, embed dim]
             output: [sequence length, batch size, embed dim]
         """
-        x = x + self.pe[: x.size(0), :]
+        x = x + self.pe[: x.size(0), :].to(self.dev)
         return self.dropout(x)
 
 class Encoder_Postnet(torch.nn.Module):
@@ -293,6 +294,7 @@ class Encoder_Postnet(torch.nn.Module):
         self.fc_pos = torch.nn.Linear(embed_size, embed_size)
         # only 0 and 1 two possibilities
         # self.emb_beats = torch.nn.Embedding(2, embed_size)
+        # logging.info(f'{embed_size}')
         self.pos = PositionalEncoding(embed_size)
 
     def aligner(self, encoder_out, align_phone, text_phone):
