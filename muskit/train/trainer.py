@@ -1,3 +1,8 @@
+#! /usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+#  MIT License (https://opensource.org/licenses/MIT)
+
 import argparse
 from contextlib import contextmanager
 import dataclasses
@@ -37,6 +42,14 @@ from muskit.train.distributed_utils import DistributedOption
 from muskit.train.reporter import Reporter
 from muskit.train.reporter import SubReporter
 from muskit.utils.build_dataclass import build_dataclass
+
+from librosa.display import specshow
+import matplotlib.pyplot as plt
+
+import os
+import soundfile as sf
+import yaml
+from parallel_wavegan.utils import load_model
 
 if LooseVersion(torch.__version__) >= LooseVersion("1.1.0"):
     from torch.utils.tensorboard import SummaryWriter
@@ -91,6 +104,9 @@ class TrainerOptions:
     best_model_criterion: Sequence[Sequence[str]]
     val_scheduler_criterion: Sequence[str]
     unused_parameters: bool
+    vocoder_checkpoint: str
+    vocoder_config: str
+    vocoder_normalize_before: bool
 
 
 class Trainer:
@@ -466,7 +482,7 @@ class Trainer:
         iterator_stop = torch.tensor(0).to("cuda" if ngpu > 0 else "cpu")
 
         start_time = time.perf_counter()
-        for iiter, (_, batch) in enumerate(
+        for iiter, (filename_list, batch) in enumerate(
             reporter.measure_iter_time(iterator, "iter_time"), 1
         ):
             assert isinstance(batch, dict), type(batch)
@@ -484,6 +500,7 @@ class Trainer:
             with autocast(scaler is not None):
                 with reporter.measure_time("forward_time"):
                     # print("'Shuai: What is **batch ? ", batch)
+                    # logging.info(f"filename_list: {filename_list}")
                     
                     retval = model(**batch)
 
@@ -666,10 +683,34 @@ class Trainer:
 
         model.eval()
 
+        #############################
+        ###  setup vocoder model  ###
+        #############################
+
+        print(f"options: {options}")
+
+        # load config
+        if options.vocoder_config == "":
+            dirname = os.path.dirname(options.vocoder_checkpoint)
+            print(f"dirname: {dirname}")
+            options.vocoder_config = os.path.join(dirname, "config.yml")
+        print(f"options.vocoder_config: {options.vocoder_config}")
+        with open(options.vocoder_config) as f:
+            config = yaml.load(f, Loader=yaml.Loader)
+        config.update(vars(options))
+
+        model_vocoder = load_model(options.vocoder_checkpoint, config)
+        logging.info(f"Loaded model parameters from {options.vocoder_checkpoint}.")
+        # if options.normalize_before:
+        #     assert hasattr(model_vocoder, "mean"), "Feature stats are not registered."
+        #     assert hasattr(model_vocoder, "scale"), "Feature stats are not registered."
+        model_vocoder.remove_weight_norm()
+        model_vocoder = model_vocoder.eval().to("cuda" if ngpu > 0 else "cpu")
+
         # [For distributed] Because iteration counts are not always equals between
         # processes, send stop-flag to the other processes if iterator is finished
         iterator_stop = torch.tensor(0).to("cuda" if ngpu > 0 else "cpu")
-        for (_, batch) in iterator:
+        for (index, batch) in iterator:
             assert isinstance(batch, dict), type(batch)
             if distributed:
                 torch.distributed.all_reduce(iterator_stop, ReduceOp.SUM)
@@ -680,12 +721,21 @@ class Trainer:
             if no_forward_run:
                 continue
 
-            retval = model(**batch)
+            retval = model(**batch, flag_IsValid=True)
             if isinstance(retval, dict):
                 stats = retval["stats"]
                 weight = retval["weight"]
             else:
-                _, stats, weight = retval
+                # _, stats, weight = retval
+                _, stats, weight, spec_predicted, spec_gt, length = retval
+
+                # monitor spec during validation stage 
+                # [batch size, max length, feat dim]
+                spec_predicted_denorm, _ = model.normalize.inverse( spec_predicted.clone() )
+                spec_gt_denorm, _ = model.normalize.inverse( spec_gt.clone() )
+
+                cls.log_figure(model_vocoder, index[0], spec_predicted_denorm, spec_gt_denorm, length, Path(options.output_dir) / "valid")
+
             if ngpu > 1 or distributed:
                 # Apply weighted averaging for stats.
                 # if distributed, this method can also apply all_reduce()
@@ -772,3 +822,78 @@ class Trainer:
                             f"{k}_{id_}", fig, reporter.get_epoch()
                         )
             reporter.next()
+    
+    @classmethod
+    @torch.no_grad()
+    def log_figure(
+        cls, 
+        model_vocoder,
+        step, 
+        output, 
+        spec, 
+        length, 
+        save_dir, 
+        att = None, 
+    ) -> None:
+
+        """log_figure."""
+        # only get one sample from a batch
+        # save wav and plot spectrogram
+        output = output.cpu().detach().numpy()[0]
+        out_spec = spec.cpu().detach().numpy()[0]
+        length = np.max(length.cpu().detach().numpy()[0])
+        output = output[:length]
+        out_spec = out_spec[:length]
+
+        plt.subplot(1, 2, 1)
+        specshow(output.T)
+        plt.title("prediction")
+        plt.subplot(1, 2, 2)
+        specshow(out_spec.T)
+        plt.title("ground_truth")
+
+        p = save_dir / f"{step}.png"
+        p.parent.mkdir(parents=True, exist_ok=True)
+        plt.savefig(p)
+
+        ### HiFi-GAN Vocoder
+        wav = model_vocoder.inference(output, normalize_before=True).view(-1).cpu().numpy()
+        wav_true = model_vocoder.inference(out_spec, normalize_before=True).view(-1).cpu().numpy()
+
+        ### Griffin-Lim Vocoder
+        # from muskit.utils.griffin_lim import logmel2linear
+        # from muskit.utils.griffin_lim import griffin_lim
+
+        # spc = logmel2linear(output, fs=24000, n_fft=2048, n_mels=80, fmin=80, fmax=7600)
+        # wav = griffin_lim(spc, n_fft=2048, n_shift=300, win_length=1200)
+        # spec_true = logmel2linear(out_spec, fs=24000, n_fft=2048, n_mels=80, fmin=80, fmax=7600)
+        # wav_true = griffin_lim(spec_true, n_fft=2048, n_shift=300, win_length=1200)
+
+        sf.write(
+            os.path.join(save_dir, "{}.wav".format(step)),
+            wav,
+            24000,                  # args.sampling_rate
+            format="wav",
+            subtype="PCM_24",
+        )
+        sf.write(
+            os.path.join(save_dir, "{}_true.wav".format(step)),
+            wav_true,
+            24000,                  # args.sampling_rate
+            format="wav",
+            subtype="PCM_24",
+        )
+
+        if att is not None:
+            att = att.cpu().detach().numpy()[0]
+            att = att[:, :length, :length]
+            plt.subplot(1, 4, 1)
+            specshow(att[0])
+            plt.subplot(1, 4, 2)
+            specshow(att[1])
+            plt.subplot(1, 4, 3)
+            specshow(att[2])
+            plt.subplot(1, 4, 4)
+            specshow(att[3])
+            plt.savefig(os.path.join(save_dir, "{}_att.png".format(step)))
+

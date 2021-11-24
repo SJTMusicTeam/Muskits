@@ -210,7 +210,7 @@ class SVSTask(AbsTask):
         parser.add_argument(
             "--fs",
             type=int,
-            default=16000,
+            default=24000,          # BUG: another fs in feats_extract_conf
             help="sample rate",
         )
 
@@ -379,3 +379,5 @@ class SVSTask(AbsTask):
         )
         assert check_return_type(model)
         return model
+
+    # @classmethod

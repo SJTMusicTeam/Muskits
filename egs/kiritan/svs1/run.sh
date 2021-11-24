@@ -7,6 +7,7 @@ set -o pipefail
 
 # spectrogram-related arguments
 fs=24000
+fmax=7600
 n_fft=2048
 n_shift=300
 win_length=1200
@@ -36,7 +37,9 @@ cleaner=none
     --stage 0 \
     --local_data_opts "--stage 0" \
     --feats_type raw \
+    --pitch_extract None \
     --fs "${fs}" \
+    --fmax "${fmax}" \
     --n_fft "${n_fft}" \
     --n_shift "${n_shift}" \
     --win_length "${win_length}" \
@@ -49,4 +52,5 @@ cleaner=none
     --valid_set "${valid_set}" \
     --test_sets "${test_sets}" \
     --srctexts "data/${train_set}/text" \
+    --svs_exp "exp/11_21_naiveRNN_test" \
     ${opts} "$@"
