@@ -305,6 +305,12 @@ class AbsTask(ABC):
             default=0,
             help="The number of gpus. 0 indicates CPU mode",
         )
+        group.add_argument(
+            "--gpu_id",
+            type=int,
+            default=0,
+            help="GPU_id, only works when ngpu=1",
+        )
         group.add_argument("--seed", type=int, default=0, help="Random seed")
         group.add_argument(
             "--num_workers",
@@ -433,6 +439,28 @@ class AbsTask(ABC):
         )
 
         group = parser.add_argument_group("Trainer related")
+        group.add_argument(
+            "--vocoder_checkpoint",
+            default="",
+            type=str,
+            help="checkpoint file to be loaded.",
+        )
+        group.add_argument(
+            "--vocoder_config",
+            default="",
+            type=str,
+            help="yaml format configuration file. if not explicitly provided, "
+            "it will be searched in the checkpoint directory. (default=None)",
+        )
+        group.add_argument(
+            "--vocoder_normalize_before",
+            default=False,
+            action="store_true",
+            help="whether to perform feature normalization before input to the model. "
+            "if true, it assumes that the feature is de-normalized. this is useful when "
+            "text2mel model and vocoder use different feature statistics.",
+        )
+
         group.add_argument(
             "--max_epoch",
             type=int,
@@ -1073,6 +1101,9 @@ class AbsTask(ABC):
             raise RuntimeError(
                 f"model must inherit {AbsMuskitModel.__name__}, but got {type(model)}"
             )
+        if args.ngpu == 1 and torch.cuda.is_available():
+            torch.cuda.set_device(args.gpu_id)
+            logging.info(f"GPU {args.gpu_id} is used")
         model = model.to(
             dtype=getattr(torch, args.train_dtype),
             device="cuda" if args.ngpu > 0 else "cpu",
@@ -1186,7 +1217,7 @@ class AbsTask(ABC):
                 write_collected_feats=args.write_collected_feats,
             )
         else:
-
+                        
             # 7. Build iterator factories
             if args.multiple_iterator:
                 train_iter_factory = cls.build_multiple_iter_factory(
