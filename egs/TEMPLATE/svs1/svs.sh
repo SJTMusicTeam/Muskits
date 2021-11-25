@@ -32,6 +32,7 @@ skip_train=false     # Skip training stages.
 skip_eval=false      # Skip decoding and evaluation stages.
 skip_upload=true     # Skip packing and uploading stages.
 ngpu=1               # The number of gpus ("0" uses cpu, otherwise use gpu).
+gpu_id=0             # GPU_id, only works when ngpu=1
 num_nodes=1          # The number of nodes.
 nj=32                # The number of parallel jobs.
 inference_nj=32      # The number of parallel jobs in decoding.
@@ -62,6 +63,7 @@ n_fft=1024        # The number of fft points.
 n_shift=256       # The number of shift points.
 win_length=null   # Window length.
 score_feats_extract=frame_score_feats # The type of music score feats (frame_score_feats or syllable_score_feats)
+pitch_extract=None
 # Only used for the model using pitch features (e.g. FastSpeech2)
 f0min=80          # Maximum f0 for pitch extraction.
 f0max=400         # Minimum f0 for pitch extraction.
@@ -637,15 +639,28 @@ if ! "${skip_train}"; then
             # "sound" supports "wav", "flac", etc.
             _type=sound
             _fold_length="$((singing_fold_length * n_shift))"
+            _opts+="--score_feats_extract ${score_feats_extract} "
+            _opts+="--score_feats_extract_conf fs=${fs} "
+            _opts+="--score_feats_extract_conf n_fft=${n_fft} "
+            _opts+="--score_feats_extract_conf win_length=${win_length} "
+            _opts+="--score_feats_extract_conf hop_length=${n_shift} "
             _opts+="--feats_extract ${feats_extract} "
             _opts+="--feats_extract_conf n_fft=${n_fft} "
             _opts+="--feats_extract_conf hop_length=${n_shift} "
             _opts+="--feats_extract_conf win_length=${win_length} "
+            _opts+="--pitch_extract ${pitch_extract} "
             if [ "${feats_extract}" = fbank ]; then
                 _opts+="--feats_extract_conf fs=${fs} "
                 _opts+="--feats_extract_conf fmin=${fmin} "
                 _opts+="--feats_extract_conf fmax=${fmax} "
                 _opts+="--feats_extract_conf n_mels=${n_mels} "
+            fi
+            if [ "${pitch_extract}" = dio ]; then
+                _opts+="--pitch_extract_conf fs=${fs} "
+                _opts+="--pitch_extract_conf n_fft=${n_fft} "
+                _opts+="--pitch_extract_conf hop_length=${n_shift} "
+                _opts+="--pitch_extract_conf f0max=${f0max} "
+                _opts+="--pitch_extract_conf f0min=${f0min} "
             fi
 
             if [ "${num_splits}" -gt 1 ]; then
@@ -678,13 +693,23 @@ if ! "${skip_train}"; then
             else
                 _opts+="--train_data_path_and_name_and_type ${_train_dir}/text,text,text "
                 _opts+="--train_data_path_and_name_and_type ${_train_dir}/${_scp},singing,${_type} "
+                _opts+="--train_data_path_and_name_and_type ${_train_dir}/label,label,duration "
+                _opts+="--train_data_path_and_name_and_type ${_train_dir}/midi.scp,midi,midi "
+                # echo "svs_stats_dir: ${svs_stats_dir}"
+                
                 _opts+="--train_shape_file ${svs_stats_dir}/train/text_shape.${token_type} "
                 _opts+="--train_shape_file ${svs_stats_dir}/train/singing_shape "
+                _opts+="--train_shape_file ${svs_stats_dir}/train/durations_shape "
+                _opts+="--train_shape_file ${svs_stats_dir}/train/score_shape "
             fi
             _opts+="--valid_data_path_and_name_and_type ${_valid_dir}/text,text,text "
             _opts+="--valid_data_path_and_name_and_type ${_valid_dir}/${_scp},singing,${_type} "
+            _opts+="--valid_data_path_and_name_and_type ${_valid_dir}/label,label,duration "
+            _opts+="--valid_data_path_and_name_and_type ${_valid_dir}/midi.scp,midi,midi "
             _opts+="--valid_shape_file ${svs_stats_dir}/valid/text_shape.${token_type} "
             _opts+="--valid_shape_file ${svs_stats_dir}/valid/singing_shape "
+            _opts+="--valid_shape_file ${svs_stats_dir}/valid/durations_shape "
+            _opts+="--valid_shape_file ${svs_stats_dir}/valid/score_shape "
         else
 
             #####################################
