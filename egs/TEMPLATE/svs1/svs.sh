@@ -758,7 +758,6 @@ if ! "${skip_train}"; then
             _opts+="--pitch_extract_conf n_fft=${n_fft} "
             _opts+="--pitch_extract_conf win_length=${win_length} "
             _opts+="--pitch_extract_conf hop_length=${n_shift} "
-            _opts+="--pitch_extract_conf ftype=${ftype} "
             _opts+="--pitch_normalize_conf stats_file=${svs_stats_dir}/train/pitch_stats.npz "
         fi
         if [ -e "${svs_stats_dir}/train/energy_stats.npz" ]; then
