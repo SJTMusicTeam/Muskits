@@ -1,5 +1,7 @@
 import argparse
 import os
+import shutil
+
 
 UTT_PREFIX = "oniku"
 DEV_LIST = ["chatsumi", "goin_home", "aoimeno_ningyou", "momiji", "tetsudou_shouka"]
@@ -33,13 +35,13 @@ def process_text_info(text):
     text_info = []
     for line in info.readlines():
         line = line.strip().split()
-        label_info.append(float(line[0])/1e6, float(line[1])/1e6, text[2])
-        text_info.append(line[2])
-   return " ".join(label_info), " ".join(text_info)
+        label_info.append("{} {} {}".format(float(line[0])/1e7, float(line[1])/1e7, line[2].strip()))
+        text_info.append(line[2].strip())
+    return " ".join(label_info), " ".join(text_info)
 
 
 def process_subset(src_data, subset, check_func):
-    subfolder = os.listdir(src_data))
+    subfolder = os.listdir(src_data)
     makedir(subset)
     wavscp = open(os.path.join(subset, "wav.scp"), "w", encoding="utf-8")
     utt2spk = open(os.path.join(subset, "utt2spk"), "w", encoding="utf-8")
@@ -48,15 +50,17 @@ def process_subset(src_data, subset, check_func):
     label_scp = open(os.path.join(subset, "label"), "w", encoding="utf-8")
 
     for folder in subfolder:
+        if not os.path.isdir(os.path.join(src_data, folder)):
+            continue
         if not check_func(folder):
             continue
         utt_id = "{}_{}".format(UTT_PREFIX, pack_zero(folder))
-        wavscp.write("{} {}".format(utt_id, os.path.join(src_data, folder, "{}.wav".format(folder))))
-        utt2spk.write("{} {}".format(utt_id, UTT_PREFIX))
-        text_info, label_info = process_text_info(os.path.join(src_data, folder, "{}.lab".format(folder)))
-        text_scp.write("{} {}".format(utt_id, text_info))
-        label_scp.write("{} {}".format(utt_id, label_info))
-        midi_scp.write("{} {}".format(utt_id, os.path.join(src_data, folder, "{}.mid".format(folder))))
+        wavscp.write("{} sox -t wavpcm {} -c 1 -t wavpcm -b 16 -|\n".format(utt_id, os.path.join(src_data, folder, "{}.wav".format(folder))))
+        utt2spk.write("{} {}\n".format(utt_id, UTT_PREFIX))
+        label_info, text_info = process_text_info(os.path.join(src_data, folder, "{}.lab".format(folder)))
+        text_scp.write("{} {}\n".format(utt_id, text_info))
+        label_scp.write("{} {}\n".format(utt_id, label_info))
+        midiscp.write("{} {}\n".format(utt_id, os.path.join(src_data, folder, "{}.mid".format(folder))))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(

@@ -19,7 +19,7 @@ else
     opts="--audio_format flac "
 fi
 
-train_set=train
+train_set=tr_no_dev
 valid_set=dev
 test_sets="dev eval"
 

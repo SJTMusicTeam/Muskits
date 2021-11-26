@@ -9,8 +9,8 @@ NATSUME=
 # For only JHU environment
 if [[ "$(hostname -d)" == clsp.jhu.edu ]]; then
     KIRITAN=/export/c06/jiatong/svs/SVS_system/egs/public_dataset/kiritan/downloads/
-    ONIKU=
-    OFUTON=
+    ONIKU=/export/c06/jiatong/svs/data/ONIKU_KURUMI_UTAGOE_DB
+    OFUTON=/export/c06/jiatong/svs/data/OFUTON_P_UTAGOE_DB
     NATSUME=/export/c06/jiatong/svs/SVS_system/egs/public_dataset/natsume/downloads/
 fi
 

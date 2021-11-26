@@ -134,7 +134,7 @@ if __name__ == "__main__":
 
             update_segments.write(
                 "{} {} {} {}\n".format(
-                    key, key.split("_")[0], segment_begin, segment_end
+                    key, "_".join(key.split("_")[:-1]), segment_begin, segment_end
                 )
             )
             update_label.write("{}".format(key))

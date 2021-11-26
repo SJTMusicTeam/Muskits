@@ -34,7 +34,7 @@ recog_set=eval
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     log "stage 0: Data Download"
-    # The Oniku data should be downloaded from http://onikuru.info/db-download/
+    # The Ofuton data should be downloaded from https://sites.google.com/view/oftn-utagoedb/%E3%83%9B%E3%83%BC%E3%83%A0
     # with authentication
 
 fi
@@ -54,7 +54,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
         mv ${src_data}/segments.tmp ${src_data}/segments
         mv ${src_data}/label.tmp ${src_data}/label
         mv ${src_data}/text.tmp ${src_data}/text
-        cat ${src_data}/segments | awk '{printf("%s kiritan\n", $1);}' > ${src_data}/utt2spk
+        cat ${src_data}/segments | awk '{printf("%s oniku\n", $1);}' > ${src_data}/utt2spk
         utils/utt2spk_to_spk2utt.pl < ${src_data}/utt2spk > ${src_data}/spk2utt
         utils/fix_data_dir.sh --utt_extra_files label ${src_data}
     done
