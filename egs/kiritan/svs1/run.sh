@@ -34,7 +34,7 @@ cleaner=none
 
 ./svs.sh \
     --lang jp \
-    --stage 6 \
+    --stage 1 \
     --local_data_opts "--stage 0" \
     --feats_type raw \
     --pitch_extract None \
@@ -52,5 +52,4 @@ cleaner=none
     --valid_set "${valid_set}" \
     --test_sets "${test_sets}" \
     --srctexts "data/${train_set}/text" \
-    --svs_exp "exp/11_21_naiveRNN_test" \
     ${opts} "$@"

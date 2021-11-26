@@ -54,7 +54,7 @@ endif
 all: kaldi showenv python conda_packages.done check_install
 
 python: activate_python.sh muskit.done pytorch.done pyopenjtalk.done
-
+extra: parallel_wavegan.done
 
 kaldi:
 	test -f kaldi/egs/wsj/s5/utils/parse_options.sh || git clone --depth 1 https://github.com/kaldi-asr/kaldi
@@ -120,9 +120,9 @@ muskit.done: pytorch.done conda_packages.done
 	. ./activate_python.sh && python3 -m pip install -e "..[recipe]"  # Install editable mode by default
 	touch muskit.done
 
-pyopenjtalk.done: muskit.done conda_packages.done
-	. ./activate_python.sh && ./installers/install_pyopenjtalk.sh
-	touch pyopenjtalk.done
+parallel_wavegan.done: muskit.done
+	. ./activate_python.sh && ./installers/install_parallel_wavegan.sh
+	touch parallel_wavegan.done
 
 check_install: python
 ifeq ($(strip $(CPU_ONLY)),)
@@ -145,10 +145,13 @@ endif
 
 
 clean: clean_extra
-	rm -rf pyopenjtalk.done
+	rm -rf *.done
 	find . -iname "*.pyc" -delete
 
 clean_python:
 	rm -f muskit.done pytorch.done
 	find . -iname "*.pyc" -delete
+
+clean_extra:
+	rm -rf parallel_wavegan.done
 

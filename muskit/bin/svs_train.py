@@ -13,6 +13,8 @@ def main(cmd=None):
         % python svs_train.py asr --print_config --optim adadelta
         % python svs_train.py --config conf/train_asr.yaml
     """
+    import logging
+    logging.info("get into svs task")
     SVSTask.main(cmd=cmd)
 
 
