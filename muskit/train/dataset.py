@@ -394,7 +394,7 @@ class MuskitDataset(AbsDataset):
             raise ValueError(
                 '1 or more elements are required for "path_name_type_list"'
             )
-
+        
         path_name_type_list = copy.deepcopy(path_name_type_list)
         self.preprocess = preprocess
 
@@ -518,17 +518,20 @@ class MuskitDataset(AbsDataset):
             elif isinstance(value, numbers.Number):
                 value = np.array([value])
             data[name] = value
-
+        
         # 2. [Option] Apply preprocessing
         #   e.g. muskit.train.preprocessor:CommonPreprocessor
         if self.preprocess is not None:
             data = self.preprocess(uid, data)
-        logging.info(f'data.key:{data.keys()}')
-        length = min(len(data["singing"]), len(data["score"]), len(data["tempo"]), len(data["durations"]))
-        data["singing"] = data["singing"][:length]
-        data["score"] = data["score"][:length]
-        data["tempo"] = data["tempo"][:length]
-        data["durations"] = data["durations"][:length]
+        
+        length = min ([len(data[key]) for key in data.keys()])
+        for key, value in data.items():
+            data[key] = data[key][:length]
+        # length = min(len(data["singing"]), len(data["score"]), len(data["tempo"]), len(data["durations"]))
+        # data["singing"] = data["singing"][:length]
+        # data["score"] = data["score"][:length]
+        # data["tempo"] = data["tempo"][:length]
+        # data["durations"] = data["durations"][:length]
 
         # for name in data:
         #     logging.info(f"name: {name}, shape: {len(data[name])}")

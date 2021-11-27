@@ -978,7 +978,6 @@ class AbsTask(ABC):
     def main(cls, args: argparse.Namespace = None, cmd: Sequence[str] = None):
         assert check_argument_types()
         print(get_commandline_args(), file=sys.stderr)
-        print("logging in", file=sys.stderr)
         if args is None:
             parser = cls.get_parser()
             args = parser.parse_args(cmd)
@@ -993,7 +992,6 @@ class AbsTask(ABC):
         # "distributed" is decided using the other command args
         resolve_distributed_mode(args)
         if not args.distributed or not args.multiprocessing_distributed:
-            print("entering main worker", file=sys.stderr)
             cls.main_worker(args)
 
         else:
@@ -1186,7 +1184,7 @@ class AbsTask(ABC):
                 valid_key_file = args.valid_shape_file[0]
             else:
                 valid_key_file = None
-
+            logging.info(f'args.train_data_path_and_name_and_type:{args.train_data_path_and_name_and_type}')
             collect_stats(
                 model=model,
                 train_iter=cls.build_streaming_iterator(
@@ -1217,7 +1215,6 @@ class AbsTask(ABC):
                 write_collected_feats=args.write_collected_feats,
             )
         else:
-                        
             # 7. Build iterator factories
             if args.multiple_iterator:
                 train_iter_factory = cls.build_multiple_iter_factory(
@@ -1406,7 +1403,6 @@ class AbsTask(ABC):
         """
         assert check_argument_types()
         iter_options = cls.build_iter_options(args, distributed_option, mode)
-
         # Overwrite iter_options if any kwargs is given
         if kwargs is not None:
             for k, v in kwargs.items():
@@ -1438,7 +1434,6 @@ class AbsTask(ABC):
         cls, args: argparse.Namespace, iter_options: IteratorOptions, mode: str
     ) -> AbsIterFactory:
         assert check_argument_types()
-
         dataset = MuskitDataset(
             iter_options.data_path_and_name_and_type,
             float_dtype=args.train_dtype,

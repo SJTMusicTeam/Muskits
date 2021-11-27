@@ -120,7 +120,7 @@ for x in utt2spk spk2utt feats.scp text segments wav.scp cmvn.scp vad.scp \
     utt2num_frames label midi.scp; do
   if [ -f $data/$x ]; then
     if [ ! -d $data/.backup ]; then
-      mkdir $data/.backup
+      mkdir -p $data/.backup
     fi
     cp $data/$x $data/.backup/$x
     check_sorted $data/$x
