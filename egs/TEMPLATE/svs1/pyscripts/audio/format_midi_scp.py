@@ -129,7 +129,7 @@ def main():
                 end = np.searchsorted([item[1] for item in note_seq], end, "left")
             sub_note = note_seq[start:end]
             sub_tempo = tempo_seq[start:end]
-
+            print(min(sub_note), min(sub_tempo), len(sub_note), len(sub_tempo))
             writer[utt_id] = sub_note, sub_tempo
 
     else:

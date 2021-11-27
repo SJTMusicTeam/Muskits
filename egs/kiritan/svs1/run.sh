@@ -52,5 +52,4 @@ cleaner=none
     --valid_set "${valid_set}" \
     --test_sets "${test_sets}" \
     --srctexts "data/${train_set}/text" \
-    --svs_exp "exp/11_21_naiveRNN_test" \
     ${opts} "$@"
