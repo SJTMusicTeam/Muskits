@@ -28,8 +28,4 @@ if [[ `hostname` == uranus_gs_2223 ]]; then
     ONIKU=/data1/gs/dataset/ONIKU_KURUMI_UTAGOE_DB
     OFUTON=/data1/gs/dataset/OFUTON_P_UTAGOE_DB
     NATSUME=/data1/gs/dataset/Natsume_Singing_DB
-<<<<<<< Updated upstream
 fi
-=======
-fi
->>>>>>> Stashed changes
