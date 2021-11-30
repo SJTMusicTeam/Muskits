@@ -527,15 +527,6 @@ class MuskitDataset(AbsDataset):
         length = min ([len(data[key]) for key in data.keys()])
         for key, value in data.items():
             data[key] = data[key][:length]
-        # length = min(len(data["singing"]), len(data["score"]), len(data["tempo"]), len(data["durations"]))
-        # data["singing"] = data["singing"][:length]
-        # data["score"] = data["score"][:length]
-        # data["tempo"] = data["tempo"][:length]
-        # data["durations"] = data["durations"][:length]
-
-        # for name in data:
-        #     logging.info(f"name: {name}, shape: {len(data[name])}")
-        # quit()
 
         # 3. Force data-precision
         for name in data:
