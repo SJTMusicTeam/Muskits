@@ -91,11 +91,6 @@ def transition(dataset, des_url):
         des_lab = path[1] + item.replace(".wav", ".lab")
         des_midi = path[2] + item.replace(".wav", ".mid")
 
-        if des_midi[-6:]=='13.mid':
-            des_midi = des_midi[:-6]+'14.mid'
-        elif des_midi[-6:]=='14.mid':
-            des_midi = des_midi[:-6]+'13.mid'
-
         copyfile(wav_path, des_wav)
         copyfile(lab_path, des_lab)
         copyfile(midi_path, des_midi)
@@ -112,8 +107,8 @@ for path in midfiles:
         path13 = path
     if path[-6:]=='14.mid':
         path14 = path
-path_temp = path[-6:]+'00.mid'
-copyfile(path13, path_temp)
-copyfile(path14, path13)
-copyfile(path_temp, path13)
-os.remove(path_temp)
+path_temp = path14[-6:]+'00.mid'
+shutil.move(path13, path_temp)
+shutil.move(path14, path13)
+shutil.move(path_temp, path14)
+# os.remove(path_temp)
