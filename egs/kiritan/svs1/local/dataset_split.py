@@ -99,3 +99,16 @@ def transition(dataset, des_url):
 transition(train_set, data_train_url)
 transition(validation_set, data_vaild_url)
 transition(test_set, data_test_url)
+
+
+midfiles=list(find_files_by_extensions(data_root_url, exts=['.mid']))
+for path in midfiles:
+    if path[-6:]=='13.mid':
+        path13 = path
+    if path[-6:]=='14.mid':
+        path14 = path
+path_temp = path[-6:]+'00.mid'
+copyfile(path13, path_temp)
+copyfile(path14, path13)
+copyfile(path_temp, path13)
+os.remove(path_temp)

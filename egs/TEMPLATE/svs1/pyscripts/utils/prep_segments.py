@@ -29,7 +29,7 @@ def same_split(alignment, threshold):
         size += 1
     segments = []
     start = 0
-    for i in range(size - 1):
+    for i in range(size - 2):
         index = start
         while (
             index + 1 < len(alignment)
