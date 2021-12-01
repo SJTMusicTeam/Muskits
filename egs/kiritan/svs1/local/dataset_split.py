@@ -91,6 +91,11 @@ def transition(dataset, des_url):
         des_lab = path[1] + item.replace(".wav", ".lab")
         des_midi = path[2] + item.replace(".wav", ".mid")
 
+        if des_midi[-6:]=='13.mid':
+            des_midi = des_midi[:-6]+'14.mid'
+        elif des_midi[-6:]=='14.mid':
+            des_midi = des_midi[:-6]+'13.mid'
+
         copyfile(wav_path, des_wav)
         copyfile(lab_path, des_lab)
         copyfile(midi_path, des_midi)

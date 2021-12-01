@@ -64,8 +64,8 @@ def midi_to_seq(midi_obj, dtype=np.int16, rate=22050):
 def seq_to_midi(
     note_seq,
     tempo_seq,
-    rate=22050,
-    DEFAULT_RESOLUTION=480,
+    rate=24000,
+    DEFAULT_RESOLUTION=960,
     DEFAULT_TEMPO=120,
     DEFAULT_VELOCITY=64,
 ):
