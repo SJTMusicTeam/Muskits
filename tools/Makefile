@@ -4,7 +4,7 @@
 # Disable cupy installation
 NO_CUPY :=
 # PyTorch version: 1.7.0, 1.7.1, 1.8.1
-TH_VERSION := 1.8.1
+TH_VERSION := 1.7.0
 WGET := wget --tries=3
 
 # Use pip for pytorch installation even if you have anaconda
