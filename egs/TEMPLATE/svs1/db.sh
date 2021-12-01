@@ -21,3 +21,11 @@ if [[ `hostname` == venus_qt_2241 ]]; then
     OFUTON=/data3/qt/ONIKU_KURUMI_UTAGOE_DB/
     NATSUME=/data3/qt/
 fi
+
+# For only uranus environment
+if [[ `hostname` == uranus_gs_2223 ]]; then
+    KIRITAN=/data1/gs/Muskits/egs/kiritan/svs1/data/
+    ONIKU=/data1/gs/dataset/ONIKU_KURUMI_UTAGOE_DB
+    OFUTON=/data1/gs/dataset/OFUTON_P_UTAGOE_DB
+    NATSUME=/data1/gs/dataset/Natsume_Singing_DB
+fi
