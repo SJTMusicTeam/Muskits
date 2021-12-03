@@ -388,6 +388,7 @@ class MuskitDataset(AbsDataset):
         int_dtype: str = "long",
         max_cache_size: Union[float, int, str] = 0.0,
         max_cache_fd: int = 0,
+        not_align: list = ['text'],
     ):
         assert check_argument_types()
         if len(path_name_type_list) == 0:
@@ -423,6 +424,7 @@ class MuskitDataset(AbsDataset):
             self.cache = SizedDict(shared=True)
         else:
             self.cache = None
+        self.not_align = not_align
 
     def _build_loader(
         self, path: str, loader_type: str
@@ -524,8 +526,10 @@ class MuskitDataset(AbsDataset):
         if self.preprocess is not None:
             data = self.preprocess(uid, data)
         
-        length = min ([len(data[key]) for key in data.keys()])
+        length = min ([len(data[key])for key in data.keys() if key not in self.not_align ])
         for key, value in data.items():
+            if key in self.not_align:
+                continue
             data[key] = data[key][:length]
 
         # 3. Force data-precision
