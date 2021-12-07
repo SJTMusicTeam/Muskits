@@ -114,6 +114,7 @@ singing_fold_length=800 # fold_length for singing data.
 
 help_message=$(cat << EOF
 Usage: $0 --train-set "<train_set_name>" --valid-set "<valid_set_name>" --test_sets "<test_set_names>" --srctexts "<srctexts>"
+
 Options:
     # General configuration
     --stage          # Processes starts from the specified stage (default="${stage}").
@@ -130,8 +131,10 @@ Options:
     --dumpdir        # Directory to dump features (default="${dumpdir}").
     --expdir         # Directory to save experiments (default="${expdir}").
     --python         # Specify python to execute muskit commands (default="${python}").
+
     # Data prep related
     --local_data_opts # Options to be passed to local/data.sh (default="${local_data_opts}").
+
     # Feature extraction related
     --feats_type       # Feature type (fbank or stft or raw, default="${feats_type}").
     --audio_format     # Audio format: wav, flac, wav.ark, flac.ark  (only in feats_type=raw, default="${audio_format}").
@@ -152,6 +155,7 @@ Options:
     --oov              # Out of vocabrary symbol (default="${oov}").
     --blank            # CTC blank symbol (default="${blank}").
     --sos_eos          # sos and eos symbole (default="${sos_eos}").
+    
     # Training related
     --train_config  # Config for training (default="${train_config}").
     --train_args    # Arguments for training (default="${train_args}").
@@ -178,6 +182,7 @@ Options:
                         # If set to none, Griffin-Lim vocoder will be used.
     --griffin_lim_iters # The number of iterations of Griffin-Lim (default=${griffin_lim_iters}).
     --download_model    # Download a model from Model Zoo and use it for decoding (default="${download_model}").
+    
     # [Task dependent] Set the datadir name created by local/data.sh.
     --train_set          # Name of training set (required).
     --valid_set          # Name of validation set used for monitoring/tuning network training (required).

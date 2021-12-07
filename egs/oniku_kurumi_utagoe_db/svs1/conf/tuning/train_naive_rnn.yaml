@@ -73,4 +73,4 @@ best_model_criterion:
     - min
 
 gpu_id: 1
-vocoder_checkpoint: /data1/gs/peter/ParallelWaveGAN/egs/singing/voc1/exp/train_hifigan.v1_train_nodev_clean_libritts_hifigan-2.v1/checkpoint-50000steps.pkl
+vocoder_checkpoint: /data3/qt/ParallelWaveGAN/checkpoint-50000steps.pkl

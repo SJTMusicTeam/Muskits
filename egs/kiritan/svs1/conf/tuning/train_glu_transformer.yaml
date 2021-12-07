@@ -7,12 +7,12 @@ svs: glu_transformer             # model architecture
 svs_conf:                        # keyword arguments for the selected model
     #idim: 68 #phone_size
     midi_dim: 129                # midi dimension (note number + silence)
-    tempo_dim: 300               # tempo dimension tempo number
+    tempo_dim: 300
     # odim:  #output_dim
     embed_dim: 256 # embed_size  # char or phn embedding dimension
-    eprenet_conv_layers: 3       # prenet (from bytesing) conv layers
-    eprenet_conv_chans: 256      # prenet (from bytesing) conv channels numbers
-    eprenet_conv_filts: 3        # prenet (from bytesing) conv filters size
+    # eprenet_conv_layers: 3       # prenet (from bytesing) conv layers
+    # eprenet_conv_chans: 256      # prenet (from bytesing) conv channels numbers
+    # eprenet_conv_filts: 3        # prenet (from bytesing) conv filters size
     elayers: 3                   # number of glu_transformer layers in encoder
     eunits: 256                  # number of glu_transformer units hidden_size
     glu_num_layers: 3
@@ -24,10 +24,10 @@ svs_conf:                        # keyword arguments for the selected model
     postnet_layers: 5            # number of layers in postnet
     postnet_chans: 256           # number of channels in postnet
     postnet_filts: 5             # filter size of postnet layer    n_mels: -1
-    double_mel_loss: true
+    # double_mel_loss: true
     local_gaussian: false
-    semitone_size: 59
-    Hz2semitone: false
+    # semitone_size: 59
+    # Hz2semitone: false
     use_batch_norm: true         # whether to use batch normalization in postnet
     reduction_factor: 1          # reduction factor
     eprenet_dropout_rate: 0.2    # prenet dropout rate

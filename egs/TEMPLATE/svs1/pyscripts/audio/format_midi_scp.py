@@ -13,7 +13,7 @@ import soundfile
 from tqdm import tqdm
 from typeguard import check_argument_types
 
-# from muskit.utils.cli_utils import get_commandline_args
+from muskit.utils.cli_utils import get_commandline_args
 from muskit.fileio.read_text import read_2column_text
 from muskit.fileio.midi_scp import MIDIScpWriter, MIDIScpReader
 
@@ -40,7 +40,7 @@ def str2int_tuple(integers: str) -> Optional[Tuple[int, ...]]:
 def main():
     logfmt = "%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s"
     logging.basicConfig(level=logging.INFO, format=logfmt)
-    # logging.info(get_commandline_args())
+    logging.info(get_commandline_args())
 
     parser = argparse.ArgumentParser(
         description='Create waves list from "midi.scp"',

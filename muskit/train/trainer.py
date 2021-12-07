@@ -49,7 +49,7 @@ import matplotlib.pyplot as plt
 import os
 import soundfile as sf
 import yaml
-# from parallel_wavegan.utils import load_model
+from parallel_wavegan.utils import load_model
 
 if LooseVersion(torch.__version__) >= LooseVersion("1.1.0"):
     from torch.utils.tensorboard import SummaryWriter
@@ -699,13 +699,14 @@ class Trainer:
             config = yaml.load(f, Loader=yaml.Loader)
         config.update(vars(options))
 
-        # model_vocoder = load_model(options.vocoder_checkpoint, config)
+        model_vocoder = load_model(options.vocoder_checkpoint, config)
         logging.info(f"Loaded model parameters from {options.vocoder_checkpoint}.")
         # if options.normalize_before:
-        #     assert hasattr(model_vocoder, "mean"), "Feature stats are not registered."
-        #     assert hasattr(model_vocoder, "scale"), "Feature stats are not registered."
-        # model_vocoder.remove_weight_norm()
-        # model_vocoder = model_vocoder.eval().to("cuda" if ngpu > 0 else "cpu")
+        if True:
+            assert hasattr(model_vocoder, "mean"), "Feature stats are not registered."
+            assert hasattr(model_vocoder, "scale"), "Feature stats are not registered."
+        model_vocoder.remove_weight_norm()
+        model_vocoder = model_vocoder.eval().to("cuda" if ngpu > 0 else "cpu")
 
         # [For distributed] Because iteration counts are not always equals between
         # processes, send stop-flag to the other processes if iterator is finished

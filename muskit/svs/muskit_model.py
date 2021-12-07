@@ -119,8 +119,6 @@ class MuskitSVSModel(AbsMuskitModel):
             #     )
             # Extract features
             if self.feats_extract is not None:
-                logging.info(f'singing:{singing.shape}')
-                logging.info(f'singing_length:{singing_lengths.shape}')
                 feats, feats_lengths = self.feats_extract(singing, singing_lengths) # singing to spec feature (frame level)
             else:
                 # Use precalculated feats (feats_type != raw case)

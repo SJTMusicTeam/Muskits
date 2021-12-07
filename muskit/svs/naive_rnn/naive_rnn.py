@@ -288,6 +288,8 @@ class NaiveRNN(AbsSVS):
         label_lengths: torch.Tensor,
         midi: torch.Tensor,
         midi_lengths: torch.Tensor,
+        tempo: Optional[torch.Tensor] = None,
+        tempo_lengths: Optional[torch.Tensor] = None,
         spembs: Optional[torch.Tensor] = None,
         sids: Optional[torch.Tensor] = None,
         lids: Optional[torch.Tensor] = None,
