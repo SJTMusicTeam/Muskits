@@ -7,6 +7,22 @@ import shutil
 from shutil import copyfile
 
 
+UTT_PREFIX = "kiritan"
+DEV_LIST = ["13", "14", "26", "28", "39"]
+TEST_LIST = ["01", "16", "17", "27", "44"]
+
+
+def train_check(song):
+    return (song not in DEV_LIST) and (song not in TEST_LIST)
+
+
+def dev_check(song):
+    return song in DEV_LIST
+
+
+def test_check(song):
+    return song in TEST_LIST
+
 def get_parser():
     parser = argparse.ArgumentParser(
         description="Prepare segments from HTS-style alignment files",
@@ -72,9 +88,12 @@ if __name__ == "__main__":
     # print(dataset)
     random.shuffle(dataset)
     # copyfile(source_file, destination_file)
-    train_set = dataset[:train]
-    validation_set = dataset[train : train + dev]
-    test_set = dataset[train + dev :]
+    train_set = [ data for data in dataset if train_check(data[:-4]) ]
+    validation_set = [ data for data in dataset if dev_check(data[:-4]) ]
+    test_set = [ data for data in dataset if test_check(data[:-4]) ]
+    # train_set = dataset[:train]
+    # validation_set = dataset[train : train + dev]
+    # test_set = dataset[train + dev :]
 
 
 def transition(dataset, des_url):

@@ -503,7 +503,7 @@ class Trainer:
                     # logging.info(f"filename_list: {filename_list}")
                     
                     retval = model(**batch)
-
+                    
                     # Note(kamo):
                     # Supporting two patterns for the returned value from the model
                     #   a. dict type
@@ -568,7 +568,7 @@ class Trainer:
                     scaler.scale(loss).backward()
                 else:
                     loss.backward()
-
+            
             if iiter % accum_grad == 0:
                 if scaler is not None:
                     # Unscales the gradients of optimizer's assigned params in-place
@@ -694,7 +694,7 @@ class Trainer:
             dirname = os.path.dirname(options.vocoder_checkpoint)
             print(f"dirname: {dirname}")
             options.vocoder_config = os.path.join(dirname, "config.yml")
-        print(f"options.vocoder_config: {options.vocoder_config}")
+        logging.info(f"options.vocoder_config: {options.vocoder_config}")
         with open(options.vocoder_config) as f:
             config = yaml.load(f, Loader=yaml.Loader)
         config.update(vars(options))
@@ -702,9 +702,9 @@ class Trainer:
         model_vocoder = load_model(options.vocoder_checkpoint, config)
         logging.info(f"Loaded model parameters from {options.vocoder_checkpoint}.")
         # if options.normalize_before:
-        if True:
-            assert hasattr(model_vocoder, "mean"), "Feature stats are not registered."
-            assert hasattr(model_vocoder, "scale"), "Feature stats are not registered."
+        # if True:
+        #     assert hasattr(model_vocoder, "mean"), "Feature stats are not registered."
+        #     assert hasattr(model_vocoder, "scale"), "Feature stats are not registered."
         model_vocoder.remove_weight_norm()
         model_vocoder = model_vocoder.eval().to("cuda" if ngpu > 0 else "cpu")
 
