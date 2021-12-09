@@ -25,6 +25,7 @@ from muskit.torch_utils.nets_utils import make_pad_mask, make_non_pad_mask
 from muskit.torch_utils.initialize import initialize
 from muskit.layers.glu import GLU
 from muskit.layers.transformer.attention import MultiHeadedAttention
+
 # from muskit.svs.bytesing.encoder import Encoder as EncoderPrenet
 from muskit.svs.bytesing.decoder import Postnet
 from muskit.svs.naive_rnn.naive_rnn import NaiveRNNLoss
@@ -33,6 +34,7 @@ from muskit.svs.abs_svs import AbsSVS
 from muskit.svs.gst.style_encoder import StyleEncoder
 
 SCALE_WEIGHT = 0.5 ** 0.5
+
 
 def _get_activation_fn(activation):
     """_get_activation_fn."""
@@ -43,9 +45,11 @@ def _get_activation_fn(activation):
     else:
         raise RuntimeError("activation should be relu/gelu, not %s." % activation)
 
+
 def _get_clones(module, N):
     """_get_clones."""
     return torch.nn.ModuleList([copy.deepcopy(module) for i in range(N)])
+
 
 class PostNet(torch.nn.Module):
     """CBHG Network (mel --> linear)."""
@@ -81,6 +85,7 @@ class PostNet(torch.nn.Module):
         output = self.post_projection(x).transpose(1, 2)
 
         return output
+
 
 class CBHG(torch.nn.Module):
     """CBHG Module."""
@@ -241,6 +246,7 @@ class Highwaynet(torch.nn.Module):
 
         return out
 
+
 class PositionalEncoding(torch.nn.Module):
     """Positional Encoding.
     Modified from
@@ -279,10 +285,11 @@ class PositionalEncoding(torch.nn.Module):
         x = x + self.pe[: x.size(0), :].to(self.dev)
         return self.dropout(x)
 
+
 class Encoder_Postnet(torch.nn.Module):
     """Encoder Postnet."""
 
-    def __init__(self, embed_size):#, semitone_size=59, Hz2semitone=False):
+    def __init__(self, embed_size):  # , semitone_size=59, Hz2semitone=False):
         """init."""
         super(Encoder_Postnet, self).__init__()
 
@@ -296,7 +303,6 @@ class Encoder_Postnet(torch.nn.Module):
         # only 0 and 1 two possibilities
         # self.emb_beats = torch.nn.Embedding(2, embed_size)
         # logging.info(f'{embed_size}')
-        
 
     def aligner(self, encoder_out, align_phone, text_phone):
         """aligner."""
@@ -310,7 +316,11 @@ class Encoder_Postnet(torch.nn.Module):
         # logging.info(f'align_phone:{align_phone.shape}')
         # logging.info(f'text_phone:{text_phone.shape}')
         align_phone = align_phone.long()
-        out = torch.zeros((batch, align_phone_length, emb_dim), dtype=torch.float, device=encoder_out.device)
+        out = torch.zeros(
+            (batch, align_phone_length, emb_dim),
+            dtype=torch.float,
+            device=encoder_out.device,
+        )
         for i in range(align_phone.shape[0]):
             before_text_phone = text_phone[i][0]
             encoder_ind = 0
@@ -357,9 +367,8 @@ class Encoder_Postnet(torch.nn.Module):
 
         # beats = self.emb_beats(beats.squeeze(2))
 
-        
-
         return out
+
 
 class MultiheadAttention(torch.nn.Module):
     """Multihead attention mechanism (dot attention)."""
@@ -380,7 +389,7 @@ class MultiheadAttention(torch.nn.Module):
         attn = attn / math.sqrt(self.num_hidden_k)
         if gaussian_factor is not None:
             attn = attn - gaussian_factor
-        
+
         # Masking to ignore padding (key side)
         if mask is not None:
             attn = attn.masked_fill(mask, -(2 ** 32) + 1)
@@ -399,6 +408,7 @@ class MultiheadAttention(torch.nn.Module):
         result = t.bmm(attn, value)
 
         return result, attn
+
 
 class Attention(torch.nn.Module):
     """Attention Network."""
@@ -526,6 +536,7 @@ class Attention(torch.nn.Module):
 
         return result, attns
 
+
 class TransformerGLULayer(torch.nn.Module):
     """TransformerGLULayer."""
 
@@ -542,7 +553,10 @@ class TransformerGLULayer(torch.nn.Module):
         """init."""
         super(TransformerGLULayer, self).__init__()
         self.self_attn = Attention(
-            h=nhead, num_hidden=d_model, local_gaussian=local_gaussian, dropout_rate = dropout
+            h=nhead,
+            num_hidden=d_model,
+            local_gaussian=local_gaussian,
+            dropout_rate=dropout,
         )
         self.GLU = GLU(1, d_model, glu_kernel, dropout, d_model)
         self.norm1 = torch.nn.LayerNorm(d_model)
@@ -570,6 +584,7 @@ class TransformerGLULayer(torch.nn.Module):
         src6 = src6 * SCALE_WEIGHT
         return src6, att_weight
 
+
 class GLUEncoder(torch.nn.Module):
     """Encoder Network."""
 
@@ -589,8 +604,8 @@ class GLUEncoder(torch.nn.Module):
         super(GLUEncoder, self).__init__()
 
         self.emb_phone = torch.nn.Embedding(
-                num_embeddings=phone_size, embedding_dim=embed_size, padding_idx=padding_idx
-            )
+            num_embeddings=phone_size, embedding_dim=embed_size, padding_idx=padding_idx
+        )
         # full connected
         self.fc_1 = torch.nn.Linear(embed_size, hidden_size)
 
@@ -627,6 +642,7 @@ class GLUEncoder(torch.nn.Module):
 
         out = out * math.sqrt(0.5)
         return out, text_phone
+
 
 class TransformerEncoder(torch.nn.Module):
     """TransformerEncoder is a stack of N encoder layers.
@@ -669,6 +685,7 @@ class TransformerEncoder(torch.nn.Module):
 
         return output, att_weight
 
+
 class GLUDecoder(torch.nn.Module):
     """Decoder Network."""
 
@@ -708,11 +725,12 @@ class GLUDecoder(torch.nn.Module):
         else:
             query_mask = None
         mask = pos.eq(0).unsqueeze(1).repeat(1, src.size(1), 1)
-        
+
         src = self.input_norm(src)
         memory, att_weight = self.decoder(src, mask=mask, query_mask=query_mask)
         output = self.output_fc(memory)
         return output, att_weight
+
 
 # /muskit/layers/transformer
 class GLU_Transformer(AbsSVS):
@@ -721,8 +739,8 @@ class GLU_Transformer(AbsSVS):
     def __init__(
         # network structure related
         self,
-        idim,# phone_size,
-        odim,#output_dim,
+        idim,  # phone_size,
+        odim,  # output_dim,
         midi_dim,
         tempo_dim,
         embed_dim,
@@ -731,14 +749,13 @@ class GLU_Transformer(AbsSVS):
         # eprenet_conv_chans: int = 256,
         # eprenet_conv_filts: int = 5,
         # glu_tf encoder:
-        elayers: int = 3,# enc_num_block,
+        elayers: int = 3,  # enc_num_block,
         # ehead: int = 4,# enc_nhead,
         eunits: int = 256,
         glu_num_layers: int = 3,
         glu_kernel: int = 3,
-        
-        dlayers: int = 3,# dec_num_block,
-        dhead: int = 4,# dec_nhead,
+        dlayers: int = 3,  # dec_num_block,
+        dhead: int = 4,  # dec_nhead,
         # dunits: int = 1024,
         postnet_layers: int = 5,
         postnet_chans: int = 256,
@@ -751,14 +768,14 @@ class GLU_Transformer(AbsSVS):
         use_batch_norm: bool = True,
         reduction_factor: int = 1,
         # extra embedding related
-        embed_integration_type : str = 'add',
+        embed_integration_type: str = "add",
         spks: Optional[int] = None,
         langs: Optional[int] = None,
         spk_embed_dim: Optional[int] = None,
         spk_embed_integration_type: str = "add",
         eprenet_dropout_rate: float = 0.5,
-        edropout_rate: float = 0.1,# dropout
-        ddropout_rate: float = 0.1,# dropout
+        edropout_rate: float = 0.1,  # dropout
+        ddropout_rate: float = 0.1,  # dropout
         postnet_dropout_rate: float = 0.5,
         init_type: str = "xavier_uniform",
         use_masking: bool = False,
@@ -854,18 +871,22 @@ class GLU_Transformer(AbsSVS):
         #     num_embeddings=idim, embedding_dim=embed_dim, padding_idx=self.padding_idx
         # )
         self.midi_encoder_input_layer = torch.nn.Embedding(
-            num_embeddings=midi_dim, embedding_dim=embed_dim, padding_idx=self.padding_idx
+            num_embeddings=midi_dim,
+            embedding_dim=embed_dim,
+            padding_idx=self.padding_idx,
         )
         self.midi_encoder_input_layer = torch.nn.Embedding(
-            num_embeddings=tempo_dim, embedding_dim=embed_dim, padding_idx=self.padding_idx
+            num_embeddings=tempo_dim,
+            embedding_dim=embed_dim,
+            padding_idx=self.padding_idx,
         )
-        
+
         if self.embed_integration_type == "add":
             self.projection = torch.nn.Linear(embed_dim, eunits)
         else:
             self.projection = torch.nn.Linear(2 * embed_dim, eunits)
 
-        self.enc_postnet = Encoder_Postnet(embed_dim)#, semitone_size, Hz2semitone)
+        self.enc_postnet = Encoder_Postnet(embed_dim)  # , semitone_size, Hz2semitone)
         self.fc_pos = torch.nn.Linear(embed_dim, embed_dim)
 
         # self.use_mel = n_mels > 0
@@ -873,7 +894,7 @@ class GLU_Transformer(AbsSVS):
         #     self.double_mel_loss = double_mel_loss
         # else:
         #     self.double_mel_loss = False
-        
+
         # if self.use_mel:
         #     self.decoder = GLUDecoder(
         #         num_block=dlayers,
@@ -933,7 +954,7 @@ class GLU_Transformer(AbsSVS):
             nhead=dhead,
             dropout=ddropout_rate,
             glu_kernel=glu_kernel,
-            local_gaussian=local_gaussian
+            local_gaussian=local_gaussian,
         )
 
         # # self.double_mel = PostNet(n_mels, n_mels, n_mels)
@@ -953,9 +974,10 @@ class GLU_Transformer(AbsSVS):
         # )
         # self.postnet = PostNet(odim, odim, (odim // 2 * 2))
 
-
         # define final projection
-        self.feat_out = torch.nn.Linear(odim//reduction_factor, odim * reduction_factor)
+        self.feat_out = torch.nn.Linear(
+            odim // reduction_factor, odim * reduction_factor
+        )
 
         # define postnet
         self.postnet = (
@@ -1005,7 +1027,6 @@ class GLU_Transformer(AbsSVS):
             else:
                 self.projection = torch.nn.Linear(eunits + self.spk_embed_dim, eunits)
 
-
     def _reset_parameters(self, init_type):
         # initialize parameters
         if init_type != "pytorch":
@@ -1023,7 +1044,7 @@ class GLU_Transformer(AbsSVS):
         midi_lengths: torch.Tensor,
         tempo: Optional[torch.Tensor] = None,
         tempo_lengths: Optional[torch.Tensor] = None,
-        flag_IsValid = False,
+        flag_IsValid=False,
         spembs: Optional[torch.Tensor] = None,
         sids: Optional[torch.Tensor] = None,
         lids: Optional[torch.Tensor] = None,
@@ -1072,7 +1093,9 @@ class GLU_Transformer(AbsSVS):
         # logging.info(f'Tao - hs_label:{hs_label.shape}')
         # logging.info(f'Tao - hs_midi:{hs_midi.shape}')
         # logging.info(f'Tao - hs_tempo:{hs_tempo.shape}')
-        aligner_out = self.enc_postnet(hs_phone, label, text)# encoder_out, align_phone, text_phone, pitch, beats
+        aligner_out = self.enc_postnet(
+            hs_phone, label, text
+        )  # encoder_out, align_phone, text_phone, pitch, beats
 
         # logging.info(f'Tao - aligner_out:{aligner_out.shape}')
 
@@ -1080,8 +1103,8 @@ class GLU_Transformer(AbsSVS):
             hs = aligner_out + midi_emb
         else:
             hs = torch.cat(aligner_out, midi_emb, dim=-1)
-        
-        hs =  F.leaky_relu(self.projection(hs))
+
+        hs = F.leaky_relu(self.projection(hs))
 
         # integrate spk & lang embeddings
         if self.spks is not None:
@@ -1094,7 +1117,7 @@ class GLU_Transformer(AbsSVS):
         # integrate speaker embedding
         if self.spk_embed_dim is not None:
             hs = self._integrate_with_spk_embed(hs, spembs)
-            
+
         pos_encode = self.pos(hs)
         pos_out = self.fc_pos(pos_encode)
 
@@ -1102,7 +1125,9 @@ class GLU_Transformer(AbsSVS):
 
         # logging.info(f'Tao - hs:{hs.shape}')
         # decoder
-        mel_output, att_weight = self.decoder(hs, pos=make_non_pad_mask(label_lengths).to(device=hs.device))
+        mel_output, att_weight = self.decoder(
+            hs, pos=make_non_pad_mask(label_lengths).to(device=hs.device)
+        )
         # mel_output2 = self.double_mel(mel_output)
         zs = self.postnet(mel_output.transpose(1, 2))
         zs = zs.transpose(1, 2)
@@ -1134,7 +1159,9 @@ class GLU_Transformer(AbsSVS):
             olens = feats_lengths
 
         # calculate loss values
-        l1_loss, l2_loss = self.criterion(after_outs[:, : olens.max()], before_outs[:, : olens.max()], ys, olens)
+        l1_loss, l2_loss = self.criterion(
+            after_outs[:, : olens.max()], before_outs[:, : olens.max()], ys, olens
+        )
 
         if self.loss_type == "L1":
             loss = l1_loss
@@ -1151,15 +1178,13 @@ class GLU_Transformer(AbsSVS):
             l2_loss=l2_loss.item(),
         )
 
-        loss, stats, weight = force_gatherable(
-            (loss, stats, batch_size), loss.device
-        )
+        loss, stats, weight = force_gatherable((loss, stats, batch_size), loss.device)
 
         if flag_IsValid == False:
             return loss, stats, weight
         else:
             return loss, stats, weight, after_outs[:, : olens.max()], ys, olens
-    
+
     # def forward(
     #     self,
     #     characters,

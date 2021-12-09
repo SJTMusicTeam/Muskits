@@ -126,7 +126,7 @@ class MIDIScpWriter:
 
 
 # if __name__ == "__main__":
-#     # . /data3/qt/Muskits/tools/activate_python.sh; python /data3/qt/Muskits/muskit/fileio/midi_scp.py 
+#     # . /data3/qt/Muskits/tools/activate_python.sh; python /data3/qt/Muskits/muskit/fileio/midi_scp.py
 #     from tqdm import tqdm
 #     import os
 #     args_segments = '/data3/qt/Muskits/egs/kiritan/svs1/data/train/segments'

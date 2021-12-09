@@ -315,9 +315,9 @@ class CommonPreprocessor(AbsPreprocessor):
             pitchseq.astype(np.int64)
             temposeq.astype(np.int64)
             data.pop(self.midi_name)
-            
-            data['score'] = pitchseq
-            data['tempo'] = temposeq
+
+            data["score"] = pitchseq
+            data["tempo"] = temposeq
 
         if self.label_name in data and self.tokenizer is not None:
             timeseq, text = data[self.label_name]

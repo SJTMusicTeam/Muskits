@@ -183,7 +183,9 @@ class NaiveRNN(AbsSVS):
                 num_embeddings=idim, embedding_dim=eunits, padding_idx=self.padding_idx
             )
             self.midi_encoder_input_layer = torch.nn.Embedding(
-                num_embeddings=midi_dim, embedding_dim=eunits, padding_idx=self.padding_idx
+                num_embeddings=midi_dim,
+                embedding_dim=eunits,
+                padding_idx=self.padding_idx,
             )
 
         self.encoder = torch.nn.LSTM(
@@ -293,7 +295,7 @@ class NaiveRNN(AbsSVS):
         spembs: Optional[torch.Tensor] = None,
         sids: Optional[torch.Tensor] = None,
         lids: Optional[torch.Tensor] = None,
-        flag_IsValid = False,
+        flag_IsValid=False,
     ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor], torch.Tensor]:
         """Calculate forward propagation.
         Args:
@@ -323,7 +325,7 @@ class NaiveRNN(AbsSVS):
         label = label[:, : label_lengths.max()]  # for data-parallel
         batch_size = text.size(0)
 
-        label_emb = self.encoder_input_layer(label)   # FIX ME: label Float to Int
+        label_emb = self.encoder_input_layer(label)  # FIX ME: label Float to Int
         midi_emb = self.midi_encoder_input_layer(midi)
 
         label_emb = torch.nn.utils.rnn.pack_padded_sequence(
@@ -357,7 +359,7 @@ class NaiveRNN(AbsSVS):
         # integrate speaker embedding
         if self.spk_embed_dim is not None:
             hs = self._integrate_with_spk_embed(hs, spembs)
-        
+
         hs_emb = torch.nn.utils.rnn.pack_padded_sequence(
             hs, label_lengths.to("cpu"), batch_first=True, enforce_sorted=False
         )
@@ -394,7 +396,9 @@ class NaiveRNN(AbsSVS):
             olens = feats_lengths
 
         # calculate loss values
-        l1_loss, l2_loss = self.criterion(after_outs[:, : olens.max()], before_outs[:, : olens.max()], ys, olens)
+        l1_loss, l2_loss = self.criterion(
+            after_outs[:, : olens.max()], before_outs[:, : olens.max()], ys, olens
+        )
 
         if self.loss_type == "L1":
             loss = l1_loss
@@ -411,16 +415,12 @@ class NaiveRNN(AbsSVS):
             l2_loss=l2_loss.item(),
         )
 
-        loss, stats, weight = force_gatherable(
-            (loss, stats, batch_size), loss.device
-        )
+        loss, stats, weight = force_gatherable((loss, stats, batch_size), loss.device)
 
         if flag_IsValid == False:
             return loss, stats, weight
         else:
             return loss, stats, weight, after_outs[:, : olens.max()], ys, olens
-
-        
 
     def inference(
         self,

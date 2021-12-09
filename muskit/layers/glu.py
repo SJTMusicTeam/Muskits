@@ -1,11 +1,12 @@
-
 import torch
 
 SCALE_WEIGHT = 0.5 ** 0.5
 
+
 def _shape_transform(x):
     """Tranform the size of the tensors to fit for conv input."""
     return torch.unsqueeze(torch.transpose(x, 1, 2), 3)
+
 
 class GatedConv(torch.nn.Module):
     """GatedConv."""
@@ -50,6 +51,7 @@ class StackedCNN(torch.nn.Module):
             x = x + conv(x)
             x *= SCALE_WEIGHT
         return x
+
 
 class GLU(torch.nn.Module):
     """GLU."""

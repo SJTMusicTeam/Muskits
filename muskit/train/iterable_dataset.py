@@ -111,7 +111,7 @@ class IterableMuskitDataset(IterableDataset):
                 non_iterable_list.append((path, name, _type))
             else:
                 self.path_name_type_list.append((path, name, _type))
-        
+
         if len(non_iterable_list) != 0:
             # Some types doesn't support iterable mode
             self.non_iterable_dataset = MuskitDataset(

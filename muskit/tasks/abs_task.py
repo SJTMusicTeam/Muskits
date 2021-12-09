@@ -1184,7 +1184,7 @@ class AbsTask(ABC):
                 valid_key_file = args.valid_shape_file[0]
             else:
                 valid_key_file = None
-            
+
             collect_stats(
                 model=model,
                 train_iter=cls.build_streaming_iterator(
@@ -1276,7 +1276,7 @@ class AbsTask(ABC):
 
             # Don't give args to trainer.run() directly!!!
             # Instead of it, define "Options" object and build here.
-            
+
             trainer_options = cls.trainer.build_options(args)
             cls.trainer.run(
                 model=model,

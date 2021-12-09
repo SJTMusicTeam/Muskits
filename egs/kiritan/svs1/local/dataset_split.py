@@ -130,4 +130,3 @@ path_temp = path14[-6:]+'00.mid'
 shutil.move(path13, path_temp)
 shutil.move(path14, path13)
 shutil.move(path_temp, path14)
-# os.remove(path_temp)

@@ -501,9 +501,9 @@ class Trainer:
                 with reporter.measure_time("forward_time"):
                     # print("'Shuai: What is **batch ? ", batch)
                     # logging.info(f"filename_list: {filename_list}")
-                    
+
                     retval = model(**batch)
-                    
+
                     # Note(kamo):
                     # Supporting two patterns for the returned value from the model
                     #   a. dict type
@@ -568,7 +568,7 @@ class Trainer:
                     scaler.scale(loss).backward()
                 else:
                     loss.backward()
-            
+
             if iiter % accum_grad == 0:
                 if scaler is not None:
                     # Unscales the gradients of optimizer's assigned params in-place
@@ -730,12 +730,21 @@ class Trainer:
                 # _, stats, weight = retval
                 _, stats, weight, spec_predicted, spec_gt, length = retval
 
-                # monitor spec during validation stage 
+                # monitor spec during validation stage
                 # [batch size, max length, feat dim]
-                spec_predicted_denorm, _ = model.normalize.inverse( spec_predicted.clone() )
-                spec_gt_denorm, _ = model.normalize.inverse( spec_gt.clone() )
+                spec_predicted_denorm, _ = model.normalize.inverse(
+                    spec_predicted.clone()
+                )
+                spec_gt_denorm, _ = model.normalize.inverse(spec_gt.clone())
 
-                cls.log_figure(model_vocoder, index[0], spec_predicted_denorm, spec_gt_denorm, length, Path(options.output_dir) / "valid")
+                cls.log_figure(
+                    model_vocoder,
+                    index[0],
+                    spec_predicted_denorm,
+                    spec_gt_denorm,
+                    length,
+                    Path(options.output_dir) / "valid",
+                )
 
             if ngpu > 1 or distributed:
                 # Apply weighted averaging for stats.
@@ -823,18 +832,18 @@ class Trainer:
                             f"{k}_{id_}", fig, reporter.get_epoch()
                         )
             reporter.next()
-    
+
     @classmethod
     @torch.no_grad()
     def log_figure(
-        cls, 
+        cls,
         model_vocoder,
-        step, 
-        output, 
-        spec, 
-        length, 
-        save_dir, 
-        att = None, 
+        step,
+        output,
+        spec,
+        length,
+        save_dir,
+        att=None,
     ) -> None:
 
         """log_figure."""
@@ -858,8 +867,18 @@ class Trainer:
         plt.savefig(p)
 
         ### HiFi-GAN Vocoder
-        wav = model_vocoder.inference(output, normalize_before=True).view(-1).cpu().numpy()
-        wav_true = model_vocoder.inference(out_spec, normalize_before=True).view(-1).cpu().numpy()
+        wav = (
+            model_vocoder.inference(output, normalize_before=True)
+            .view(-1)
+            .cpu()
+            .numpy()
+        )
+        wav_true = (
+            model_vocoder.inference(out_spec, normalize_before=True)
+            .view(-1)
+            .cpu()
+            .numpy()
+        )
 
         ### Griffin-Lim Vocoder
         # from muskit.utils.griffin_lim import logmel2linear
@@ -873,14 +892,14 @@ class Trainer:
         sf.write(
             os.path.join(save_dir, "{}.wav".format(step)),
             wav,
-            24000,                  # args.sampling_rate
+            24000,  # args.sampling_rate
             format="wav",
             subtype="PCM_24",
         )
         sf.write(
             os.path.join(save_dir, "{}_true.wav".format(step)),
             wav_true,
-            24000,                  # args.sampling_rate
+            24000,  # args.sampling_rate
             format="wav",
             subtype="PCM_24",
         )
@@ -897,4 +916,3 @@ class Trainer:
             plt.subplot(1, 4, 4)
             specshow(att[3])
             plt.savefig(os.path.join(save_dir, "{}_att.png".format(step)))
-

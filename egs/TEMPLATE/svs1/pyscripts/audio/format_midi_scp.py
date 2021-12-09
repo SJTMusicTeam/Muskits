@@ -111,15 +111,11 @@ def main():
         cache = (None, None, None)
         for utt_id, (recording, start, end) in tqdm(segments.items()):
             # TODO: specify track information here
-            # print(f'before:utt:{utt_id},st:{start}, ed:{end}')
-            # print(f'fs:{args.fs}')
             if recording == cache[0]:
                 note_seq, tempo_seq = cache[1], cache[2]
             else:
                 note_seq, tempo_seq = loader[recording]
                 cache = (recording, note_seq, tempo_seq)
-            # print(f'length:{len(note_seq)}')
-            # print(f'time:{len(note_seq)/args.fs}')
             if args.fs is not None:
                 start = int(start * args.fs)
                 end = int(end * args.fs)
@@ -135,8 +131,6 @@ def main():
             sub_note = note_seq[start:end]
             sub_tempo = tempo_seq[start:end]
 
-            # print(f'utt:{utt_id},st:{start}, ed:{end}')
-            # print(min(sub_note), min(sub_tempo), len(sub_note), len(sub_tempo))
             writer[utt_id] = sub_note, sub_tempo
 
     else:
