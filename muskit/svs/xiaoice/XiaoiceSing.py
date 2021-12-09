@@ -43,12 +43,12 @@ from muskit.svs.gst.style_encoder import StyleEncoder
 
 class XiaoiceSing(AbsSVS):
     """XiaoiceSing module for Singing Voice Synthesis.
-    This is a module of XiaoiceSing. A high-quality singing voice synthesis system which 
-    employs an integrated network for spectrum, F0 and duration modeling. It follows the 
+    This is a module of XiaoiceSing. A high-quality singing voice synthesis system which
+    employs an integrated network for spectrum, F0 and duration modeling. It follows the
     main architecture of FastSpeech while proposing some singing-specific design:
-        1) Add features from musical score (e.g.note pitch and length) 
+        1) Add features from musical score (e.g.note pitch and length)
         2) Add a residual connection in F0 prediction to attenuate off-key issues
-        3) The duration of all the phonemes in a musical note is accumulated to calculate 
+        3) The duration of all the phonemes in a musical note is accumulated to calculate
         the syllable duration loss for rhythm enhancement (syllable loss)
     .. _`XiaoiceSing: A High-Quality and Integrated Singing Voice Synthesis System`:
         https://arxiv.org/pdf/2006.06261.pdf

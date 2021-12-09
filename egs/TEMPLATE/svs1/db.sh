@@ -15,10 +15,10 @@ if [[ "$(hostname -d)" == clsp.jhu.edu ]]; then
 fi
 
 # For only venus environment
-if [[ `hostname` == venus_qt_2251 ]]; then
+if [[ `hostname` == venus_qt_2241 ]]; then
     KIRITAN=/data3/qt/
-    ONIKU=
-    OFUTON=
+    ONIKU=/data3/qt/OFUTON_P_UTAGOE_DB/
+    OFUTON=/data3/qt/ONIKU_KURUMI_UTAGOE_DB/
     NATSUME=/data3/qt/
 fi
 

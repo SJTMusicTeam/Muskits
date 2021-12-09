@@ -155,7 +155,7 @@ Options:
     --oov              # Out of vocabrary symbol (default="${oov}").
     --blank            # CTC blank symbol (default="${blank}").
     --sos_eos          # sos and eos symbole (default="${sos_eos}").
-
+    
     # Training related
     --train_config  # Config for training (default="${train_config}").
     --train_args    # Arguments for training (default="${train_args}").
@@ -170,7 +170,7 @@ Options:
     --teacher_dumpdir       # Direcotry of teacher outputs
     --write_collected_feats # Whether to dump features in statistics collection (default="${write_collected_feats}").
     --svs_task              # SVS task (svs or gan_svs, now only support svs)
-
+    
     # Decoding related
     --inference_config  # Config for decoding (default="${inference_config}").
     --inference_args    # Arguments for decoding, (default="${inference_args}").
@@ -182,7 +182,7 @@ Options:
                         # If set to none, Griffin-Lim vocoder will be used.
     --griffin_lim_iters # The number of iterations of Griffin-Lim (default=${griffin_lim_iters}).
     --download_model    # Download a model from Model Zoo and use it for decoding (default="${download_model}").
-
+    
     # [Task dependent] Set the datadir name created by local/data.sh.
     --train_set          # Name of training set (required).
     --valid_set          # Name of validation set used for monitoring/tuning network training (required).

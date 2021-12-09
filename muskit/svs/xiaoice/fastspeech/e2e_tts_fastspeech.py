@@ -12,7 +12,9 @@ import torch.nn.functional as F
 from muskit.svs.xiaoice.fastspeech.fastspeech.duration_calculator import (
     DurationCalculator,  # noqa: H301
 )
-from muskit.svs.xiaoice.fastspeech.fastspeech.duration_predictor import DurationPredictor
+from muskit.svs.xiaoice.fastspeech.fastspeech.duration_predictor import (
+    DurationPredictor,
+)
 from muskit.svs.xiaoice.fastspeech.fastspeech.duration_predictor import (
     DurationPredictorLoss,  # noqa: H301
 )
