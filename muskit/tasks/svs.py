@@ -31,6 +31,7 @@ from muskit.svs.feats_extract.log_spectrogram import LogSpectrogram
 from muskit.svs.encoder_decoder.transformer.transformer import Transformer
 from muskit.svs.bytesing.bytesing import ByteSing
 from muskit.svs.naive_rnn.naive_rnn import NaiveRNN
+from muskit.svs.mlp_singer.mlp import MLPSinger
 from muskit.svs.glu_transformer.glu_transformer import GLU_Transformer
 from muskit.utils.get_default_kwargs import get_default_kwargs
 from muskit.utils.nested_dict_action import NestedDictAction
@@ -96,6 +97,7 @@ svs_choices = ClassChoices(
         glu_transformer=GLU_Transformer,
         bytesing=ByteSing,
         naive_rnn=NaiveRNN,
+        mlp=MLPSinger,
     ),
     type_check=AbsSVS,
     default="transformer",
