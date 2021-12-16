@@ -996,14 +996,11 @@ class GLU_Transformer(AbsSVS):
         # self.feat_out = torch.nn.Linear(eunits, odim * reduction_factor)
         # define loss function
         self.criterion = NaiveRNNLoss(
-            use_masking=use_masking,
-            use_weighted_masking=use_weighted_masking,
+            use_masking=use_masking, use_weighted_masking=use_weighted_masking,
         )
 
         # initialize parameters
-        self._reset_parameters(
-            init_type=init_type,
-        )
+        self._reset_parameters(init_type=init_type,)
 
         # define spk and lang embedding
         self.spks = None
@@ -1172,11 +1169,7 @@ class GLU_Transformer(AbsSVS):
         else:
             raise ValueError("unknown --loss-type " + self.loss_type)
 
-        stats = dict(
-            loss=loss.item(),
-            l1_loss=l1_loss.item(),
-            l2_loss=l2_loss.item(),
-        )
+        stats = dict(loss=loss.item(), l1_loss=l1_loss.item(), l2_loss=l2_loss.item(),)
 
         loss, stats, weight = force_gatherable((loss, stats, batch_size), loss.device)
 

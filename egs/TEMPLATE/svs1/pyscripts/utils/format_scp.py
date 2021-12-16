@@ -77,11 +77,7 @@ def segmentation(
     sub_wav = get_subsequence(segment_begin, segment_end, wave, rate)
     sub_note = get_subsequence(segment_begin, segment_end, note_seq, rate)
 
-    wav_writer = SoundScpWriter(
-        out_wavdir,
-        out_wavscp,
-        format="wav",
-    )
+    wav_writer = SoundScpWriter(out_wavdir, out_wavscp, format="wav",)
     midi_writer = MIDIScpWriter(out_mididir, out_midiscp, format="midi", rate=args_fs)
 
     wav_writer[key] = int(rate), sub_wav

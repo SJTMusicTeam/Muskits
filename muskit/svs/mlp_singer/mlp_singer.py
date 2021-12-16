@@ -134,8 +134,9 @@ class MLPSinger(AbsSVS):
         self.reduction_factor = reduction_factor
         self.chunk_size = chunk_size
         self.overlap_size = overlap_size
-        assert chunk_size > 3 * overlap_size, \
-            "overlap_size is too small to perform overlapped semgnetation"
+        assert (
+            chunk_size > 3 * overlap_size
+        ), "overlap_size is too small to perform overlapped semgnetation"
         self.loss_type = loss_type
 
         self.midi_embed_integration_type = midi_embed_integration_type
@@ -147,22 +148,14 @@ class MLPSinger(AbsSVS):
             num_embeddings=idim, embedding_dim=eunits, padding_idx=self.padding_idx
         )
         self.midi_encoder_input_layer = torch.nn.Embedding(
-            num_embeddings=midi_dim,
-            embedding_dim=eunits,
-            padding_idx=self.padding_idx,
+            num_embeddings=midi_dim, embedding_dim=eunits, padding_idx=self.padding_idx,
         )
 
         if self.midi_embed_integration_type == "add":
-            self.encoder = torch.nn.Linear(
-                eunits,
-                dunits
-            )
+            self.encoder = torch.nn.Linear(eunits, dunits)
         else:
-            self.encoder = torch.nn.Linear(
-                2 * eunits,
-                dunits
-            )
-        
+            self.encoder = torch.nn.Linear(2 * eunits, dunits)
+
         self.decoder = MLPMixer(
             d_model=dunits,
             seq_len=chunk_size,
@@ -213,14 +206,11 @@ class MLPSinger(AbsSVS):
 
         # define loss function
         self.criterion = NaiveRNNLoss(
-            use_masking=use_masking,
-            use_weighted_masking=use_weighted_masking,
+            use_masking=use_masking, use_weighted_masking=use_weighted_masking,
         )
 
         # initialize parameters
-        self._reset_parameters(
-            init_type=init_type,
-        )
+        self._reset_parameters(init_type=init_type,)
 
     def _reset_parameters(self, init_type):
         # initialize parameters
@@ -281,7 +271,7 @@ class MLPSinger(AbsSVS):
         else:
             hs = torch.cat(hs_label, hs_midi, dim=-1)
             hs = F.leaky_relu(self.midi_projection(hs))
-        
+
         hs = self.encoder(hs)
 
         # integrate spk & lang embeddings
@@ -295,7 +285,7 @@ class MLPSinger(AbsSVS):
         # integrate speaker embedding
         if self.spk_embed_dim is not None:
             hs = self._integrate_with_spk_embed(hs, spembs)
-        
+
         hs, pad, shape = self._chunking(hs)
         zs = self.decoder(hs)
         zs = self._cat_chunks(hs, pad, shape)
@@ -342,11 +332,7 @@ class MLPSinger(AbsSVS):
         else:
             raise ValueError("unknown --loss-type " + self.loss_type)
 
-        stats = dict(
-            loss=loss.item(),
-            l1_loss=l1_loss.item(),
-            l2_loss=l2_loss.item(),
-        )
+        stats = dict(loss=loss.item(), l1_loss=l1_loss.item(), l2_loss=l2_loss.item(),)
 
         loss, stats, weight = force_gatherable((loss, stats, batch_size), loss.device)
 
@@ -393,7 +379,7 @@ class MLPSinger(AbsSVS):
         else:
             hs = torch.cat(hs_label, hs_midi, dim=-1)
             hs = self.midi_projection(hs)
-        
+
         hs = self.encoder(hs)
 
         # integrate spk & lang embeddings
@@ -446,7 +432,7 @@ class MLPSinger(AbsSVS):
             raise NotImplementedError("support only add or concat.")
 
         return hs
-    
+
     def _chunking(
         self, hs: torch.Tensor
     ) -> Tuple[torch.Tensor, Tuple[int], Tuple[int]]:
@@ -474,11 +460,13 @@ class MLPSinger(AbsSVS):
 
         segmentd_hs = hs.as_strided(
             (batch_size, segment_len, self.chunk_size, feat_dim),
-            (max_length * feature_dim, valid_value * feature_dim, feature_dim, 1)
+            (max_length * feature_dim, valid_value * feature_dim, feature_dim, 1),
         )
-        segmented_hs = segmentd_hs.view(batch_size * segmnet_len, self.chunk_size, feat_dim)
-        return segmentd_hs., pad, (batch_size, segment_len, self.chunk_size, feat_dim)
-    
+        segmented_hs = segmentd_hs.view(
+            batch_size * segmnet_len, self.chunk_size, feat_dim
+        )
+        return segmentd_hs, pad, (batch_size, segment_len, self.chunk_size, feat_dim)
+
     def _cat_chunks(
         self, segmentd_hs: torch.Tensor, pad: Tuple[int], shape: Tuple[int]
     ) -> torch.Tensor:
@@ -496,9 +484,8 @@ class MLPSinger(AbsSVS):
         valid_dim = chunk_size - 2 * self.overlap_size
 
         # remove overlap size
-        segmented_hs = segmented_hs[:, :, overlap_size: -overlap_size]
+        segmented_hs = segmented_hs[:, :, overlap_size:-overlap_size]
 
         hs = segmented_hs.reshape(batch_size, segment_len * valid_dim, feature_dim)
-        hs = hs[:, pad_left :-pad_right, :]
+        hs = hs[:, pad_left:-pad_right, :]
         return hs
-
