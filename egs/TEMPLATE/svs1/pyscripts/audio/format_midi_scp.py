@@ -116,12 +116,13 @@ def main():
             else:
                 note_seq, tempo_seq = loader[recording]
                 cache = (recording, note_seq, tempo_seq)
-
             if args.fs is not None:
                 start = int(start * args.fs)
                 end = int(end * args.fs)
                 if start < 0:
                     start = 0
+                if start > len(note_seq):
+                    start = len(note_seq)
                 if end > len(note_seq):
                     end = len(note_seq)
             else:

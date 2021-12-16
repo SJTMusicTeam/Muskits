@@ -47,7 +47,7 @@ def midi_to_seq(midi_obj, dtype=np.int16, rate=22050):
     for i in range(len(notes)):
         st = int(tick_to_time[notes[i].start] * rate)
         ed = int(tick_to_time[notes[i].end] * rate)
-        note_seq[st : ed + 1] = notes[i].pitch
+        note_seq[st:ed] = notes[i].pitch
 
     tempos = midi_obj.tempo_changes
     tempos.sort(key=lambda x: (x.time, x.tempo))
@@ -64,8 +64,8 @@ def midi_to_seq(midi_obj, dtype=np.int16, rate=22050):
 def seq_to_midi(
     note_seq,
     tempo_seq,
-    rate=22050,
-    DEFAULT_RESOLUTION=480,
+    rate=24000,
+    DEFAULT_RESOLUTION=960,
     DEFAULT_TEMPO=120,
     DEFAULT_VELOCITY=64,
 ):
@@ -113,7 +113,7 @@ def seq_to_midi(
         ed = j / rate
 
         start = np.searchsorted(tick_to_time, st, "left")
-        end = np.searchsorted(tick_to_time, ed, "left") - 1
+        end = np.searchsorted(tick_to_time, ed, "left")
         if pitch > 0 and pitch <= 128:
             notes.append(
                 miditoolkit.midi.containers.Note(

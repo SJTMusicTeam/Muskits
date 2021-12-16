@@ -28,7 +28,7 @@ fi
 
 mkdir -p ${KIRITAN}
 
-train_set=tr_no_dev
+train_set=train
 train_dev=dev
 recog_set=eval1
 

@@ -87,6 +87,7 @@ class MuskitSVSModel(AbsMuskitModel):
         spembs: Optional[torch.Tensor] = None,
         sids: Optional[torch.Tensor] = None,
         lids: Optional[torch.Tensor] = None,
+        flag_IsValid=False,
     ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor], torch.Tensor]:
         """Caclualte outputs and return the loss tensor.
         Args:
@@ -118,29 +119,40 @@ class MuskitSVSModel(AbsMuskitModel):
             #     )
             # Extract features
             if self.feats_extract is not None:
-                feats, feats_lengths = self.feats_extract(singing, singing_lengths) # singing to spec feature (frame level)
+                feats, feats_lengths = self.feats_extract(
+                    singing, singing_lengths
+                )  # singing to spec feature (frame level)
             else:
                 # Use precalculated feats (feats_type != raw case)
                 feats, feats_lengths = singing, singing_lengths
 
             # Extract auxiliary features
             if self.score_feats_extract is not None:
-                durations, durations_lengths, score, score_lengths, \
-                    tempo, tempo_lengths = self.score_feats_extract(durations=durations.unsqueeze(-1),\
-                                                                    durations_lengths=durations_lengths,\
-                                                                    score=score.unsqueeze(-1),\
-                                                                    score_lengths=score_lengths,\
-                                                                    tempo=tempo.unsqueeze(-1),\
-                                                                    tempo_lengths=tempo_lengths)
+                (
+                    durations,
+                    durations_lengths,
+                    score,
+                    score_lengths,
+                    tempo,
+                    tempo_lengths,
+                ) = self.score_feats_extract(
+                    durations=durations.unsqueeze(-1),
+                    durations_lengths=durations_lengths,
+                    score=score.unsqueeze(-1),
+                    score_lengths=score_lengths,
+                    tempo=tempo.unsqueeze(-1),
+                    tempo_lengths=tempo_lengths,
+                )
                 # score : 128 midi pitch
                 # tempo : bpm
-                # duration : 
+                # duration :
                 #   input-> phone-id seqence | output -> frame level(取众数 from window) or syllable level
 
             if self.pitch_extract is not None and pitch is None:
                 pitch, pitch_lengths = self.pitch_extract(
-                    input=pitch.unsqueeze(-1),
-                    input_lengths=pitch_lengths,
+                    input=singing,
+                    input_lengths=singing_lengths,
+                    feats_lengths=feats_lengths,
                 )
 
             if self.energy_extract is not None and energy is None:
@@ -166,6 +178,7 @@ class MuskitSVSModel(AbsMuskitModel):
             text_lengths=text_lengths,
             feats=feats,
             feats_lengths=feats_lengths,
+            flag_IsValid=flag_IsValid,
         )
 
         # Update batch for additional auxiliary inputs
@@ -178,11 +191,14 @@ class MuskitSVSModel(AbsMuskitModel):
         if durations is not None:
             durations = durations.to(dtype=torch.long)
             batch.update(label=durations, label_lengths=durations_lengths)
-        if score is not None:
+        if score is not None and pitch is None:
             score = score.to(dtype=torch.long)
             batch.update(midi=score, midi_lengths=score_lengths)
+        if tempo is not None:
+            tempo = tempo.to(dtype=torch.long)
+            batch.update(tempo=tempo, tempo_lengths=tempo_lengths)
         if self.pitch_extract is not None and pitch is not None:
-            batch.update(pitch=pitch, pitch_lengths=pitch_lengths)
+            batch.update(midi=pitch, midi_lengths=pitch_lengths)
         if self.energy_extract is not None and energy is not None:
             batch.update(energy=energy, energy_lengths=energy_lengths)
         if self.svs.require_raw_singing:
@@ -244,13 +260,21 @@ class MuskitSVSModel(AbsMuskitModel):
             # Use precalculated feats (feats_type != raw case)
             feats, feats_lengths = singing, singing_lengths
         if self.score_feats_extract is not None:
-            durations, durations_lengths, score, score_lengths, \
-                tempo, tempo_lengths = self.score_feats_extract(durations=durations.unsqueeze(-1),\
-                                                                durations_lengths=durations_lengths,\
-                                                                score=score.unsqueeze(-1),\
-                                                                score_lengths=score_lengths,\
-                                                                tempo=tempo.unsqueeze(-1),\
-                                                                tempo_lengths=tempo_lengths)
+            (
+                durations,
+                durations_lengths,
+                score,
+                score_lengths,
+                tempo,
+                tempo_lengths,
+            ) = self.score_feats_extract(
+                durations=durations.unsqueeze(-1),
+                durations_lengths=durations_lengths,
+                score=score.unsqueeze(-1),
+                score_lengths=score_lengths,
+                tempo=tempo.unsqueeze(-1),
+                tempo_lengths=tempo_lengths,
+            )
         if self.pitch_extract is not None:
             pitch, pitch_lengths = self.pitch_extract(
                 input=pitch.unsqueeze(-1),
@@ -264,7 +288,7 @@ class MuskitSVSModel(AbsMuskitModel):
                 durations=durations,
                 durations_lengths=durations_lengths,
             )
-        
+
         # store in dict
         feats_dict = dict(feats=feats, feats_lengths=feats_lengths)
         if pitch is not None:

@@ -63,6 +63,7 @@ n_fft=1024        # The number of fft points.
 n_shift=256       # The number of shift points.
 win_length=null   # Window length.
 score_feats_extract=frame_score_feats # The type of music score feats (frame_score_feats or syllable_score_feats)
+pitch_extract=None
 # Only used for the model using pitch features (e.g. FastSpeech2)
 f0min=80          # Maximum f0 for pitch extraction.
 f0max=400         # Minimum f0 for pitch extraction.
@@ -154,7 +155,7 @@ Options:
     --oov              # Out of vocabrary symbol (default="${oov}").
     --blank            # CTC blank symbol (default="${blank}").
     --sos_eos          # sos and eos symbole (default="${sos_eos}").
-
+    
     # Training related
     --train_config  # Config for training (default="${train_config}").
     --train_args    # Arguments for training (default="${train_args}").
@@ -169,7 +170,7 @@ Options:
     --teacher_dumpdir       # Direcotry of teacher outputs
     --write_collected_feats # Whether to dump features in statistics collection (default="${write_collected_feats}").
     --svs_task              # SVS task (svs or gan_svs, now only support svs)
-
+    
     # Decoding related
     --inference_config  # Config for decoding (default="${inference_config}").
     --inference_args    # Arguments for decoding, (default="${inference_args}").
@@ -181,7 +182,7 @@ Options:
                         # If set to none, Griffin-Lim vocoder will be used.
     --griffin_lim_iters # The number of iterations of Griffin-Lim (default=${griffin_lim_iters}).
     --download_model    # Download a model from Model Zoo and use it for decoding (default="${download_model}").
-
+    
     # [Task dependent] Set the datadir name created by local/data.sh.
     --train_set          # Name of training set (required).
     --valid_set          # Name of validation set used for monitoring/tuning network training (required).
@@ -638,15 +639,28 @@ if ! "${skip_train}"; then
             # "sound" supports "wav", "flac", etc.
             _type=sound
             _fold_length="$((singing_fold_length * n_shift))"
+            _opts+="--score_feats_extract ${score_feats_extract} "
+            _opts+="--score_feats_extract_conf fs=${fs} "
+            _opts+="--score_feats_extract_conf n_fft=${n_fft} "
+            _opts+="--score_feats_extract_conf win_length=${win_length} "
+            _opts+="--score_feats_extract_conf hop_length=${n_shift} "
             _opts+="--feats_extract ${feats_extract} "
             _opts+="--feats_extract_conf n_fft=${n_fft} "
             _opts+="--feats_extract_conf hop_length=${n_shift} "
             _opts+="--feats_extract_conf win_length=${win_length} "
+            _opts+="--pitch_extract ${pitch_extract} "
             if [ "${feats_extract}" = fbank ]; then
                 _opts+="--feats_extract_conf fs=${fs} "
                 _opts+="--feats_extract_conf fmin=${fmin} "
                 _opts+="--feats_extract_conf fmax=${fmax} "
                 _opts+="--feats_extract_conf n_mels=${n_mels} "
+            fi
+            if [ "${pitch_extract}" = dio ]; then
+                _opts+="--pitch_extract_conf fs=${fs} "
+                _opts+="--pitch_extract_conf n_fft=${n_fft} "
+                _opts+="--pitch_extract_conf hop_length=${n_shift} "
+                _opts+="--pitch_extract_conf f0max=${f0max} "
+                _opts+="--pitch_extract_conf f0min=${f0min} "
             fi
 
             if [ "${num_splits}" -gt 1 ]; then
@@ -769,7 +783,6 @@ if ! "${skip_train}"; then
             _opts+="--pitch_extract_conf n_fft=${n_fft} "
             _opts+="--pitch_extract_conf win_length=${win_length} "
             _opts+="--pitch_extract_conf hop_length=${n_shift} "
-            _opts+="--pitch_extract_conf ftype=${ftype} "
             _opts+="--pitch_normalize_conf stats_file=${svs_stats_dir}/train/pitch_stats.npz "
         fi
         if [ -e "${svs_stats_dir}/train/energy_stats.npz" ]; then

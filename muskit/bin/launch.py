@@ -348,6 +348,8 @@ EOF
 
     logging.info(f"log file: {args.log}")
 
+    logging.info(f"submitting cmd {cmd}")
+
     failed = False
     while any(p.returncode is None for p in processes):
         for process in processes:

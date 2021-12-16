@@ -448,7 +448,7 @@ class Reporter:
                     message += f"{epoch}epoch results: "
                 else:
                     message += ", "
-                message += f"[{key}] {_message}"
+                message += f"\n[{key}] {_message}"
         return message
 
     def get_value(self, key: str, key2: str, epoch: int = None):

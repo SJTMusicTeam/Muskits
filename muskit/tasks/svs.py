@@ -31,6 +31,7 @@ from muskit.svs.feats_extract.log_spectrogram import LogSpectrogram
 from muskit.svs.encoder_decoder.transformer.transformer import Transformer
 from muskit.svs.bytesing.bytesing import ByteSing
 from muskit.svs.naive_rnn.naive_rnn import NaiveRNN
+from muskit.svs.glu_transformer.glu_transformer import GLU_Transformer
 from muskit.utils.get_default_kwargs import get_default_kwargs
 from muskit.utils.nested_dict_action import NestedDictAction
 from muskit.utils.types import int_or_none
@@ -46,7 +47,9 @@ feats_extractor_choices = ClassChoices(
 
 score_feats_extractor_choices = ClassChoices(
     "score_feats_extract",
-    classes=dict(frame_score_feats=FrameScoreFeats, syllable_score_feats=SyllableScoreFeats),
+    classes=dict(
+        frame_score_feats=FrameScoreFeats, syllable_score_feats=SyllableScoreFeats
+    ),
     type_check=AbsFeatsExtract,
     default="frame_score_feats",
 )
@@ -90,6 +93,7 @@ svs_choices = ClassChoices(
     "svs",
     classes=dict(
         transformer=Transformer,
+        glu_transformer=GLU_Transformer,
         bytesing=ByteSing,
         naive_rnn=NaiveRNN,
     ),
@@ -208,7 +212,7 @@ class SVSTask(AbsTask):
         parser.add_argument(
             "--fs",
             type=int,
-            default=16000,
+            default=24000,  # BUG: another fs in feats_extract_conf
             help="sample rate",
         )
 
@@ -320,10 +324,14 @@ class SVSTask(AbsTask):
         energy_extract = None
         pitch_normalize = None
         energy_normalize = None
-        logging.info(f'args:{args}')
+        logging.info(f"args:{args}")
         if getattr(args, "score_feats_extract", None) is not None:
-            score_feats_extract_class = score_feats_extractor_choices.get_class(args.score_feats_extract)
-            score_feats_extract = score_feats_extract_class(**args.score_feats_extract_conf)
+            score_feats_extract_class = score_feats_extractor_choices.get_class(
+                args.score_feats_extract
+            )
+            score_feats_extract = score_feats_extract_class(
+                **args.score_feats_extract_conf
+            )
         if getattr(args, "pitch_extract", None) is not None:
             pitch_extract_class = pitch_extractor_choices.get_class(args.pitch_extract)
             if args.pitch_extract_conf.get("reduction_factor", None) is not None:
@@ -377,3 +385,5 @@ class SVSTask(AbsTask):
         )
         assert check_return_type(model)
         return model
+
+    # @classmethod

@@ -440,6 +440,28 @@ class AbsTask(ABC):
 
         group = parser.add_argument_group("Trainer related")
         group.add_argument(
+            "--vocoder_checkpoint",
+            default="",
+            type=str,
+            help="checkpoint file to be loaded.",
+        )
+        group.add_argument(
+            "--vocoder_config",
+            default="",
+            type=str,
+            help="yaml format configuration file. if not explicitly provided, "
+            "it will be searched in the checkpoint directory. (default=None)",
+        )
+        group.add_argument(
+            "--vocoder_normalize_before",
+            default=False,
+            action="store_true",
+            help="whether to perform feature normalization before input to the model. "
+            "if true, it assumes that the feature is de-normalized. this is useful when "
+            "text2mel model and vocoder use different feature statistics.",
+        )
+
+        group.add_argument(
             "--max_epoch",
             type=int,
             default=40,
@@ -1193,7 +1215,6 @@ class AbsTask(ABC):
                 write_collected_feats=args.write_collected_feats,
             )
         else:
-                        
             # 7. Build iterator factories
             if args.multiple_iterator:
                 train_iter_factory = cls.build_multiple_iter_factory(
@@ -1255,6 +1276,7 @@ class AbsTask(ABC):
 
             # Don't give args to trainer.run() directly!!!
             # Instead of it, define "Options" object and build here.
+
             trainer_options = cls.trainer.build_options(args)
             cls.trainer.run(
                 model=model,
@@ -1381,7 +1403,6 @@ class AbsTask(ABC):
         """
         assert check_argument_types()
         iter_options = cls.build_iter_options(args, distributed_option, mode)
-
         # Overwrite iter_options if any kwargs is given
         if kwargs is not None:
             for k, v in kwargs.items():
@@ -1413,7 +1434,6 @@ class AbsTask(ABC):
         cls, args: argparse.Namespace, iter_options: IteratorOptions, mode: str
     ) -> AbsIterFactory:
         assert check_argument_types()
-
         dataset = MuskitDataset(
             iter_options.data_path_and_name_and_type,
             float_dtype=args.train_dtype,

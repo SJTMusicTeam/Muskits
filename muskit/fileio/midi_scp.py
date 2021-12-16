@@ -126,6 +126,67 @@ class MIDIScpWriter:
 
 
 # if __name__ == "__main__":
+#     # . /data3/qt/Muskits/tools/activate_python.sh; python /data3/qt/Muskits/muskit/fileio/midi_scp.py
+#     from tqdm import tqdm
+#     import os
+#     args_segments = '/data3/qt/Muskits/egs/kiritan/svs1/data/train/segments'
+#     scp = '/data3/qt/Muskits/egs/kiritan/svs1/data/train/midi.scp'
+#     fs = np.int16(16000)
+#     outdir = '/data3/qt/Muskits/egs/kiritan/test'
+#     out_midiscp = outdir+"/test.scp"
+
+
+#     segments = {}
+#     with open(args_segments) as f:
+#         for line in f:
+#             if len(line) == 0:
+#                 continue
+#             utt_id, recording_id, segment_begin, segment_end = line.strip().split(
+#                 " "
+#             )
+#             segments[utt_id] = (
+#                 recording_id,
+#                 float(segment_begin),
+#                 float(segment_end),
+#             )
+
+
+#     loader = MIDIScpReader(scp, rate=fs)
+#     writer = MIDIScpWriter(
+#         outdir,
+#         out_midiscp,
+#         format="midi",
+#         rate=fs,
+#     )
+#     cache = (None, None, None)
+#     for utt_id, (recording, start, end) in tqdm(segments.items()):
+#         # TODO: specify track information here
+#         if recording == cache[0]:
+#             note_seq, tempo_seq = cache[1], cache[2]
+#         else:
+#             note_seq, tempo_seq = loader[recording]
+#             cache = (recording, note_seq, tempo_seq)
+
+#         if fs is not None:
+#             start = int(start * fs)
+#             end = int(end * fs)
+#             if start < 0:
+#                 start = 0
+#             if end > len(note_seq):
+#                 end = len(note_seq)
+#         else:
+#             start = np.searchsorted([item[0] for item in note_seq], start, "left")
+#             end = np.searchsorted([item[1] for item in note_seq], end, "left")
+#         sub_note = note_seq[start:end]
+#         sub_tempo = tempo_seq[start:end]
+
+#         writer[utt_id] = sub_note, sub_tempo
+
+#     else:
+#         # midi_scp does not need to change, when no segments is applied
+#         # Note things will change, after finish other todos in the script
+#         os.system("cp {} {}".format(scp, Path(outdir / f"{test}.scp")))
+
 #     path = '/data3/qt/Muskits/egs/kiritan/svs1/dump/raw/org/train/data/format_midi.18/kiritan11_0000.midi'
 #     midi_obj = miditoolkit.midi.parser.MidiFile(path)
 #     note_seq, tempo_seq = midi_to_seq(midi_obj, np.int16, np.int16(16000) )

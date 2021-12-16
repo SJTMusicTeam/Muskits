@@ -7,6 +7,8 @@ set -o pipefail
 
 # spectrogram-related arguments
 fs=24000
+fmin=80
+fmax=7600
 n_fft=2048
 n_shift=300
 win_length=1200
@@ -33,10 +35,12 @@ cleaner=none
 
 ./svs.sh \
     --lang jp \
-    --stage 6 \
+    --stage 1 \
     --local_data_opts "--stage 0" \
     --feats_type raw \
+    --pitch_extract None \
     --fs "${fs}" \
+    --fmax "${fmax}" \
     --n_fft "${n_fft}" \
     --n_shift "${n_shift}" \
     --win_length "${win_length}" \

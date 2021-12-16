@@ -186,12 +186,12 @@ def sound_loader(path, float_dtype=None):
     return AdapterForSoundScpReader(loader, float_dtype)
 
 
-def midi_loader(path, float_dtype=None):
+def midi_loader(path, float_dtype=None, rate=np.int16(24000)):
     # The file is as follows:
     #   utterance_id_A /some/where/a.mid
     #   utterance_id_B /some/where/b.midi
 
-    loader = MIDIScpReader(path)
+    loader = MIDIScpReader(fname=path, rate=rate)
 
     # MIDIScpReader.__getitem__() returns ndarray
     return AdapterForMIDIScpReader(loader)
@@ -388,6 +388,7 @@ class MuskitDataset(AbsDataset):
         int_dtype: str = "long",
         max_cache_size: Union[float, int, str] = 0.0,
         max_cache_fd: int = 0,
+        not_align: list = ["text"],  # TODO(Tao): add to args
     ):
         assert check_argument_types()
         if len(path_name_type_list) == 0:
@@ -423,6 +424,7 @@ class MuskitDataset(AbsDataset):
             self.cache = SizedDict(shared=True)
         else:
             self.cache = None
+        self.not_align = not_align
 
     def _build_loader(
         self, path: str, loader_type: str
@@ -523,6 +525,14 @@ class MuskitDataset(AbsDataset):
         #   e.g. muskit.train.preprocessor:CommonPreprocessor
         if self.preprocess is not None:
             data = self.preprocess(uid, data)
+
+        length = min(
+            [len(data[key]) for key in data.keys() if key not in self.not_align]
+        )
+        for key, value in data.items():
+            if key in self.not_align:
+                continue
+            data[key] = data[key][:length]
 
         # 3. Force data-precision
         for name in data:

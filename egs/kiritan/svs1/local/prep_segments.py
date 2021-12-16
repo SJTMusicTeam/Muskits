@@ -45,7 +45,7 @@ class SegInfo(object):
             else:
                 cache_seg.append(seg)
 
-        return_seg.append(cache_seg)
+        return_seg[-1].extend(cache_seg)
         return return_seg
 
 
