@@ -802,7 +802,8 @@ class Trainer:
 
                     if isinstance(att_w, torch.Tensor):
                         att_w = att_w.detach().cpu().numpy()
-
+                    if att_w.ndim > 3:
+                        att_w = att_w.reshape(-1, att_w.shape[-2], att_w.shape[-1])
                     if att_w.ndim == 2:
                         att_w = att_w[None]
                     elif att_w.ndim > 3 or att_w.ndim == 1:
