@@ -72,9 +72,9 @@ def get_parser():
 def make_segment(file_id, labels, threshold=13.5, sil=["pau", "br", "sil"]):
     segments = []
     segment = SegInfo()
+    last_label = None
     for label in labels:
-
-        if label.label_id in sil:
+        if last_label is not None and last_label.end < label.start:
             if len(segment.segs) > 0:
                 segments.extend(segment.split(threshold=threshold))
                 segment = SegInfo()
