@@ -5,6 +5,7 @@ KIRITAN=
 ONIKU=
 OFUTON=
 NATSUME=
+CSD=downloads
 
 # For only JHU environment
 if [[ "$(hostname -d)" == clsp.jhu.edu ]]; then
