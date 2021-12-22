@@ -25,7 +25,7 @@ svs_conf:                        # keyword arguments for the selected model
     postnet_chans: 256           # number of channels in postnet
     postnet_filts: 5             # filter size of postnet layer    n_mels: -1
     # double_mel_loss: true
-    local_gaussian: false
+    local_gaussian: true
     # semitone_size: 59
     # Hz2semitone: false
     use_batch_norm: true         # whether to use batch normalization in postnet
@@ -44,24 +44,30 @@ svs_conf:                        # keyword arguments for the selected model
 ##########################################################
 optim: adam           # optimizer type
 optim_conf:           # keyword arguments for selected optimizer
-    lr: 1.0e-03       # learning rate
-    eps: 1.0e-06      # epsilon
-    weight_decay: 0.0 # weight decay coefficient
+    lr: 1.0       # learning rate
+    # eps: 1.0e-06      # epsilon
+    # weight_decay: 0.0 # weight decay coefficient
+    # warmup_steps: 4000
+scheduler: noamlr
+scheduler_conf:
+    warmup_steps: 4000
 
 ##########################################################
 #                OTHER TRAINING SETTING                  #
 ##########################################################
-num_iters_per_epoch: 500    # number of iterations per epoch
-max_epoch: 100              # number of epochs
+# num_iters_per_epoch: 500    # number of iterations per epoch
+max_epoch: 1000              # number of epochs
 grad_clip: 5.0              # gradient clipping norm
 grad_noise: false           # whether to use gradient noise injection
 accum_grad: 1               # gradient accumulation
 # batch_bins: 1000000       # batch bins (for feats_type=fbank)
-batch_bins: 1000000         # batch bins (for feats_type=raw, *= n_shift / n_mels)
-batch_type: numel           # how to make batch
+# batch_bins: 1000000         # batch bins (for feats_type=raw, *= n_shift / n_mels)
+batch_size: 4
+batch_type: sorted           # how to make batch
+# batch_type: numel           # how to make batch
 sort_in_batch: descending   # how to sort data in making batch
 sort_batch: descending      # how to sort created batches
-num_workers: 6              # number of workers of data loader
+num_workers: 10              # number of workers of data loader
 train_dtype: float32        # dtype in training
 log_interval: null          # log interval in iterations
 keep_nbest_models: 5        # number of models to keep
@@ -75,5 +81,5 @@ best_model_criterion:
     - loss
     - min
 
-gpu_id: 1
+gpu_id: 0
 vocoder_checkpoint: /data3/qt/ParallelWaveGAN/checkpoint-50000steps.pkl

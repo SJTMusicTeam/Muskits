@@ -3,6 +3,7 @@ import math
 import numpy
 import torch
 from torch import nn
+import logging
 
 
 class MultiHeadedAttention(nn.Module):
@@ -53,7 +54,7 @@ class MultiHeadedAttention(nn.Module):
 
         return q, k, v
 
-    def forward_attention(self, value, scores, mask):
+    def forward_attention(self, value, scores, mask, gaussian_factor=None):
         """Compute attention context vector.
 
         Args:
@@ -67,6 +68,10 @@ class MultiHeadedAttention(nn.Module):
 
         """
         n_batch = value.size(0)
+        if gaussian_factor is not None:
+            # logging.info(f'scores.shape:{scores.shape}')
+            # logging.info(f'gaussian_factor:{gaussian_factor.shape}')
+            scores = scores - gaussian_factor.unsqueeze(1)
         if mask is not None:
             mask = mask.unsqueeze(1).eq(0)  # (batch, 1, *, time2)
             min_value = float(
@@ -84,10 +89,11 @@ class MultiHeadedAttention(nn.Module):
         x = (
             x.transpose(1, 2).contiguous().view(n_batch, -1, self.h * self.d_k)
         )  # (batch, time1, d_model)
+        # if gaussian_factor is not None:
+        #     return self.linear_out(x), self.attn  # (batch, time1, d_model)
+        return self.linear_out(x)#, self.attn  # (batch, time1, d_model)
 
-        return self.linear_out(x)  # (batch, time1, d_model)
-
-    def forward(self, query, key, value, mask):
+    def forward(self, query, key, value, mask, gaussian_factor=None):
         """Compute scaled dot product attention.
 
         Args:
@@ -103,7 +109,7 @@ class MultiHeadedAttention(nn.Module):
         """
         q, k, v = self.forward_qkv(query, key, value)
         scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(self.d_k)
-        return self.forward_attention(v, scores, mask)
+        return self.forward_attention(v, scores, mask, gaussian_factor)
 
 
 class LegacyRelPositionMultiHeadedAttention(MultiHeadedAttention):
