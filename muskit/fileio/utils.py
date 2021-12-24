@@ -30,7 +30,7 @@ def get_tick_to_time_mapping(ticks_per_beat, tempo_changes, max_tick=np.int32(1e
     return tick_to_time
 
 
-def midi_to_seq(midi_obj, dtype=np.int16, rate=22050):
+def midi_to_seq(midi_obj, dtype=np.int16, rate=22050, pitch_aug_factor=0):
     """method for midi_obj.
     Input:
         miditoolkit_object, sampling rate
@@ -47,7 +47,7 @@ def midi_to_seq(midi_obj, dtype=np.int16, rate=22050):
     for i in range(len(notes)):
         st = int(tick_to_time[notes[i].start] * rate)
         ed = int(tick_to_time[notes[i].end] * rate)
-        note_seq[st:ed] = notes[i].pitch
+        note_seq[st:ed] = notes[i].pitch if (pitch_aug_factor == 0 or notes[i].pitch == 0) else (notes[i].pitch + pitch_aug_factor)
 
     tempos = midi_obj.tempo_changes
     tempos.sort(key=lambda x: (x.time, x.tempo))
