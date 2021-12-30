@@ -98,7 +98,7 @@ def transition(dataset, des_url):
         # print(des_midi)
         # break
         if wav_path[-3:] != "wav":
-            print("========: ", wav_path)
+            print("Error Path: ", wav_path)
             continue
         copyfile(wav_path, des_wav)
         copyfile(lab_path, des_lab)
