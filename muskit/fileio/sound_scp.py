@@ -33,9 +33,10 @@ class SoundScpReader(collections.abc.Mapping):
         self.dtype = dtype
         self.always_2d = always_2d
         self.normalize = normalize
-        self.data = read_2column_text(fname)  # read_phoneme
+        self.data = read_2column_text(fname)  # read wavpath from wav.scp
 
     def __getitem__(self, key):
+        key, pitch_aug_factor = key
         wav = self.data[key]
         if self.normalize:
             # soundfile.read normalizes data to [-1,1] if dtype is not given
@@ -44,6 +45,13 @@ class SoundScpReader(collections.abc.Mapping):
             array, rate = soundfile.read(
                 wav, dtype=self.dtype, always_2d=self.always_2d
             )
+        
+        if pitch_aug_factor != 0:
+            # Pitch augmentation
+            ratio = pow(2,1/12)
+            import pyworld as pw
+            f0_pw, sp, ap = pw.wav2world(array, rate)    # use default options
+            array = pw.synthesize(f0_pw * (ratio ** pitch_aug_factor), sp, ap, rate, pw.default_frame_period)
 
         return rate, array
 
