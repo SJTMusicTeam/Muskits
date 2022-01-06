@@ -30,7 +30,7 @@ def get_tick_to_time_mapping(ticks_per_beat, tempo_changes, max_tick=np.int32(1e
     return tick_to_time
 
 
-def midi_to_seq(midi_obj, dtype=np.int16, rate=22050, pitch_aug_factor=0):
+def midi_to_seq(midi_obj, dtype=np.int16, rate=22050, pitch_aug_factor=0, time_aug_factor=1):
     """method for midi_obj.
     Input:
         miditoolkit_object, sampling rate
@@ -43,20 +43,20 @@ def midi_to_seq(midi_obj, dtype=np.int16, rate=22050, pitch_aug_factor=0):
     notes = midi_obj.instruments[0].notes
     notes.sort(key=lambda x: (x.start, x.pitch))
 
-    note_seq = np.zeros(int(rate * max_time), dtype=dtype)
+    note_seq = np.zeros(int(rate * max_time * time_aug_factor), dtype=dtype)
     for i in range(len(notes)):
-        st = int(tick_to_time[notes[i].start] * rate)
-        ed = int(tick_to_time[notes[i].end] * rate)
+        st = int(tick_to_time[notes[i].start] * rate * time_aug_factor)
+        ed = int(tick_to_time[notes[i].end] * rate * time_aug_factor)
         note_seq[st:ed] = notes[i].pitch if (pitch_aug_factor == 0 or notes[i].pitch == 0) else (notes[i].pitch + pitch_aug_factor)
 
     tempos = midi_obj.tempo_changes
     tempos.sort(key=lambda x: (x.time, x.tempo))
-    tempo_seq = np.zeros(int(rate * max_time), dtype=dtype)
+    tempo_seq = np.zeros(int(rate * max_time * time_aug_factor), dtype=dtype)
     for i in range(len(tempos) - 1):
-        st = int(tick_to_time[tempos[i].time] * rate)
-        ed = int(tick_to_time[tempos[i + 1].time] * rate)
+        st = int(tick_to_time[tempos[i].time] * rate * time_aug_factor)
+        ed = int(tick_to_time[tempos[i + 1].time] * rate * time_aug_factor)
         tempo_seq[st:ed] = int(tempos[i].tempo + 0.5)
-    st = int(tick_to_time[tempos[-1].time] * rate)
+    st = int(tick_to_time[tempos[-1].time] * rate * time_aug_factor)
     tempo_seq[st:] = int(tempos[-1].tempo + 0.5)
     return note_seq, tempo_seq
 
@@ -138,19 +138,27 @@ def seq_to_midi(
 if __name__ == "__main__":
     import os
 
-    paths = os.listdir(
-        "/data3/qt/Muskits/egs/kiritan/svs1/dump/raw/org/train/data/format_midi.18/"
-    )
-    # print(paths)
-    for p in paths:
-        # path = '/data3/qt/Muskits/egs/kiritan/svs1/dump/raw/org/train/data/format_midi.18/kiritan11_0001.midi'
-        path = (
-            "/data3/qt/Muskits/egs/kiritan/svs1/dump/raw/org/train/data/format_midi.18/"
-            + p
-        )
-        print(path)
-        midi_obj = miditoolkit.midi.parser.MidiFile(path)
-        note_seq, tempo_seq = midi_to_seq(midi_obj, np.int16, np.int16(16000))
-        midi_obj = seq_to_midi(note_seq, tempo_seq, np.int16(16000))
-        midi_path = "/data3/qt/songmass/output_res_prev/midiscp.mid"
-        midi_obj.dump(midi_path)
+    # paths = os.listdir(
+    #     "/data3/qt/Muskits/egs/kiritan/svs1/dump/raw/org/train/data/format_midi.18/"
+    # )
+    # # print(paths)
+    # for p in paths:
+    #     # path = '/data3/qt/Muskits/egs/kiritan/svs1/dump/raw/org/train/data/format_midi.18/kiritan11_0001.midi'
+    #     path = (
+    #         "/data3/qt/Muskits/egs/kiritan/svs1/dump/raw/org/train/data/format_midi.18/"
+    #         + p
+    #     )
+    #     print(path)
+    #     midi_obj = miditoolkit.midi.parser.MidiFile(path)
+    #     note_seq, tempo_seq = midi_to_seq(midi_obj, np.int16, np.int16(16000))
+    #     midi_obj = seq_to_midi(note_seq, tempo_seq, np.int16(16000))
+    #     midi_path = "/data3/qt/songmass/output_res_prev/midiscp.mid"
+    #     midi_obj.dump(midi_path) 
+
+    import miditoolkit
+    path = "/data5/gs/Muskits/egs/ofuton_p_utagoe_db/svs1/dump/raw/org/dev/data/format_midi.1/oniku_00000000000000momiji_0000.midi"
+    midi_obj = miditoolkit.midi.parser.MidiFile(path)
+
+    tempos = midi_obj.tempo_changes
+    tempos.sort(key=lambda x: (x.time, x.tempo))
+    print(tempos)

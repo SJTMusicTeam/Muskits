@@ -4,6 +4,7 @@ from typing import Union
 
 import numpy as np
 import soundfile
+import pytsmod as tsm
 from typeguard import check_argument_types
 
 from muskit.fileio.read_text import read_2column_text
@@ -36,7 +37,7 @@ class SoundScpReader(collections.abc.Mapping):
         self.data = read_2column_text(fname)  # read wavpath from wav.scp
 
     def __getitem__(self, key):
-        key, pitch_aug_factor = key
+        key, pitch_aug_factor, time_aug_factor = key
         wav = self.data[key]
         if self.normalize:
             # soundfile.read normalizes data to [-1,1] if dtype is not given
@@ -52,6 +53,10 @@ class SoundScpReader(collections.abc.Mapping):
             import pyworld as pw
             f0_pw, sp, ap = pw.wav2world(array, rate)    # use default options
             array = pw.synthesize(f0_pw * (ratio ** pitch_aug_factor), sp, ap, rate, pw.default_frame_period)
+
+        if time_aug_factor != 1:
+            # Time augmentation
+            array = tsm.wsola(array, time_aug_factor)
 
         return rate, array
 
