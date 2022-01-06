@@ -81,7 +81,7 @@ class IterableMuskitDataset(IterableDataset):
         self,
         path_name_type_list: Collection[Tuple[str, str, str]],
         preprocess: Callable[
-            [str, Dict[str, np.ndarray]], Dict[str, np.ndarray]
+            [str, Dict[str, np.ndarray], float], Dict[str, np.ndarray]
         ] = None,
         float_dtype: str = "float32",
         int_dtype: str = "long",
@@ -215,7 +215,7 @@ class IterableMuskitDataset(IterableDataset):
             # 3. [Option] Apply preprocessing
             #   e.g. muskit.train.preprocessor:CommonPreprocessor
             if self.preprocess is not None:
-                data = self.preprocess(uid, data)
+                data = self.preprocess(uid, data, time_aug_factor=1.0)
 
             # 4. Force data-precision
             for name in data:
