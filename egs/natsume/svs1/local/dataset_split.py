@@ -69,7 +69,6 @@ if __name__ == "__main__":
     if train <= 0:
         print("Error, train set is empty.")
         exit()
-    # print(dataset)
     random.shuffle(dataset)
     # copyfile(source_file, destination_file)
     train_set = dataset[:train]
@@ -79,13 +78,13 @@ if __name__ == "__main__":
 
 def transition(dataset, des_url):
     # src_len = len(source_root_url)
-    path = [des_url + item for item in ["/wav/", "/mono_label/", "/midi_label/"]]
+    path = [des_url + item for item in ["/wav/", "/mono_label/", "/midi/"]]
     for p in path:
         makedir(p)
     for item in dataset:
         wav_path = source_root_url + item
         lab_path = wav_path.replace("wav/", "mono_label/").replace(".wav", ".lab")
-        midi_path = wav_path.replace("wav/", "midi_label/").replace(".wav", ".mid")
+        midi_path = wav_path.replace("wav/", "midi/").replace(".wav", ".mid")
 
         des_wav = path[0] + item
         des_lab = path[1] + item.replace(".wav", ".lab")
@@ -98,6 +97,9 @@ def transition(dataset, des_url):
         # print(midi_path)
         # print(des_midi)
         # break
+        if wav_path[-3:] != "wav":
+            print("Error Path: ", wav_path)
+            continue
         copyfile(wav_path, des_wav)
         copyfile(lab_path, des_lab)
         copyfile(midi_path, des_midi)
