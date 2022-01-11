@@ -1792,6 +1792,7 @@ class AbsTask(ABC):
             )
         model.to(device)
         if model_file is not None:
+            logging.info(f"Load model state dict from: {model_file}")
             if device == "cuda":
                 # NOTE(kamo): "cuda" for torch.load always indicates cuda:0
                 #   in PyTorch<=1.4
