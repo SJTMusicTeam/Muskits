@@ -35,7 +35,7 @@ cleaner=none
 
 ./svs.sh \
     --lang jp \
-    --stage 1 \
+    --stage 6 \
     --local_data_opts "--stage 0" \
     --feats_type raw \
     --pitch_extract None \
@@ -53,4 +53,5 @@ cleaner=none
     --valid_set "${valid_set}" \
     --test_sets "${test_sets}" \
     --srctexts "data/${train_set}/text" \
+    # --svs_exp "exp/12-23-GLU_Debug" \
     ${opts} "$@"

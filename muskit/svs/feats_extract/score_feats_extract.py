@@ -103,7 +103,8 @@ class FrameScoreFeats(AbsFeatsExtract):
 
         # Step3: aggregate label
         # (bs, nframe, self.win_length, label_dim) => (bs, nframe)
-        output, _ = output.sum(dim=-1, keepdim=False).mode(dim=2, keepdim=False)
+        _tmp = output.sum(dim=-1, keepdim=False).float()
+        output = _tmp[:,:,self.win_length // 2]
 
         # Step4: process lengths
         if input_lengths is not None:

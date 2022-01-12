@@ -381,6 +381,7 @@ class Trainer:
                 _improved = []
                 for _phase, k, _mode in trainer_options.best_model_criterion:
                     # e.g. _phase, k, _mode = "train", "loss", "min"
+                    # logging.info(f'k:{k}')
                     if reporter.has(_phase, k):
                         best_epoch = reporter.get_best_epoch(_phase, k, _mode)
                         # Creates sym links if it's the best result

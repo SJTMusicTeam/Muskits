@@ -30,7 +30,6 @@ svs_conf:                        # keyword arguments for the selected model
     # Hz2semitone: false
     use_batch_norm: true         # whether to use batch normalization in postnet
     reduction_factor: 1          # reduction factor
-    eprenet_dropout_rate: 0.2    # prenet dropout rate
     edropout_rate: 0.1           # encoder dropout rate
     ddropout_rate: 0.1           # decoder dropout rate
     postnet_dropout_rate: 0.5    # postnet dropout_rate
@@ -55,16 +54,16 @@ scheduler_conf:
 ##########################################################
 #                OTHER TRAINING SETTING                  #
 ##########################################################
-# num_iters_per_epoch: 500    # number of iterations per epoch
-max_epoch: 1000              # number of epochs
+# num_iters_per_epoch: 200    # number of iterations per epoch
+max_epoch: 1500              # number of epochs
 grad_clip: 5.0              # gradient clipping norm
 grad_noise: false           # whether to use gradient noise injection
 accum_grad: 1               # gradient accumulation
 # batch_bins: 1000000       # batch bins (for feats_type=fbank)
-# batch_bins: 1000000         # batch bins (for feats_type=raw, *= n_shift / n_mels)
-batch_size: 4
-batch_type: sorted           # how to make batch
-# batch_type: numel           # how to make batch
+batch_bins: 1000000         # batch bins (for feats_type=raw, *= n_shift / n_mels)
+# batch_size: 5
+# batch_type: sorted           # how to make batch
+batch_type: numel           # how to make batch
 sort_in_batch: descending   # how to sort data in making batch
 sort_batch: descending      # how to sort created batches
 num_workers: 10              # number of workers of data loader
@@ -81,5 +80,5 @@ best_model_criterion:
     - loss
     - min
 
-gpu_id: 0
+gpu_id: 1
 vocoder_checkpoint: /data3/qt/ParallelWaveGAN/checkpoint-50000steps.pkl
