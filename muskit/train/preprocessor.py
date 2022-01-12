@@ -24,7 +24,10 @@ class AbsPreprocessor(ABC):
 
     @abstractmethod
     def __call__(
-        self, uid: str, data: Dict[str, Union[str, np.ndarray]]
+        self, 
+        uid: str, 
+        data: Dict[str, Union[str, np.ndarray]],
+        time_aug_factor: float
     ) -> Dict[str, np.ndarray]:
         raise NotImplementedError
 
@@ -218,7 +221,7 @@ class CommonPreprocessor(AbsPreprocessor):
             self.noises = None
 
     def __call__(
-        self, uid: str, data: Dict[str, Union[str, np.ndarray, tuple]]
+        self, uid: str, data: Dict[str, Union[str, np.ndarray, tuple]], time_aug_factor: float
     ) -> Dict[str, np.ndarray]:
         assert check_argument_types()
 
@@ -328,11 +331,14 @@ class CommonPreprocessor(AbsPreprocessor):
             text_ints = self.token_id_converter.tokens2ids(tokens)
 
             data.pop(self.label_name)
-            labelseq = np.zeros((nsamples))
-            offset = timeseq[0, 0]
+            # [Shuai]: length of label - phone_id seq is the same of midi, 
+            # time_aug_factor has already been applied on midi length in dataset.py, step1. Load data from each loaders
+            # so the time_aug_factor won`t be applied here when init.
+            labelseq = np.zeros((nsamples))      
+            offset = timeseq[0, 0] * time_aug_factor
             for i in range(timeseq.shape[0]):
-                start = int((timeseq[i, 0] - offset) * self.fs)
-                end = int((timeseq[i, 1] - offset) * self.fs) + 1
+                start = int((timeseq[i, 0] - offset) * time_aug_factor * self.fs)
+                end = int((timeseq[i, 1] - offset) * time_aug_factor * self.fs) + 1
                 labelseq[start:end] = text_ints[i]
             # data[self.label_name] = timeseq, np.array(text_ints, dtype=np.int64)
             labelseq.astype(np.int64)

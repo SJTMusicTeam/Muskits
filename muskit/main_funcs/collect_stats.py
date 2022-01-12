@@ -68,6 +68,11 @@ def collect_stats(
                         )
 
                 # 2. Extract feats
+                del batch['pitch_aug']
+                del batch['pitch_aug_lengths']
+                del batch['time_aug']
+                del batch['time_aug_lengths']
+                
                 if ngpu <= 1:
                     data = model.collect_feats(**batch)
                 else:

@@ -311,6 +311,10 @@ class AbsTask(ABC):
             default=0,
             help="GPU_id, only works when ngpu=1",
         )
+        group.add_argument("--pitch_aug_min", type=int, default=0, help="The lower bound of midi semitone when pitch augmentation")
+        group.add_argument("--pitch_aug_max", type=int, default=0, help="The upper bound of midi semitone when pitch augmentation")
+        group.add_argument("--time_aug_min", type=float, default=1, help="The lower bound of time augmentation factor")
+        group.add_argument("--time_aug_max", type=float, default=1, help="The upper bound of time augmentation factor")
         group.add_argument("--seed", type=int, default=0, help="Random seed")
         group.add_argument(
             "--num_workers",
@@ -1440,6 +1444,11 @@ class AbsTask(ABC):
             preprocess=iter_options.preprocess_fn,
             max_cache_size=iter_options.max_cache_size,
             max_cache_fd=iter_options.max_cache_fd,
+            mode=mode,
+            pitch_aug_min=args.pitch_aug_min,
+            pitch_aug_max=args.pitch_aug_max,
+            time_aug_min=args.time_aug_min,
+            time_aug_max=args.time_aug_max,
         )
         cls.check_task_requirements(
             dataset, args.allow_variable_data_keys, train=iter_options.train

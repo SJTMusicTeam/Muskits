@@ -269,12 +269,6 @@ class SyllableScoreFeats(AbsFeatsExtract):
         Returns:
             output: (Batch, Frames)
         """
-        # logging.info(f'durations.shape:{durations.shape}')
-        # logging.info(f'score.shape:{score.shape}')
-        # logging.info(f'tempo.shape:{tempo.shape}')
-        # logging.info(f'durations_lengths.shape:{durations_lengths.shape}')
-        # logging.info(f'score_lengths.shape:{score_lengths.shape}')
-        # logging.info(f'tempo_lengths.shape:{tempo_lengths.shape}')
         assert durations.shape == score.shape and score.shape == tempo.shape
         assert (
             durations_lengths.shape == score_lengths.shape

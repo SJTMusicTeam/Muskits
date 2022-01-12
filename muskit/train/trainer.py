@@ -503,6 +503,11 @@ class Trainer:
                     # print("'Shuai: What is **batch ? ", batch)
                     # logging.info(f"filename_list: {filename_list}")
 
+                    del batch['pitch_aug']
+                    del batch['pitch_aug_lengths']
+                    del batch['time_aug']
+                    del batch['time_aug_lengths']
+
                     retval = model(**batch)
 
                     # Note(kamo):
@@ -723,6 +728,11 @@ class Trainer:
             if no_forward_run:
                 continue
 
+            del batch['pitch_aug']
+            del batch['pitch_aug_lengths']
+            del batch['time_aug']
+            del batch['time_aug_lengths']
+
             retval = model(**batch, flag_IsValid=True)
             if isinstance(retval, dict):
                 stats = retval["stats"]
@@ -794,6 +804,10 @@ class Trainer:
 
             # 1. Forwarding model and gathering all attentions
             #    calculate_all_attentions() uses single gpu only.
+            del batch['pitch_aug']
+            del batch['pitch_aug_lengths']
+            del batch['time_aug']
+            del batch['time_aug_lengths']
             att_dict = calculate_all_attentions(model, batch)
 
             # 2. Plot attentions: This part is slow due to matplotlib

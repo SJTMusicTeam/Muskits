@@ -5,6 +5,7 @@ import copy
 import functools
 import logging
 import numbers
+import random
 import re
 from typing import Any
 from typing import Callable
@@ -50,8 +51,9 @@ class AdapterForSoundScpReader(collections.abc.Mapping):
     def __iter__(self):
         return iter(self.loader)
 
-    def __getitem__(self, key: str) -> np.ndarray:
-        retval = self.loader[key]
+    def __getitem__(self, key: (str,int)) -> np.ndarray:
+        key, pitch_aug_factor, time_aug_factor = key
+        retval = self.loader[(key, pitch_aug_factor, time_aug_factor)]
 
         if isinstance(retval, tuple):
             assert len(retval) == 2, len(retval)
@@ -126,8 +128,9 @@ class AdapterForMIDIScpReader(collections.abc.Mapping):
     def __iter__(self):
         return iter(self.loader)
 
-    def __getitem__(self, key: str) -> np.ndarray:
-        retval = self.loader[key]
+    def __getitem__(self, key: (str,int)) -> np.ndarray:
+        key, pitch_aug_factor, time_aug_factor = key
+        retval = self.loader[(key, pitch_aug_factor, time_aug_factor)]
 
         assert len(retval) == 2, len(retval)
         if isinstance(retval[0], np.ndarray) and isinstance(retval[1], np.ndarray):
@@ -382,13 +385,18 @@ class MuskitDataset(AbsDataset):
         self,
         path_name_type_list: Collection[Tuple[str, str, str]],
         preprocess: Callable[
-            [str, Dict[str, np.ndarray]], Dict[str, np.ndarray]
+            [str, Dict[str, np.ndarray], float], Dict[str, np.ndarray]
         ] = None,
         float_dtype: str = "float32",
         int_dtype: str = "long",
         max_cache_size: Union[float, int, str] = 0.0,
         max_cache_fd: int = 0,
         not_align: list = ["text"],  # TODO(Tao): add to args
+        mode: str = "valid",  # train, valid, plot_att, ...
+        pitch_aug_min: int = 0,
+        pitch_aug_max: int = 0,
+        time_aug_min: float = 1.0,
+        time_aug_max: float = 1.0,
     ):
         assert check_argument_types()
         if len(path_name_type_list) == 0:
@@ -425,6 +433,15 @@ class MuskitDataset(AbsDataset):
         else:
             self.cache = None
         self.not_align = not_align
+        self.mode = mode
+
+        self.pitch_aug_min = pitch_aug_min
+        self.pitch_aug_max = pitch_aug_max
+        self.time_aug_min = time_aug_min
+        self.time_aug_max = time_aug_max
+
+        assert self.pitch_aug_min <= self.pitch_aug_max
+        assert self.time_aug_min <= self.time_aug_max
 
     def _build_loader(
         self, path: str, loader_type: str
@@ -454,6 +471,7 @@ class MuskitDataset(AbsDataset):
 
                 func = dic["func"]
                 try:
+                    # logging.info(f"path: {path}")
                     return func(path, **kwargs)
                 except Exception:
                     if hasattr(func, "__name__"):
@@ -494,11 +512,31 @@ class MuskitDataset(AbsDataset):
             data = self.cache[uid]
             return uid, data
 
+        if self.mode == "train":
+            pitch_aug_factor = random.randint(self.pitch_aug_min, self.pitch_aug_max)
+
+            _time_list = [i/100 for i in range(int(self.time_aug_min*100),int(self.time_aug_max*100+1),1)]
+            # _time_list = [i/1e3 for i in range(int(self.time_aug_min*1e3),int(self.time_aug_max*1e3+1),1)]
+            # for _ in range(7):
+            #     _time_list.append(1.0)
+            time_aug_factor = random.sample(_time_list, 1)[0]
+        else:
+            pitch_aug_factor = 0
+            time_aug_factor = 1
+
         data = {}
         # 1. Load data from each loaders
         for name, loader in self.loader_dict.items():
+            # name: text, singing, label, midi
             try:
-                value = loader[uid]
+                if name == "midi" or name == "singing":
+                    value = loader[(uid, pitch_aug_factor, time_aug_factor)]
+                else:
+                    value = loader[uid]
+                # if name == "text":
+                #     logging.info(f"name: {name}, loader: {loader}")
+                #     logging.info(f"value: {value}")
+                #     quit()
                 if isinstance(value, list):
                     value = np.array(value)
                 if not isinstance(
@@ -524,15 +562,22 @@ class MuskitDataset(AbsDataset):
         # 2. [Option] Apply preprocessing
         #   e.g. muskit.train.preprocessor:CommonPreprocessor
         if self.preprocess is not None:
-            data = self.preprocess(uid, data)
+            data = self.preprocess(uid, data, time_aug_factor)
 
         length = min(
             [len(data[key]) for key in data.keys() if key not in self.not_align]
         )
+        # logging.info(f"length: {length}")
+        
+        # logging.info(f"time_aug_factor: {time_aug_factor}")
         for key, value in data.items():
             if key in self.not_align:
                 continue
+            # logging.info(f"key: {key}, data[key].shape: {data[key].shape}")
             data[key] = data[key][:length]
+        # quit()
+        data['pitch_aug'] = np.array([pitch_aug_factor])
+        data['time_aug'] = np.array([time_aug_factor])
 
         # 3. Force data-precision
         for name in data:

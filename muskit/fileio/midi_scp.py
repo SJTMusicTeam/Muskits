@@ -40,11 +40,12 @@ class MIDIScpReader(collections.abc.Mapping):
         self.data = read_2column_text(fname)  # get key-value dict
 
     def __getitem__(self, key):
+        key, pitch_aug_factor, time_aug_factor = key
         # return miditoolkit.midi.parser.MidiFile(self.data[key])
         midi_obj = miditoolkit.midi.parser.MidiFile(self.data[key])
 
         if self.rep == "representation":
-            note_seq, tempo_seq = midi_to_seq(midi_obj, self.dtype, self.rate)
+            note_seq, tempo_seq = midi_to_seq(midi_obj, self.dtype, self.rate, pitch_aug_factor, time_aug_factor)
         return note_seq, tempo_seq
 
     def get_path(self, key):
