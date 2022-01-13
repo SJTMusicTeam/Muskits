@@ -343,17 +343,24 @@ class CommonPreprocessor(AbsPreprocessor):
             # data[self.label_name] = timeseq, np.array(text_ints, dtype=np.int64)
             labelseq.astype(np.int64)
             data["durations"] = labelseq
-
+        
+        # logging.info(f"self.label_name: {self.label_name}")
+        # logging.info(f"self.text_name: {self.text_name}, self.tokenizer: {self.tokenizer}")
+        # logging.info(f"data: {data}")
         if self.text_name in data and self.tokenizer is not None:
             text = data[self.text_name]
+            # logging.info(f"uid: {uid}, text: {text}")
             if not isinstance(text, np.ndarray):
-                text = " ".join(text)
+                if not isinstance(text, str):
+                    text = " ".join(text)
                 text = self.text_cleaner(text)
                 tokens = self.tokenizer.text2tokens(text)
-                text_ints = self.token_id_converter.tokens2ids(tokens)
-                data[self.text_name] = np.array(text_ints, dtype=np.int64)
+                _text_ints = self.token_id_converter.tokens2ids(tokens)
+                # assert text_ints == _text_ints
+                data[self.text_name] = np.array(_text_ints, dtype=np.int64)
         # TODO allow the tuple type
         # assert check_return_type(data)
+        # logging.info(f"uid: {uid}, data: {data}")
         return data
 
 

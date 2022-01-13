@@ -43,21 +43,26 @@ def midi_to_seq(midi_obj, dtype=np.int16, rate=22050, pitch_aug_factor=0, time_a
     notes = midi_obj.instruments[0].notes
     notes.sort(key=lambda x: (x.start, x.pitch))
 
+    tempos = midi_obj.tempo_changes
+    tempos.sort(key=lambda x: (x.time, x.tempo))
+    assert len(tempos) == 1
+    tempo_BPM = tempos[0].tempo         # global information, beats per minute
+    tempo_BPS = tempo_BPM / 60.0        # global information, beats per second
+
     note_seq = np.zeros(int(rate * max_time * time_aug_factor), dtype=dtype)
+    tempo_seq = np.zeros(int(rate * max_time * time_aug_factor), dtype=dtype)
     for i in range(len(notes)):
         st = int(tick_to_time[notes[i].start] * rate * time_aug_factor)
         ed = int(tick_to_time[notes[i].end] * rate * time_aug_factor)
         note_seq[st:ed] = notes[i].pitch if (pitch_aug_factor == 0 or notes[i].pitch == 0) else (notes[i].pitch + pitch_aug_factor)
 
-    tempos = midi_obj.tempo_changes
-    tempos.sort(key=lambda x: (x.time, x.tempo))
-    tempo_seq = np.zeros(int(rate * max_time * time_aug_factor), dtype=dtype)
-    for i in range(len(tempos) - 1):
-        st = int(tick_to_time[tempos[i].time] * rate * time_aug_factor)
-        ed = int(tick_to_time[tempos[i + 1].time] * rate * time_aug_factor)
-        tempo_seq[st:ed] = int(tempos[i].tempo + 0.5)
-    st = int(tick_to_time[tempos[-1].time] * rate * time_aug_factor)
-    tempo_seq[st:] = int(tempos[-1].tempo + 0.5)
+        st_time = tick_to_time[notes[i].start] * time_aug_factor
+        ed_time = tick_to_time[notes[i].end] * time_aug_factor
+        note_duration = ed_time - st_time       # Beats in seconds
+        beat_num = note_duration * tempo_BPS  # Beats nums in note
+        beat_input = int(beat_num / 0.0125 + 0.5)
+        tempo_seq[st:ed] = beat_input
+
     return note_seq, tempo_seq
 
 
@@ -159,6 +164,6 @@ if __name__ == "__main__":
     path = "/data5/gs/Muskits/egs/ofuton_p_utagoe_db/svs1/dump/raw/org/dev/data/format_midi.1/oniku_00000000000000momiji_0000.midi"
     midi_obj = miditoolkit.midi.parser.MidiFile(path)
 
-    tempos = midi_obj.tempo_changes
-    tempos.sort(key=lambda x: (x.time, x.tempo))
-    print(tempos)
+    # note_seq, tempo_seq = midi_to_seq(midi_obj, np.int16, np.int16(24000))
+
+    

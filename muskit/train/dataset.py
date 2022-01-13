@@ -533,9 +533,9 @@ class MuskitDataset(AbsDataset):
                     value = loader[(uid, pitch_aug_factor, time_aug_factor)]
                 else:
                     value = loader[uid]
-                # if name == "text":
+                # if name == "text" or name == "label":
                 #     logging.info(f"name: {name}, loader: {loader}")
-                #     logging.info(f"value: {value}")
+                #     logging.info(f"uid: {uid}, value: {value}")
                 #     quit()
                 if isinstance(value, list):
                     value = np.array(value)
