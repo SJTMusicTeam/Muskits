@@ -31,7 +31,7 @@ from muskit.svs.feats_extract.log_spectrogram import LogSpectrogram
 from muskit.svs.encoder_decoder.transformer.transformer import Transformer
 from muskit.svs.bytesing.bytesing import ByteSing
 from muskit.svs.naive_rnn.naive_rnn import NaiveRNN
-from muskit.svs.mlp_singer.mlp import MLPSinger
+from muskit.svs.mlp_singer.mlp_singer import MLPSinger
 from muskit.svs.glu_transformer.glu_transformer import GLU_Transformer
 from muskit.svs.xiaoice.XiaoiceSing import XiaoiceSing
 from muskit.svs.xiaoice.XiaoiceSing import XiaoiceSing_noDP

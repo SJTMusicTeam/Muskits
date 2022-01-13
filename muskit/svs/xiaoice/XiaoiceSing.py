@@ -399,15 +399,11 @@ class XiaoiceSing(AbsSVS):
         )
         loss = l1_loss + duration_loss
 
-<<<<<<< HEAD
-        stats = dict(l1_loss=l1_loss.item(), duration_loss=duration_loss.item(),)
-=======
         stats = dict(
             loss=loss.item(),
             l1_loss=l1_loss.item(),
             duration_loss=duration_loss.item(),
         )
->>>>>>> c543b89e6e40901eb2428e5bb112a247f9e913ef
 
         # report extra information
         if self.encoder_type == "transformer" and self.use_scaled_pos_enc:
