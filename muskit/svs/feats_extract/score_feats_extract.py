@@ -217,7 +217,6 @@ class SyllableScoreFeats(AbsFeatsExtract):
         for i in range(durations_lengths):
             if durations[seq[-1]] != durations[i]:
                 seq.append(i)
-
         seq.append(durations_lengths.item())
 
         seq.append(0)
@@ -234,12 +233,19 @@ class SyllableScoreFeats(AbsFeatsExtract):
         seg_tempo = []  # torch.zeros(lengths, dtype=torch.long)
         for i in range(lengths):
             l, r = seq[i], seq[i + 1]
-            tmp_duartion, _ = durations[l:r].mode()
-            tmp_score, _ = score[l:r].mode()
-            tmp_tempo, _ = tempo[l:r].mode()
+            
+            # tmp_duartion, _ = durations[l:r].mode(dim=0)
+            # tmp_score, _ = score[l:r].mode(dim=0)
+            # tmp_tempo, _ = tempo[l:r].mode(dim=0)
+
+            tmp_duartion = durations[l:r][(r - l) // 2]
+            tmp_score = score[l:r][(r - l) // 2]
+            tmp_tempo = tempo[l:r][(r - l) // 2]
+
             seg_duartion.append(tmp_duartion.item())
             seg_score.append(tmp_score.item())
             seg_tempo.append(tmp_tempo.item())
+
         return seg_duartion, lengths, seg_score, lengths, seg_tempo, lengths
 
     def forward(
@@ -280,7 +286,10 @@ class SyllableScoreFeats(AbsFeatsExtract):
         seg_score, seg_score_lengths = [], []
         seg_tempo, seg_tempo_lengths = [], []
 
+        # logging.info(f"Into forward function of SyllableScoreFeats")
+
         for i in range(bs):
+            # logging.info(f"the index sample of batch: {i}")
             seg = self.get_segments(
                 durations=durations[i],
                 durations_lengths=durations_lengths[i],
@@ -296,12 +305,12 @@ class SyllableScoreFeats(AbsFeatsExtract):
             seg_tempo.append(seg[4])
             seg_tempo_lengths.append(seg[5])
 
-        seg_durations = torch.LongTensor(ListsToTensor(seg_durations))
-        seg_durations_lengths = torch.LongTensor(seg_durations_lengths)
-        seg_score = torch.LongTensor(ListsToTensor(seg_score))
-        seg_score_lengths = torch.LongTensor(seg_score_lengths)
-        seg_tempo = torch.LongTensor(ListsToTensor(seg_tempo))
-        seg_tempo_lengths = torch.LongTensor(seg_tempo_lengths)
+        seg_durations = torch.LongTensor(ListsToTensor(seg_durations)).to(durations.device)
+        seg_durations_lengths = torch.LongTensor(seg_durations_lengths).to(durations.device)
+        seg_score = torch.LongTensor(ListsToTensor(seg_score)).to(durations.device)
+        seg_score_lengths = torch.LongTensor(seg_score_lengths).to(durations.device)
+        seg_tempo = torch.LongTensor(ListsToTensor(seg_tempo)).to(durations.device)
+        seg_tempo_lengths = torch.LongTensor(seg_tempo_lengths).to(durations.device)
 
         return (
             seg_durations,

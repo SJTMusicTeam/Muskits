@@ -90,6 +90,10 @@ class LogMelFbank(AbsFeatsExtract):
         # 1. Domain-conversion: e.g. Stft: time -> time-freq
         input_stft, feats_lens = self.stft(input, input_lengths)
 
+        # import logging
+        # logging.info(f"input_stft.dim(): {input_stft.dim()}")
+        # logging.info(f"input_stft.shape: {input_stft.shape}")
+
         assert input_stft.dim() >= 4, input_stft.shape
         # "2" refers to the real/imag parts of Complex
         assert input_stft.shape[-1] == 2, input_stft.shape

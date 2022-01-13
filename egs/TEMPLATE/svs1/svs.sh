@@ -858,6 +858,188 @@ else
     log "Skip training stages"
 fi
 
+if ! "${skip_eval}"; then
+    if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
+        log "Stage 7: Decoding: training_dir=${svs_exp}"
+
+        if ${gpu_inference}; then
+            _cmd="${cuda_cmd}"
+            _ngpu=1
+        else
+            _cmd="${decode_cmd}"
+            _ngpu=0
+        fi
+
+        _opts=
+        if [ -n "${inference_config}" ]; then
+            _opts+="--config ${inference_config} "
+        fi
+
+        if [ -z "${teacher_dumpdir}" ]; then
+            _feats_type="$(<${data_feats}/${train_set}/feats_type)"
+        else
+            if [ -e "${teacher_dumpdir}/${train_set}/probs" ]; then
+                # Knowledge distillation
+                _feats_type=fbank
+            else
+                # Teacher forcing
+                _feats_type="$(<${data_feats}/${train_set}/feats_type)"
+            fi
+        fi
+
+        # NOTE(kamo): If feats_type=raw, vocoder_conf is unnecessary
+        _scp=wav.scp
+        # "sound" supports "wav", "flac", etc.
+        _type=sound
+        _fold_length="$((singing_fold_length * n_shift))"
+        _opts+="--score_feats_extract ${score_feats_extract} "
+        _opts+="--score_feats_extract_conf fs=${fs} "
+        _opts+="--score_feats_extract_conf n_fft=${n_fft} "
+        _opts+="--score_feats_extract_conf win_length=${win_length} "
+        _opts+="--score_feats_extract_conf hop_length=${n_shift} "
+        _opts+="--feats_extract ${feats_extract} "
+        _opts+="--feats_extract_conf n_fft=${n_fft} "
+        _opts+="--feats_extract_conf hop_length=${n_shift} "
+        _opts+="--feats_extract_conf win_length=${win_length} "
+        _opts+="--pitch_extract ${pitch_extract} "
+        if [ "${feats_extract}" = fbank ]; then
+            _opts+="--feats_extract_conf fs=${fs} "
+            _opts+="--feats_extract_conf fmin=${fmin} "
+            _opts+="--feats_extract_conf fmax=${fmax} "
+            _opts+="--feats_extract_conf n_mels=${n_mels} "
+        fi
+        if [ "${pitch_extract}" = dio ]; then
+            _opts+="--pitch_extract_conf fs=${fs} "
+            _opts+="--pitch_extract_conf n_fft=${n_fft} "
+            _opts+="--pitch_extract_conf hop_length=${n_shift} "
+            _opts+="--pitch_extract_conf f0max=${f0max} "
+            _opts+="--pitch_extract_conf f0min=${f0min} "
+        fi
+        if [ "${feats_normalize}" = "global_mvn" ]; then
+            _opts+="--normalize_conf stats_file=${svs_stats_dir}/train/feats_stats.npz "
+        fi
+
+        if [[ "${audio_format}" == *ark* ]]; then
+            _type=kaldi_ark
+        else
+            # "sound" supports "wav", "flac", etc.
+            _type=sound
+        fi
+        if [ "${_feats_type}" = fbank ] || [ "${_feats_type}" = stft ]; then
+            _opts+="--vocoder_conf n_fft=${n_fft} "
+            _opts+="--vocoder_conf n_shift=${n_shift} "
+            _opts+="--vocoder_conf win_length=${win_length} "
+            _opts+="--vocoder_conf fs=${fs} "
+            _scp=feats.scp
+            _type=kaldi_ark
+        fi
+        if [ "${_feats_type}" = fbank ]; then
+            _opts+="--vocoder_conf n_mels=${n_mels} "
+            _opts+="--vocoder_conf fmin=${fmin} "
+            _opts+="--vocoder_conf fmax=${fmax} "
+        fi
+
+        log "Generate '${svs_exp}/${inference_tag}/run.sh'. You can resume the process from stage 7 using this script"
+        mkdir -p "${svs_exp}/${inference_tag}"; echo "${run_args} --stage 7 \"\$@\"; exit \$?" > "${svs_exp}/${inference_tag}/run.sh"; chmod +x "${svs_exp}/${inference_tag}/run.sh"
+
+
+        for dset in ${test_sets}; do
+            _data="${data_feats}/${dset}"
+            _speech_data="${_data}"
+            _dir="${svs_exp}/${inference_tag}/${dset}"
+            _logdir="${_dir}/log"
+            mkdir -p "${_logdir}"
+
+            _ex_opts=""
+            if [ -n "${teacher_dumpdir}" ]; then
+                # Use groundtruth of durations
+                _teacher_dir="${teacher_dumpdir}/${dset}"
+                _ex_opts+="--data_path_and_name_and_type ${_teacher_dir}/durations,durations,text_int "
+                # Overwrite speech arguments if use knowledge distillation
+                if [ -e "${teacher_dumpdir}/${train_set}/probs" ]; then
+                    _speech_data="${_teacher_dir}/denorm"
+                    _scp=feats.scp
+                    _type=npy
+                fi
+            fi
+
+            # Add X-vector to the inputs if needed
+            if "${use_xvector}"; then
+                _xvector_dir="${dumpdir}/xvector/${dset}"
+                _ex_opts+="--data_path_and_name_and_type ${_xvector_dir}/xvector.scp,spembs,kaldi_ark "
+            fi
+
+            # 0. Copy feats_type
+            cp "${_data}/feats_type" "${_dir}/feats_type"
+
+            # 1. Split the key file
+            key_file=${_data}/text
+            split_scps=""
+            _nj=$(min "${inference_nj}" "$(<${key_file} wc -l)")
+            for n in $(seq "${_nj}"); do
+                split_scps+=" ${_logdir}/keys.${n}.scp"
+            done
+            # shellcheck disable=SC2086
+            utils/split_scp.pl "${key_file}" ${split_scps}
+
+            # 3. Submit decoding jobs
+            log "Decoding started... log: '${_logdir}/svs_inference.*.log'"
+            # shellcheck disable=SC2086
+            ${_cmd} --gpu "${_ngpu}" JOB=1:"${_nj}" "${_logdir}"/svs_inference.JOB.log \
+                ${python} -m muskit.bin.svs_inference \
+                    --ngpu "${_ngpu}" \
+                    --data_path_and_name_and_type "${_data}/text,text,text" \
+                    --data_path_and_name_and_type "${_data}/label,label,duration" \
+                    --data_path_and_name_and_type "${_data}/midi.scp,midi,midi" \
+                    --data_path_and_name_and_type "${_data}/${_scp},singing,${_type}" \
+                    --key_file "${_logdir}"/keys.JOB.scp \
+                    --model_file "${svs_exp}"/"${inference_model}" \
+                    --train_config "${svs_exp}"/config.yaml \
+                    --output_dir "${_logdir}"/output.JOB \
+                    --vocoder_conf griffin_lim_iters="${griffin_lim_iters}" \
+                    ${_opts} ${_ex_opts} ${inference_args}
+
+            # 4. Concatenates the output files from each jobs
+            mkdir -p "${_dir}"/{norm,denorm,wav}
+            for i in $(seq "${_nj}"); do
+                 cat "${_logdir}/output.${i}/norm/feats.scp"
+            done | LC_ALL=C sort -k1 > "${_dir}/norm/feats.scp"
+            for i in $(seq "${_nj}"); do
+                 cat "${_logdir}/output.${i}/denorm/feats.scp"
+            done | LC_ALL=C sort -k1 > "${_dir}/denorm/feats.scp"
+            for i in $(seq "${_nj}"); do
+                 cat "${_logdir}/output.${i}/speech_shape/speech_shape"
+            done | LC_ALL=C sort -k1 > "${_dir}/speech_shape"
+            for i in $(seq "${_nj}"); do
+                mv -u "${_logdir}/output.${i}"/wav/*.wav "${_dir}"/wav
+                rm -rf "${_logdir}/output.${i}"/wav
+            done
+            if [ -e "${_logdir}/output.${_nj}/att_ws" ]; then
+                mkdir -p "${_dir}"/att_ws
+                for i in $(seq "${_nj}"); do
+                     cat "${_logdir}/output.${i}/durations/durations"
+                done | LC_ALL=C sort -k1 > "${_dir}/durations"
+                for i in $(seq "${_nj}"); do
+                     cat "${_logdir}/output.${i}/focus_rates/focus_rates"
+                done | LC_ALL=C sort -k1 > "${_dir}/focus_rates"
+                for i in $(seq "${_nj}"); do
+                    mv -u "${_logdir}/output.${i}"/att_ws/*.png "${_dir}"/att_ws
+                    rm -rf "${_logdir}/output.${i}"/att_ws
+                done
+            fi
+            if [ -e "${_logdir}/output.${_nj}/probs" ]; then
+                mkdir -p "${_dir}"/probs
+                for i in $(seq "${_nj}"); do
+                    mv -u "${_logdir}/output.${i}"/probs/*.png "${_dir}"/probs
+                    rm -rf "${_logdir}/output.${i}"/probs
+                done
+            fi
+        done
+    fi
+else
+    log "Skip the evaluation stages"
+fi
+
 ### TODO: other stages
 
 log "Successfully finished. [elapsed=${SECONDS}s]"

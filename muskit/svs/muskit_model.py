@@ -21,6 +21,10 @@ from muskit.train.abs_muskit_model import AbsMuskitModel
 from muskit.svs.abs_svs import AbsSVS
 from muskit.svs.feats_extract.abs_feats_extract import AbsFeatsExtract
 
+from muskit.svs.feats_extract.score_feats_extract import FrameScoreFeats
+from muskit.svs.feats_extract.score_feats_extract import SyllableScoreFeats
+from muskit.torch_utils.nets_utils import pad_list
+
 if LooseVersion(torch.__version__) >= LooseVersion("1.6.0"):
     from torch.cuda.amp import autocast
 else:
@@ -95,7 +99,7 @@ class MuskitSVSModel(AbsMuskitModel):
             text_lengths (Tensor): Text length tensor (B,).
             singing (Tensor): Singing waveform tensor (B, T_wav).
             singing_lengths (Tensor): Singing length tensor (B,).
-            duration (Optional[Tensor]): Duration tensor.
+            duration (Optional[Tensor]): Duration tensor. - phone id sequence
             duration_lengths (Optional[Tensor]): Duration length tensor (B,).
             score (Optional[Tensor]): Duration tensor.
             score_lengths (Optional[Tensor]): Duration length tensor (B,).
@@ -127,10 +131,15 @@ class MuskitSVSModel(AbsMuskitModel):
                 feats, feats_lengths = singing, singing_lengths
 
             # Extract auxiliary features
-            if self.score_feats_extract is not None:
+            # score : 128 midi pitch
+            # tempo : bpm
+            # duration :
+            #   input-> phone-id seqence | output -> frame level(取众数 from window) or syllable level
+            ds = None
+            if isinstance(self.score_feats_extract, FrameScoreFeats):
                 (
-                    durations,
-                    durations_lengths,
+                    label,
+                    label_lengths,
                     score,
                     score_lengths,
                     tempo,
@@ -143,10 +152,142 @@ class MuskitSVSModel(AbsMuskitModel):
                     tempo=tempo.unsqueeze(-1),
                     tempo_lengths=tempo_lengths,
                 )
-                # score : 128 midi pitch
-                # tempo : bpm
-                # duration :
-                #   input-> phone-id seqence | output -> frame level(取众数 from window) or syllable level
+
+                label = label[:, : label_lengths.max()]  # for data-parallel
+
+                # calculate durations, new text & text_length
+                # Syllable Level duration info needs phone 
+                # NOTE(Shuai) Duplicate adjacent phones will appear in text files sometimes 
+                # e.g. oniku_0000000000000000hato_0002 
+                # 10.951 11.107 sh 
+                # 11.107 11.336 i 
+                # 11.336 11.610 i 
+                # 11.610 11.657 k
+                _text_cal = []
+                _text_length_cal = []
+                ds = []
+                for i, _ in enumerate(label_lengths):
+                    _phone = label[i, :label_lengths[i]]
+
+                    _output, counts = torch.unique_consecutive(_phone, return_counts=True)
+                    
+                    _text_cal.append(_output)
+                    _text_length_cal.append(len(_output))
+                    ds.append(counts)
+                ds = pad_list(ds, pad_value=0).to(text.device)
+                text = pad_list(_text_cal, pad_value=0).to(text.device, dtype=torch.long)
+                text_lengths = torch.tensor(_text_length_cal).to(text.device)
+
+
+            elif isinstance(self.score_feats_extract, SyllableScoreFeats):
+                extractMethod_frame = FrameScoreFeats(
+                    fs          = self.score_feats_extract.fs,
+                    n_fft       = self.score_feats_extract.n_fft,
+                    win_length  = self.score_feats_extract.win_length,
+                    hop_length  = self.score_feats_extract.hop_length,
+                    window      = self.score_feats_extract.window,
+                    center      = self.score_feats_extract.center,
+                )
+
+                # logging.info(f"extractMethod_frame: {extractMethod_frame}")
+                
+                (
+                    labelFrame,
+                    labelFrame_lengths,
+                    scoreFrame,
+                    scoreFrame_lengths,
+                    tempoFrame,
+                    tempoFrame_lengths,
+                )= extractMethod_frame(
+                    durations=durations.unsqueeze(-1),
+                    durations_lengths=durations_lengths,
+                    score=score.unsqueeze(-1),
+                    score_lengths=score_lengths,
+                    tempo=tempo.unsqueeze(-1),
+                    tempo_lengths=tempo_lengths,
+                )
+
+                labelFrame = labelFrame[:, : labelFrame_lengths.max()]  # for data-parallel
+                scoreFrame = scoreFrame[:, : scoreFrame_lengths.max()]  # for data-parallel
+
+                # Extract Syllable Level label, score, tempo information from Frame Level 
+                (
+                    label,
+                    label_lengths,
+                    score,
+                    score_lengths,
+                    tempo,
+                    tempo_lengths,
+                ) = self.score_feats_extract(
+                    durations=labelFrame,
+                    durations_lengths=labelFrame_lengths,
+                    score=scoreFrame,
+                    score_lengths=scoreFrame_lengths,
+                    tempo=tempoFrame,
+                    tempo_lengths=tempoFrame_lengths,
+                )
+
+                # calculate durations, represent syllable encoder outputs to feats mapping
+                # Syllable Level duration info needs phone & midi
+                ds = []
+                for i, _ in enumerate(labelFrame_lengths):
+                    assert labelFrame_lengths[i] == scoreFrame_lengths[i]
+                    assert label_lengths[i] == score_lengths[i]
+
+                    frame_length = labelFrame_lengths[i]
+                    _phoneFrame = labelFrame[i, :frame_length]
+                    _midiFrame = scoreFrame[i, :frame_length]
+
+                    # Clean _phoneFrame & _midiFrame
+                    for index in range(frame_length):
+                        if _phoneFrame[index] == 0 and _midiFrame[index] == 0:
+                            frame_length -= 1
+                            feats_lengths[i] -= 1
+
+                    syllable_length = label_lengths[i]
+                    _phoneSyllable = label[i, :syllable_length]
+                    _midiSyllable = score[i, :syllable_length]
+
+                    # logging.info(f"_phoneFrame: {_phoneFrame}, _midiFrame: {_midiFrame}")
+                    # logging.info(f"_phoneSyllable: {_phoneSyllable}, _midiSyllable: {_midiSyllable}, _tempoSyllable: {tempo[i]}")
+
+                    start_index = 0
+                    ds_tmp = []
+                    flag_finish = 0
+                    for index in range(syllable_length):
+                        _findPhone = _phoneSyllable[index]
+                        _findMidi = _midiSyllable[index]
+                        _length = 0
+                        if flag_finish == 1:
+                            # Fix error in _phoneSyllable & _midiSyllable
+                            label[i, index] = 0
+                            score[i, index] = 0
+                            tempo[i, index] = 0
+                            label_lengths[i] -= 1
+                            score_lengths[i] -= 1
+                            tempo_lengths[i] -= 1
+                        else:
+                            for indexFrame in range(start_index, frame_length):
+                                if _phoneFrame[indexFrame] == _findPhone and _midiFrame[indexFrame] == _findMidi:
+                                    _length += 1
+                                else:
+                                    # logging.info(f"_findPhone: {_findPhone}, _findMidi: {_findMidi}, _length: {_length}")
+                                    ds_tmp.append(_length)
+                                    start_index = indexFrame
+                                    break
+                                if indexFrame == frame_length - 1:
+                                    # logging.info(f"_findPhone: {_findPhone}, _findMidi: {_findMidi}, _length: {_length}")
+                                    flag_finish = 1
+                                    ds_tmp.append(_length)
+                                    start_index = indexFrame
+                                    # logging.info("Finish")
+                                    break
+
+                    # logging.info(f"ds_tmp: {ds_tmp}, sum(ds_tmp): {sum(ds_tmp)}, frame_length: {frame_length}, feats_lengths[i]: {feats_lengths[i]}")
+                    assert sum(ds_tmp) == frame_length and sum(ds_tmp) == feats_lengths[i]
+
+                    ds.append(torch.tensor(ds_tmp))
+                ds = pad_list(ds, pad_value=0).to(label.device)            
 
             if self.pitch_extract is not None and pitch is None:
                 pitch, pitch_lengths = self.pitch_extract(
@@ -209,15 +350,17 @@ class MuskitSVSModel(AbsMuskitModel):
             batch.update(sids=sids)
         if lids is not None:
             batch.update(lids=lids)
-        if durations is not None:
-            durations = durations.to(dtype=torch.long)
-            batch.update(label=durations, label_lengths=durations_lengths)
+        if label is not None:
+            label = label.to(dtype=torch.long)
+            batch.update(label=label, label_lengths=label_lengths)
         if score is not None and pitch is None:
             score = score.to(dtype=torch.long)
             batch.update(midi=score, midi_lengths=score_lengths)
         if tempo is not None:
             tempo = tempo.to(dtype=torch.long)
             batch.update(tempo=tempo, tempo_lengths=tempo_lengths)
+        if ds is not None:
+            batch.update(ds=ds)
         if self.pitch_extract is not None and pitch is not None:
             batch.update(midi=pitch, midi_lengths=pitch_lengths)
         if self.energy_extract is not None and energy is not None:
@@ -328,13 +471,15 @@ class MuskitSVSModel(AbsMuskitModel):
     def inference(
         self,
         text: torch.Tensor,
+        durations: torch.Tensor,
+        score: torch.Tensor,
         singing: Optional[torch.Tensor] = None,
+        pitch: Optional[torch.Tensor] = None,
+        tempo: Optional[torch.Tensor] = None,
+        energy: Optional[torch.Tensor] = None,
         spembs: Optional[torch.Tensor] = None,
         sids: Optional[torch.Tensor] = None,
         lids: Optional[torch.Tensor] = None,
-        durations: Optional[torch.Tensor] = None,
-        pitch: Optional[torch.Tensor] = None,
-        energy: Optional[torch.Tensor] = None,
         **decode_config,
     ) -> Dict[str, torch.Tensor]:
         """Caclualte features and return them as a dict.
@@ -350,47 +495,227 @@ class MuskitSVSModel(AbsMuskitModel):
         Returns:
             Dict[str, Tensor]: Dict of outputs.
         """
+        singing_lengths = None 
+        durations_lengths = None
+        score_lengths = None
+        tempo_lengths = None
+
+        # unsqueeze of singing must be here, or it'll cause error in the return dim of STFT
+        singing = singing.unsqueeze(0)      
+        text = text.unsqueeze(0)  # for data-parallel
+        durations = durations.unsqueeze(0)  # for data-parallel
+        score = score.unsqueeze(0)  # for data-parallel
+        tempo = tempo.unsqueeze(0)  # for data-parallel
+
+        logging.info(f"singing.shape: {singing.shape}")
+        logging.info(f"text.shape: {text.shape}")
+        logging.info(f"durations.shape: {durations.shape}")
+        logging.info(f"score.shape: {score.shape}")
+        logging.info(f"tempo.shape: {tempo.shape}")
+
+        # Extract features
+        if self.feats_extract is not None:
+            feats, feats_lengths = self.feats_extract(
+                singing, singing_lengths
+            )  # singing to spec feature (frame level)
+        else:
+            # Use precalculated feats (feats_type != raw case)
+            feats, feats_lengths = singing, singing_lengths
+
+        # Extract auxiliary features
+        # score : 128 midi pitch
+        # tempo : bpm
+        # duration :
+        #   input-> phone-id seqence | output -> frame level(取众数 from window) or syllable level
+        ds = None
+        batch_size = text.size(0)
+        assert batch_size == 1
+        if isinstance(self.score_feats_extract, FrameScoreFeats):
+            (
+                label,
+                label_lengths,
+                score,
+                score_lengths,
+                tempo,
+                tempo_lengths,
+            ) = self.score_feats_extract(
+                durations=durations.unsqueeze(-1),
+                durations_lengths=durations_lengths,
+                score=score.unsqueeze(-1),
+                score_lengths=score_lengths,
+                tempo=tempo.unsqueeze(-1),
+                tempo_lengths=tempo_lengths,
+            )
+
+            # calculate durations, new text & text_length
+            # Syllable Level duration info needs phone 
+            # NOTE(Shuai) Duplicate adjacent phones will appear in text files sometimes 
+            # e.g. oniku_0000000000000000hato_0002 
+            # 10.951 11.107 sh 
+            # 11.107 11.336 i 
+            # 11.336 11.610 i 
+            # 11.610 11.657 k
+            _text_cal = []
+            _text_length_cal = []
+            ds = []
+            for i in range(batch_size):
+                _phone = label[i]
+
+                _output, counts = torch.unique_consecutive(_phone, return_counts=True)
+                
+                _text_cal.append(_output)
+                _text_length_cal.append(len(_output))
+                ds.append(counts)
+            ds = pad_list(ds, pad_value=0).to(text.device)
+            text = pad_list(_text_cal, pad_value=0).to(text.device, dtype=torch.long)
+            text_lengths = torch.tensor(_text_length_cal).to(text.device)
+
+
+        elif isinstance(self.score_feats_extract, SyllableScoreFeats):
+            extractMethod_frame = FrameScoreFeats(
+                fs          = self.score_feats_extract.fs,
+                n_fft       = self.score_feats_extract.n_fft,
+                win_length  = self.score_feats_extract.win_length,
+                hop_length  = self.score_feats_extract.hop_length,
+                window      = self.score_feats_extract.window,
+                center      = self.score_feats_extract.center,
+            )
+
+            # logging.info(f"extractMethod_frame: {extractMethod_frame}")
+            
+            (
+                labelFrame,
+                labelFrame_lengths,
+                scoreFrame,
+                scoreFrame_lengths,
+                tempoFrame,
+                tempoFrame_lengths,
+            )= extractMethod_frame(
+                durations=durations.unsqueeze(-1),
+                durations_lengths=durations_lengths,
+                score=score.unsqueeze(-1),
+                score_lengths=score_lengths,
+                tempo=tempo.unsqueeze(-1),
+                tempo_lengths=tempo_lengths,
+            )
+
+            labelFrame = labelFrame[:, : labelFrame_lengths.max()]  # for data-parallel
+            scoreFrame = scoreFrame[:, : scoreFrame_lengths.max()]  # for data-parallel
+
+            # Extract Syllable Level label, score, tempo information from Frame Level 
+            (
+                label,
+                label_lengths,
+                score,
+                score_lengths,
+                tempo,
+                tempo_lengths,
+            ) = self.score_feats_extract(
+                durations=labelFrame,
+                durations_lengths=labelFrame_lengths,
+                score=scoreFrame,
+                score_lengths=scoreFrame_lengths,
+                tempo=tempoFrame,
+                tempo_lengths=tempoFrame_lengths,
+            )
+
+            # calculate durations, represent syllable encoder outputs to feats mapping
+            # Syllable Level duration info needs phone & midi
+            ds = []
+            for i, _ in enumerate(labelFrame_lengths):
+                assert labelFrame_lengths[i] == scoreFrame_lengths[i]
+                assert label_lengths[i] == score_lengths[i]
+
+                frame_length = labelFrame_lengths[i]
+                _phoneFrame = labelFrame[i, :frame_length]
+                _midiFrame = scoreFrame[i, :frame_length]
+
+                # Clean _phoneFrame & _midiFrame
+                for index in range(frame_length):
+                    if _phoneFrame[index] == 0 and _midiFrame[index] == 0:
+                        frame_length -= 1
+                        feats_lengths[i] -= 1
+
+                syllable_length = label_lengths[i]
+                _phoneSyllable = label[i, :syllable_length]
+                _midiSyllable = score[i, :syllable_length]
+
+                # logging.info(f"_phoneFrame: {_phoneFrame}, _midiFrame: {_midiFrame}")
+                # logging.info(f"_phoneSyllable: {_phoneSyllable}, _midiSyllable: {_midiSyllable}, _tempoSyllable: {tempo[i]}")
+
+                start_index = 0
+                ds_tmp = []
+                flag_finish = 0
+                for index in range(syllable_length):
+                    _findPhone = _phoneSyllable[index]
+                    _findMidi = _midiSyllable[index]
+                    _length = 0
+                    if flag_finish == 1:
+                        # Fix error in _phoneSyllable & _midiSyllable
+                        label[i, index] = 0
+                        score[i, index] = 0
+                        tempo[i, index] = 0
+                        label_lengths[i] -= 1
+                        score_lengths[i] -= 1
+                        tempo_lengths[i] -= 1
+                    else:
+                        for indexFrame in range(start_index, frame_length):
+                            if _phoneFrame[indexFrame] == _findPhone and _midiFrame[indexFrame] == _findMidi:
+                                _length += 1
+                            else:
+                                # logging.info(f"_findPhone: {_findPhone}, _findMidi: {_findMidi}, _length: {_length}")
+                                ds_tmp.append(_length)
+                                start_index = indexFrame
+                                break
+                            if indexFrame == frame_length - 1:
+                                # logging.info(f"_findPhone: {_findPhone}, _findMidi: {_findMidi}, _length: {_length}")
+                                flag_finish = 1
+                                ds_tmp.append(_length)
+                                start_index = indexFrame
+                                # logging.info("Finish")
+                                break
+
+                # logging.info(f"ds_tmp: {ds_tmp}, sum(ds_tmp): {sum(ds_tmp)}, frame_length: {frame_length}, feats_lengths[i]: {feats_lengths[i]}")
+                assert sum(ds_tmp) == frame_length and sum(ds_tmp) == feats_lengths[i]
+
+                ds.append(torch.tensor(ds_tmp))
+            ds = pad_list(ds, pad_value=0).to(label.device)
+
+        if self.pitch_extract is not None and pitch is None:
+            pitch, pitch_lengths = self.pitch_extract(
+                input=singing,
+                input_lengths=singing_lengths,
+                feats_lengths=feats_lengths,
+            )
+
+        if self.energy_extract is not None and energy is None:
+            energy, energy_lengths = self.energy_extract(
+                singing,
+                singing_lengths,
+                feats_lengths=feats_lengths,
+                durations=durations,
+                durations_lengths=durations_lengths,
+            )
+
+        logging.info(f"feats.shape: {feats.shape}")
+        logging.info(f"durations.shape: {durations.shape}")
+        logging.info(f"score.shape: {score.shape}")
+
         input_dict = dict(text=text)
-        if decode_config["use_teacher_forcing"] or getattr(self.svs, "use_gst", False):
-            if singing is None:
-                raise RuntimeError("missing required argument: 'singing'")
-            if self.feats_extract is not None:
-                feats = self.feats_extract(singing[None])[0][0]
-            else:
-                # Use precalculated feats (feats_type != raw case)
-                feats = singing
-            if self.normalize is not None:
-                feats = self.normalize(feats[None])[0][0]
-            input_dict.update(feats=feats)
-            if self.svs.require_raw_singing:
-                input_dict.update(singing=singing)
 
-        if decode_config["use_teacher_forcing"]:
-            if durations is not None:
-                input_dict.update(durations=durations)
-
-            if self.pitch_extract is not None:
-                pitch = self.pitch_extract(
-                    singing[None],
-                    feats_lengths=torch.LongTensor([len(feats)]),
-                    durations=durations[None],
-                )[0][0]
-            if self.pitch_normalize is not None:
-                pitch = self.pitch_normalize(pitch[None])[0][0]
-            if pitch is not None:
-                input_dict.update(pitch=pitch)
-
-            if self.energy_extract is not None:
-                energy = self.energy_extract(
-                    singing[None],
-                    feats_lengths=torch.LongTensor([len(feats)]),
-                    durations=durations[None],
-                )[0][0]
-            if self.energy_normalize is not None:
-                energy = self.energy_normalize(energy[None])[0][0]
-            if energy is not None:
-                input_dict.update(energy=energy)
-
+        if feats is not None:
+            input_dict["feats"] = feats
+        if score is not None and pitch is None:
+            score = score.to(dtype=torch.long)
+            input_dict["midi"] = score
+        if durations is not None:
+            label = label.to(dtype=torch.long)
+            input_dict["label"] = label
+        if ds is not None:
+            input_dict.update(ds=ds)
+        if tempo is not None:
+            tempo = tempo.to(dtype=torch.long)
+            input_dict.update(tempo=tempo)
         if spembs is not None:
             input_dict.update(spembs=spembs)
         if sids is not None:
@@ -398,13 +723,13 @@ class MuskitSVSModel(AbsMuskitModel):
         if lids is not None:
             input_dict.update(lids=lids)
 
-        output_dict = self.svs.inference(**input_dict, **decode_config)
+        # output_dict = self.svs.inference(**input_dict, **decode_config)
+        outs, probs, att_ws = self.svs.inference(**input_dict)
 
-        if self.normalize is not None and output_dict.get("feat_gen") is not None:
+        if self.normalize is not None:
             # NOTE: normalize.inverse is in-place operation
-            feat_gen_denorm = self.normalize.inverse(
-                output_dict["feat_gen"].clone()[None]
-            )[0][0]
-            output_dict.update(feat_gen_denorm=feat_gen_denorm)
+            outs_denorm = self.normalize.inverse(outs.clone()[None])[0][0]
+        else:
+            outs_denorm = outs
 
-        return output_dict
+        return outs, outs_denorm, probs, att_ws

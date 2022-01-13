@@ -210,9 +210,9 @@ class NaiveRNN(AbsSVS):
 
         dim_direction = 2 if ebidirectional == True else 1
         if self.midi_embed_integration_type == "add":
-            self.midi_projection = torch.nn.Linear(eunits * dim_direction, eunits)
+            self.midi_projection = torch.nn.Linear(eunits * dim_direction, eunits * dim_direction)
         else:
-            self.midi_projection = torch.nn.linear(2 * eunits * dim_direction, eunits)
+            self.midi_projection = torch.nn.linear(2 * eunits * dim_direction, eunits * dim_direction)
 
         self.decoder = torch.nn.LSTM(
             input_size=eunits,
@@ -347,7 +347,6 @@ class NaiveRNN(AbsSVS):
         else:
             hs = torch.cat(hs_label, hs_midi, dim=-1)
             hs = F.leaky_relu(self.midi_projection(hs))
-
         # integrate spk & lang embeddings
         if self.spks is not None:
             sid_embs = self.sid_emb(sids.view(-1))
@@ -359,19 +358,19 @@ class NaiveRNN(AbsSVS):
         # integrate speaker embedding
         if self.spk_embed_dim is not None:
             hs = self._integrate_with_spk_embed(hs, spembs)
+        
+        # hs_emb = torch.nn.utils.rnn.pack_padded_sequence(
+        #     hs, label_lengths.to("cpu"), batch_first=True, enforce_sorted=False
+        # )
 
-        hs_emb = torch.nn.utils.rnn.pack_padded_sequence(
-            hs, label_lengths.to("cpu"), batch_first=True, enforce_sorted=False
-        )
+        # zs, (_, _) = self.decoder(hs_emb)
+        # zs, _ = torch.nn.utils.rnn.pad_packed_sequence(zs, batch_first=True)
 
-        zs, (_, _) = self.decoder(hs_emb)
-        zs, _ = torch.nn.utils.rnn.pad_packed_sequence(zs, batch_first=True)
-
-        zs = zs[:, self.reduction_factor - 1 :: self.reduction_factor]
+        # zs = zs[:, self.reduction_factor - 1 :: self.reduction_factor]
 
         # (B, T_feats//r, odim * r) -> (B, T_feats//r * r, odim)
-        before_outs = F.leaky_relu(self.feat_out(zs).view(zs.size(0), -1, self.odim))
-        # before_outs = F.leaky_relu(self.feat_out(hs).view(hs.size(0), -1, self.odim))
+        # before_outs = F.leaky_relu(self.feat_out(zs).view(zs.size(0), -1, self.odim))
+        before_outs = F.leaky_relu(self.feat_out(hs).view(hs.size(0), -1, self.odim))
 
         # postnet -> (B, T_feats//r * r, odim)
         if self.postnet is None:
@@ -428,6 +427,7 @@ class NaiveRNN(AbsSVS):
         label: torch.Tensor,
         midi: torch.Tensor,
         feats: torch.Tensor = None,
+        tempo: Optional[torch.Tensor] = None,
         spembs: Optional[torch.Tensor] = None,
         sids: Optional[torch.Tensor] = None,
         lids: Optional[torch.Tensor] = None,
@@ -446,11 +446,6 @@ class NaiveRNN(AbsSVS):
             Dict[str, Tensor]: Output dict including the following items:
                 * feat_gen (Tensor): Output sequence of features (T_feats, odim).
         """
-        text = text.unsqueeze(0)  # for data-parallel
-        feats = feats.unsqueeze(0)  # for data-parallel
-        midi = midi.unsqueeze(0)  # for data-parallel
-        label = midi.unsqueeze(0)  # for data-parallel
-
         label_emb = self.encoder_input_layer(label)
         midi_emb = self.midi_encoder_input_layer(midi)
 
@@ -459,11 +454,10 @@ class NaiveRNN(AbsSVS):
 
         if self.midi_embed_integration_type == "add":
             hs = hs_label + hs_midi
-            hs = self.midi_projection(hs)
+            hs = F.leaky_relu(self.midi_projection(hs))
         else:
             hs = torch.cat(hs_label, hs_midi, dim=-1)
-            hs = self.midi_projection(hs)
-
+            hs = F.leaky_relu(self.midi_projection(hs))
         # integrate spk & lang embeddings
         if self.spks is not None:
             sid_embs = self.sid_emb(sids.view(-1))
@@ -476,13 +470,8 @@ class NaiveRNN(AbsSVS):
         if self.spk_embed_dim is not None:
             hs = self._integrate_with_spk_embed(hs, spembs)
 
-        zs = torch.nn.utils.rnn.pack_padded_sequence(
-            hs, label_lengths, batch_first=True
-        )
-
-        zs = zs[:, self.reduction_factor - 1 :: self.reduction_factor]
         # (B, T_feats//r, odim * r) -> (B, T_feats//r * r, odim)
-        before_outs = self.feat_out(zs).view(zs.size(0), -1, self.odim)
+        before_outs = F.leaky_relu(self.feat_out(hs).view(hs.size(0), -1, self.odim))
 
         # postnet -> (B, T_feats//r * r, odim)
         if self.postnet is None:
@@ -492,7 +481,7 @@ class NaiveRNN(AbsSVS):
                 before_outs.transpose(1, 2)
             ).transpose(1, 2)
 
-        return after_outs
+        return after_outs, None, None   # outs, probs, att_ws
 
     def _integrate_with_spk_embed(
         self, hs: torch.Tensor, spembs: torch.Tensor
