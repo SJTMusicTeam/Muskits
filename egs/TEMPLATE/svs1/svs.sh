@@ -100,9 +100,9 @@ griffin_lim_iters=4 # the number of iterations of Griffin-Lim.
 download_model=""   # Download a model from Model Zoo and use it for decoding.
 
 # [Task dependent] Set the datadir name created by local/data.sh
-train_set=""     # Name of training set.
-valid_set=""     # Name of validation set used for monitoring/tuning network training.
-test_sets=""     # Names of test sets. Multiple items (e.g., both dev and eval sets) can be specified.
+train_set="train"     # Name of training set.
+valid_set="dev"     # Name of validation set used for monitoring/tuning network training.
+test_sets="eval1"     # Names of test sets. Multiple items (e.g., both dev and eval sets) can be specified.
 srctexts=""      # Texts to create token list. Multiple items can be specified.
 nlsyms_txt=none  # Non-linguistic symbol list (needed if existing).
 token_type=phn   # Transcription type.
