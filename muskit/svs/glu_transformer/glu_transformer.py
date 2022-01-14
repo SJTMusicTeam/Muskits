@@ -27,6 +27,7 @@ from muskit.layers.glu import GLU
 from muskit.layers.transformer.attention import MultiHeadedAttention
 from muskit.layers.transformer.embedding import PositionalEncoding
 from muskit.layers.cbhg import CBHG
+from muskit.layers.fastspeech.length_regulator import LengthRegulator
 
 # from muskit.svs.bytesing.encoder import Encoder as EncoderPrenet
 from muskit.svs.bytesing.decoder import Postnet
@@ -542,6 +543,8 @@ class GLU_Transformer(AbsSVS):
             self.projection = torch.nn.Linear(2 * embed_dim, embed_dim)
 
         self.enc_postnet = Encoder_Postnet()  # , semitone_size, Hz2semitone)
+        # define length regulator
+        self.length_regulator = LengthRegulator()
         
         self.fc_midi = torch.nn.Linear(embed_dim, embed_dim)
         self.fc_pos = torch.nn.Linear(embed_dim, embed_dim)
@@ -626,6 +629,7 @@ class GLU_Transformer(AbsSVS):
         midi_lengths: torch.Tensor,
         tempo: Optional[torch.Tensor] = None,
         tempo_lengths: Optional[torch.Tensor] = None,
+        ds: torch.Tensor = None,
         flag_IsValid=False,
         spembs: Optional[torch.Tensor] = None,
         sids: Optional[torch.Tensor] = None,
@@ -663,9 +667,11 @@ class GLU_Transformer(AbsSVS):
         phone_emb, _ = self.phone_encoder(text)
         midi_emb = self.midi_encoder_input_layer(midi)
         
-        label_emb = self.enc_postnet(
-            phone_emb, label, text
-        )
+
+        label_emb = self.length_regulator(phone_emb, ds)
+        # label_emb = self.enc_postnet(
+        #     phone_emb, label, text
+        # )
 
         midi_emb = F.leaky_relu(self.fc_midi(midi_emb))
 
