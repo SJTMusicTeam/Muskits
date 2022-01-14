@@ -32,6 +32,8 @@ from muskit.svs.encoder_decoder.transformer.transformer import Transformer
 from muskit.svs.bytesing.bytesing import ByteSing
 from muskit.svs.naive_rnn.naive_rnn import NaiveRNN
 from muskit.svs.glu_transformer.glu_transformer import GLU_Transformer
+from muskit.svs.xiaoice.XiaoiceSing import XiaoiceSing
+from muskit.svs.xiaoice.XiaoiceSing import XiaoiceSing_noDP
 from muskit.utils.get_default_kwargs import get_default_kwargs
 from muskit.utils.nested_dict_action import NestedDictAction
 from muskit.utils.types import int_or_none
@@ -96,6 +98,8 @@ svs_choices = ClassChoices(
         glu_transformer=GLU_Transformer,
         bytesing=ByteSing,
         naive_rnn=NaiveRNN,
+        xiaoice=XiaoiceSing,
+        xiaoice_noDP=XiaoiceSing_noDP,
     ),
     type_check=AbsSVS,
     default="transformer",
@@ -236,7 +240,7 @@ class SVSTask(AbsTask):
     @classmethod
     def build_preprocess_fn(
         cls, args: argparse.Namespace, train: bool
-    ) -> Optional[Callable[[str, Dict[str, np.array]], Dict[str, np.ndarray]]]:
+    ) -> Optional[Callable[[str, Dict[str, np.array], float], Dict[str, np.ndarray]]]:
         assert check_argument_types()
         if args.use_preprocessor:
             retval = CommonPreprocessor(

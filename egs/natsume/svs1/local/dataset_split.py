@@ -69,7 +69,6 @@ if __name__ == "__main__":
     if train <= 0:
         print("Error, train set is empty.")
         exit()
-    # print(dataset)
     random.shuffle(dataset)
     # copyfile(source_file, destination_file)
     train_set = dataset[:train]

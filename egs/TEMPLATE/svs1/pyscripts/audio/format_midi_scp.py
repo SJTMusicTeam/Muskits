@@ -114,7 +114,9 @@ def main():
             if recording == cache[0]:
                 note_seq, tempo_seq = cache[1], cache[2]
             else:
-                note_seq, tempo_seq = loader[recording]
+                pitch_aug_factor = 0
+                time_aug_factor = 1.0
+                note_seq, tempo_seq = loader[(recording, pitch_aug_factor, time_aug_factor)]
                 cache = (recording, note_seq, tempo_seq)
             if args.fs is not None:
                 start = int(start * args.fs)
