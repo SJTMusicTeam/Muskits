@@ -53,5 +53,4 @@ cleaner=none
     --valid_set "${valid_set}" \
     --test_sets "${test_sets}" \
     --srctexts "data/${train_set}/text" \
-    # --svs_exp "exp/12-23-GLU_Debug" \
     ${opts} "$@"
