@@ -23,6 +23,7 @@ requirements = {
         "ctc-segmentation<1.6,>=1.4.0",
         "wandb",
         "filelock",
+        "pytsmod",
         # DNN related packages are installed by Makefile
         # 'torch==1.0.1'
         # "chainer==6.0.0",

@@ -45,7 +45,7 @@ def midi_to_seq(midi_obj, dtype=np.int16, rate=22050, pitch_aug_factor=0, time_a
 
     tempos = midi_obj.tempo_changes
     tempos.sort(key=lambda x: (x.time, x.tempo))
-    assert len(tempos) == 1
+    # assert len(tempos) == 1
     tempo_BPM = tempos[0].tempo         # global information, beats per minute
     tempo_BPS = tempo_BPM / 60.0        # global information, beats per second
 
