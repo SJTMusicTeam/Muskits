@@ -23,6 +23,7 @@ def dev_check(song):
 def test_check(song):
     return song in TEST_LIST
 
+
 def get_parser():
     parser = argparse.ArgumentParser(
         description="Prepare segments from HTS-style alignment files",
@@ -88,9 +89,9 @@ if __name__ == "__main__":
     # print(dataset)
     random.shuffle(dataset)
     # copyfile(source_file, destination_file)
-    train_set = [ data for data in dataset if train_check(data[:-4]) ]
-    validation_set = [ data for data in dataset if dev_check(data[:-4]) ]
-    test_set = [ data for data in dataset if test_check(data[:-4]) ]
+    train_set = [data for data in dataset if train_check(data[:-4])]
+    validation_set = [data for data in dataset if dev_check(data[:-4])]
+    test_set = [data for data in dataset if test_check(data[:-4])]
     # train_set = dataset[:train]
     # validation_set = dataset[train : train + dev]
     # test_set = dataset[train + dev :]
@@ -120,13 +121,13 @@ transition(validation_set, data_vaild_url)
 transition(test_set, data_test_url)
 
 
-midfiles=list(find_files_by_extensions(data_root_url, exts=['.mid']))
+midfiles = list(find_files_by_extensions(data_root_url, exts=[".mid"]))
 for path in midfiles:
-    if path[-6:]=='13.mid':
+    if path[-6:] == "13.mid":
         path13 = path
-    if path[-6:]=='14.mid':
+    if path[-6:] == "14.mid":
         path14 = path
-path_temp = path14[-6:]+'00.mid'
+path_temp = path14[-6:] + "00.mid"
 shutil.move(path13, path_temp)
 shutil.move(path14, path13)
 shutil.move(path_temp, path14)

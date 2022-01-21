@@ -407,13 +407,9 @@ class XiaoiceSing(AbsSVS):
 
         # report extra information
         if self.encoder_type == "transformer" and self.use_scaled_pos_enc:
-            stats.update(
-                encoder_alpha=self.encoder.embed[-1].alpha.data.item(),
-            )
+            stats.update(encoder_alpha=self.encoder.embed[-1].alpha.data.item(),)
         if self.decoder_type == "transformer" and self.use_scaled_pos_enc:
-            stats.update(
-                decoder_alpha=self.decoder.embed[-1].alpha.data.item(),
-            )
+            stats.update(decoder_alpha=self.decoder.embed[-1].alpha.data.item(),)
 
         loss, stats, weight = force_gatherable((loss, stats, batch_size), loss.device)
 
@@ -455,13 +451,7 @@ class XiaoiceSing(AbsSVS):
             # use groundtruth of duration
             ds = d.unsqueeze(0)
             _, outs, d_outs = self._forward(
-                xs,
-                ilens,
-                ys,
-                ds=ds,
-                spembs=spembs,
-                sids=sids,
-                lids=lids,
+                xs, ilens, ys, ds=ds, spembs=spembs, sids=sids, lids=lids,
             )  # (1, T_feats, odim)
         else:
             # inference

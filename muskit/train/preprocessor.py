@@ -179,8 +179,7 @@ class CommonPreprocessor(AbsPreprocessor):
                 g2p_type=g2p_type,
             )
             self.token_id_converter = TokenIDConverter(
-                token_list=token_list,
-                unk_symbol=unk_symbol,
+                token_list=token_list, unk_symbol=unk_symbol,
             )
         else:
             self.text_cleaner = None
@@ -399,8 +398,7 @@ class CommonPreprocessor_multi(AbsPreprocessor):
                 g2p_type=g2p_type,
             )
             self.token_id_converter = TokenIDConverter(
-                token_list=token_list,
-                unk_symbol=unk_symbol,
+                token_list=token_list, unk_symbol=unk_symbol,
             )
         else:
             self.text_cleaner = None

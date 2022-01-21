@@ -420,8 +420,7 @@ class MuskitSVSModel(AbsMuskitModel):
             )
         if self.pitch_extract is not None:
             pitch, pitch_lengths = self.pitch_extract(
-                input=pitch.unsqueeze(-1),
-                input_lengths=pitch_lengths,
+                input=pitch.unsqueeze(-1), input_lengths=pitch_lengths,
             )
         if self.energy_extract is not None:
             energy, energy_lengths = self.energy_extract(
