@@ -141,7 +141,7 @@ if [[ $dir_with_frame_shift ]]; then
 fi
 
 if ! $skip_fix ; then
-  pyscripts/utils/fix_data_dir.sh $dest || exit 1;
+  scripts/utils/fix_data_dir.sh $dest || exit 1;
 fi
 
 exit 0
