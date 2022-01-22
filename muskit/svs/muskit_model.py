@@ -323,6 +323,27 @@ class MuskitSVSModel(AbsMuskitModel):
         )
 
         # Update batch for additional auxiliary inputs
+        # if spembs is not None:
+        #     batch.update(spembs=spembs.cpu())
+        # if sids is not None:
+        #     batch.update(sids=sids.cpu())
+        # if lids is not None:
+        #     batch.update(lids=lids.cpu())
+        # if durations is not None:
+        #     durations = durations.to(dtype=torch.long)
+        #     batch.update(label=durations.cpu(), label_lengths=durations_lengths.cpu())
+        # if score is not None and pitch is None:
+        #     score = score.to(dtype=torch.long)
+        #     batch.update(midi=score.cpu(), midi_lengths=score_lengths.cpu())
+        # if tempo is not None:
+        #     tempo = tempo.to(dtype=torch.long)
+        #     batch.update(tempo=tempo.cpu(), tempo_lengths=tempo_lengths.cpu())
+        # if self.pitch_extract is not None and pitch is not None:
+        #     batch.update(midi=pitch.cpu(), midi_lengths=pitch_lengths.cpu())
+        # if self.energy_extract is not None and energy is not None:
+        #     batch.update(energy=energy.cpu(), energy_lengths=energy_lengths.cpu())
+        # if self.svs.require_raw_singing:
+        #     batch.update(singing=singing.cpu(), singing_lengths=singing_lengths.cpu())
         if spembs is not None:
             batch.update(spembs=spembs)
         if sids is not None:
@@ -346,7 +367,13 @@ class MuskitSVSModel(AbsMuskitModel):
             batch.update(energy=energy, energy_lengths=energy_lengths)
         if self.svs.require_raw_singing:
             batch.update(singing=singing, singing_lengths=singing_lengths)
-
+        # logging.info(f'memory:{torch.cuda.memory_allocated(device=None) / 2 ** 30}')
+        # if LooseVersion(torch.__version__) >= LooseVersion("1.4.0"):
+        #     if torch.cuda.is_initialized():
+        #         logging.info(f'max_memory_reserved:{torch.cuda.max_memory_reserved() / 2 ** 30}')
+        # else:
+        #     if torch.cuda.is_available() and torch.cuda.max_memory_cached() > 0:
+        #         logging.info(f'max_memory_cached:{torch.cuda.max_memory_cached() / 2 ** 30}')
         return self.svs(**batch)
 
     def collect_feats(
