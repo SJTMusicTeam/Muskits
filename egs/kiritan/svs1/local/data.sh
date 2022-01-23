@@ -52,12 +52,12 @@ for dataset in ${train_set} ${train_dev} ${recog_set}; do
   if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
       log "stage 2: Generate data directory"
       # scp files generation
-      local/data_pre.sh data/local/${dataset}_raw data/${dataset} 48000
+      local/data_pre.sh $1data/local/${dataset}_raw $1data/${dataset} 48000
   fi
 
   if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
       log "stage 3: Prepare segments"
-      src_data=data/${dataset}
+      src_data=$1data/${dataset}
       local/prep_segments.py --silence pau --silence sil ${src_data} 10000 # in ms
       mv ${src_data}/segments.tmp ${src_data}/segments
       mv ${src_data}/label.tmp ${src_data}/label

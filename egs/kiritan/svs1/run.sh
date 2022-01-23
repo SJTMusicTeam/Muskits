@@ -13,6 +13,8 @@ n_fft=2048
 n_shift=300
 win_length=1200
 
+NOWPATH=`pwd`
+
 opts=
 if [ "${fs}" -eq 48000 ]; then
     # To suppress recreation, specify wav format
@@ -53,4 +55,5 @@ cleaner=none
     --valid_set "${valid_set}" \
     --test_sets "${test_sets}" \
     --srctexts "data/${train_set}/text" \
+    --local_data_opts "${NOWPATH}/"\
     ${opts} "$@"
