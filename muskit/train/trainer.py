@@ -239,8 +239,7 @@ class Trainer:
         if distributed_option.distributed:
             if trainer_options.sharded_ddp:
                 dp_model = fairscale.nn.data_parallel.ShardedDataParallel(
-                    module=model,
-                    sharded_optimizer=optimizers,
+                    module=model, sharded_optimizer=optimizers,
                 )
             else:
                 dp_model = torch.nn.parallel.DistributedDataParallel(
@@ -381,6 +380,7 @@ class Trainer:
                 _improved = []
                 for _phase, k, _mode in trainer_options.best_model_criterion:
                     # e.g. _phase, k, _mode = "train", "loss", "min"
+                    # logging.info(f'k:{k}')
                     if reporter.has(_phase, k):
                         best_epoch = reporter.get_best_epoch(_phase, k, _mode)
                         # Creates sym links if it's the best result
@@ -594,9 +594,7 @@ class Trainer:
 
                 # compute the gradient norm to check if it is normal or not
                 grad_norm = torch.nn.utils.clip_grad_norm_(
-                    model.parameters(),
-                    max_norm=grad_clip,
-                    norm_type=grad_clip_type,
+                    model.parameters(), max_norm=grad_clip, norm_type=grad_clip_type,
                 )
                 # PyTorch<=1.4, clip_grad_norm_ returns float value
                 if not isinstance(grad_norm, torch.Tensor):
@@ -816,7 +814,8 @@ class Trainer:
 
                     if isinstance(att_w, torch.Tensor):
                         att_w = att_w.detach().cpu().numpy()
-
+                    if att_w.ndim > 3:
+                        att_w = att_w.reshape(-1, att_w.shape[-2], att_w.shape[-1])
                     if att_w.ndim == 2:
                         att_w = att_w[None]
                     elif att_w.ndim > 3 or att_w.ndim == 1:
@@ -850,14 +849,7 @@ class Trainer:
     @classmethod
     @torch.no_grad()
     def log_figure(
-        cls,
-        model_vocoder,
-        step,
-        output,
-        spec,
-        length,
-        save_dir,
-        att=None,
+        cls, model_vocoder, step, output, spec, length, save_dir, att=None,
     ) -> None:
 
         """log_figure."""

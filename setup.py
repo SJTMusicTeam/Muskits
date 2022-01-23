@@ -23,8 +23,8 @@ requirements = {
         "ctc-segmentation<1.6,>=1.4.0",
         "wandb",
         "filelock",
+        "pytsmod",
         # DNN related packages are installed by Makefile
-        # 'torch==1.0.1'
         # "chainer==6.0.0",
         # 'cupy==6.0.0',
         "tensorboard>=1.14",  # For pytorch>=1.1.0
@@ -33,7 +33,7 @@ requirements = {
         "librosa>=0.8.0",
         # Natural language processing related
         # FIXME(kamo): Sentencepiece 0.1.90 breaks backwardcompatibility?
-        "sentencepiece<0.1.90,>=0.1.82",
+        "sentencepiece",
         "nltk>=3.4.5",
         # File IO related
         "PyYAML>=5.1.2",
@@ -90,7 +90,15 @@ try:
     if LooseVersion(torch.__version__) >= LooseVersion("1.5.1"):
         requirements["install"].append("fairscale")
 
-    if LooseVersion(torch.__version__) >= LooseVersion("1.8.1"):
+    elif LooseVersion(torch.__version__) >= LooseVersion("1.10.0"):
+        requirements["install"].append("torchaudio==0.10.0")
+    elif LooseVersion(torch.__version__) >= LooseVersion("1.9.1"):
+        requirements["install"].append("torchaudio==0.9.1")
+    elif LooseVersion(torch.__version__) >= LooseVersion("1.9.0"):
+        requirements["install"].append("torchaudio==0.9.0")
+    elif LooseVersion(torch.__version__) >= LooseVersion("1.8.2"):
+        requirements["install"].append("torchaudio==0.8.2")
+    elif LooseVersion(torch.__version__) >= LooseVersion("1.8.1"):
         requirements["install"].append("torchaudio==0.8.1")
     elif LooseVersion(torch.__version__) >= LooseVersion("1.8.0"):
         requirements["install"].append("torchaudio==0.8.0")

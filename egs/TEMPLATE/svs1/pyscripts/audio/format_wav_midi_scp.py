@@ -85,11 +85,7 @@ def segmentation(
     sub_note = get_subsequence(segment_begin, segment_end, note_seq, rate)
     sub_tempo = get_subsequence(segment_begin, segment_end, tempo_seq, rate)
 
-    wav_writer = SoundScpWriter(
-        out_wavdir,
-        out_wavscp,
-        format="wav",
-    )
+    wav_writer = SoundScpWriter(out_wavdir, out_wavscp, format="wav",)
     midi_writer = MIDIScpWriter(out_mididir, out_midiscp, format="midi", rate=args_fs)
 
     wav_writer[key] = int(rate), sub_wav
@@ -149,11 +145,7 @@ if __name__ == "__main__":
     if args.fs is None:
         args.fs = midi_reader.rate
     # Note: generate segmented file
-    wav_writer = SoundScpWriter(
-        out_wavdir,
-        out_wavscp,
-        format="wav",
-    )
+    wav_writer = SoundScpWriter(out_wavdir, out_wavscp, format="wav",)
     midi_writer = MIDIScpWriter(out_mididir, out_midiscp, format="midi", rate=args.fs)
 
     for key, val in segments.items():

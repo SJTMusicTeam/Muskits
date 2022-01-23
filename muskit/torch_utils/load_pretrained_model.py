@@ -6,9 +6,7 @@ import torch.optim
 
 
 def load_pretrained_model(
-    init_param: str,
-    model: torch.nn.Module,
-    map_location: str = "cpu",
+    init_param: str, model: torch.nn.Module, map_location: str = "cpu",
 ):
     """Load a model state and set it to the model.
 

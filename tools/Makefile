@@ -3,8 +3,8 @@
 
 # Disable cupy installation
 NO_CUPY :=
-# PyTorch version: 1.7.0, 1.7.1, 1.8.1
-TH_VERSION := 1.7.0
+# PyTorch version: 1.8.1, 1.10.1
+TH_VERSION := 1.10.1
 WGET := wget --tries=3
 
 # Use pip for pytorch installation even if you have anaconda
@@ -53,7 +53,7 @@ endif
 
 all: kaldi showenv python conda_packages.done check_install
 
-python: activate_python.sh muskit.done pytorch.done pyopenjtalk.done
+python: activate_python.sh muskit.done pytorch.done
 extra: parallel_wavegan.done
 
 kaldi:
