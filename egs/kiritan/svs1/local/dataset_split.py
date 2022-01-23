@@ -69,9 +69,9 @@ if __name__ == "__main__":
     source_root_url = args.db_root
 
     data_root_url = args.save_dir
-    data_train_url = data_root_url + "train_raw"
+    data_train_url = data_root_url + "tr_no_dev_raw"
     data_vaild_url = data_root_url + "dev_raw"
-    data_test_url = data_root_url + "eval1_raw"
+    data_test_url = data_root_url + "eval_raw"
     makedir(data_root_url)
     makedir(data_train_url)
     makedir(data_vaild_url)

@@ -28,9 +28,9 @@ fi
 
 mkdir -p ${KIRITAN}
 
-train_set=train
+train_set=tr_no_dev
 train_dev=dev
-recog_set=eval1
+recog_set=eval
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     log "stage 0: Data Download"
@@ -46,7 +46,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
 fi
 
 
-for dataset in train dev eval1; do
+for dataset in ${train_set} ${train_dev} ${recog_set}; do
   echo "process for subset: ${dataset}"
   # dataset=test
   if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then

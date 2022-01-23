@@ -19,7 +19,7 @@ NOWPATH=${NOWPATH%/*}
 combine_data_path=""
 combine_data_path+=" ${NOWPATH}/oniku_kurumi_utagoe_db/svs1/data/"
 combine_data_path+=" ${NOWPATH}/ofuton_p_utagoe_db/svs1/data/"
-# combine_data_path+=" ${NOWPATH}/kiritan/svs1/data/"
+combine_data_path+=" ${NOWPATH}/kiritan/svs1/data/"
 
 opts=
 if [ "${fs}" -eq 48000 ]; then
