@@ -3,11 +3,10 @@
 # -e 'error', -u 'undefined variable', -o ... 'error in pipeline', -x 'print commands',
 set -e
 set -u
-set -o pipefail
+# set -o pipefail
 
 # spectrogram-related arguments
 fs=24000
-fmin=80
 fmax=7600
 n_fft=2048
 n_shift=300

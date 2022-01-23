@@ -120,7 +120,7 @@ def calculate_all_attentions(
                 if k + "_lengths" in batch
             }
         )
-        model(**_sample)
+        model(**_sample, flag_IsValid=True)
 
         # Derive the attention results
         for name, output in outputs.items():

@@ -216,7 +216,8 @@ class IterableMuskitDataset(IterableDataset):
             # 3. [Option] Apply preprocessing
             #   e.g. muskit.train.preprocessor:CommonPreprocessor
             if self.preprocess is not None:
-                data = self.preprocess(uid, data, time_aug_factor=1.0)
+                time_aug_factor = 1.0
+                data = self.preprocess(uid, data, time_aug_factor)
 
             # 4. Force data-precision
             for name in data:
