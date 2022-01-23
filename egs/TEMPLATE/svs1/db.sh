@@ -1,11 +1,12 @@
 # Set the path of your corpus
 # "downloads" means the corpus can be downloaded by the recipe automatically
 
-KIRITAN=
+KIRITAN=/home/exx/jiatong/projects/svs/data/
 ONIKU=
 OFUTON=
 NATSUME=
 COMBINE=
+CSD=downloads
 
 # For only JHU environment
 if [[ "$(hostname -d)" == clsp.jhu.edu ]]; then

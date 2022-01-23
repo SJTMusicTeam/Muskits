@@ -101,12 +101,7 @@ def main():
     out_midiscp = Path(args.outdir) / f"{args.name}.scp"
     if args.segments is not None:
         loader = MIDIScpReader(args.scp, rate=args.fs)
-        writer = MIDIScpWriter(
-            args.outdir,
-            out_midiscp,
-            format="midi",
-            rate=args.fs,
-        )
+        writer = MIDIScpWriter(args.outdir, out_midiscp, format="midi", rate=args.fs,)
 
         cache = (None, None, None)
         for utt_id, (recording, start, end) in tqdm(segments.items()):
