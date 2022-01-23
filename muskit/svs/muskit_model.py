@@ -494,19 +494,25 @@ class MuskitSVSModel(AbsMuskitModel):
         Returns:
             Dict[str, Tensor]: Dict of outputs.
         """
-        singing_lengths = None 
-        durations_lengths = None
-        score_lengths = None
-        tempo_lengths = None
+        singing_lengths = torch.tensor([len(singing)]) 
+        durations_lengths = torch.tensor([len(durations)])
+        score_lengths = torch.tensor([len(score)])
+        tempo_lengths = torch.tensor([len(tempo)])
+
+        assert durations_lengths == score_lengths and durations_lengths == tempo_lengths
+        length  = torch.min(singing_lengths, durations_lengths)
+        singing_lengths = length
+        durations_lengths, score_lengths, tempo_lengths = length, length, length
 
         # unsqueeze of singing must be here, or it'll cause error in the return dim of STFT
-        singing = singing.unsqueeze(0)      
+        singing = singing[:length].unsqueeze(0)      
         text = text.unsqueeze(0)  # for data-parallel
-        durations = durations.unsqueeze(0)  # for data-parallel
-        score = score.unsqueeze(0)  # for data-parallel
-        tempo = tempo.unsqueeze(0)  # for data-parallel
+        durations = durations[:length].unsqueeze(0)  # for data-parallel
+        score = score[:length].unsqueeze(0)  # for data-parallel
+        tempo = tempo[:length].unsqueeze(0)  # for data-parallel
 
         logging.info(f"singing.shape: {singing.shape}")
+        logging.info(f"singing_lengths: {singing_lengths}")
         logging.info(f"text.shape: {text.shape}")
         logging.info(f"durations.shape: {durations.shape}")
         logging.info(f"score.shape: {score.shape}")
@@ -520,6 +526,8 @@ class MuskitSVSModel(AbsMuskitModel):
         else:
             # Use precalculated feats (feats_type != raw case)
             feats, feats_lengths = singing, singing_lengths
+        logging.info(f"feats.shape: {feats.shape}")
+        logging.info(f"feats_lengths: {feats_lengths}")
 
         # Extract auxiliary features
         # score : 128 midi pitch
@@ -674,7 +682,7 @@ class MuskitSVSModel(AbsMuskitModel):
                                 # logging.info("Finish")
                                 break
 
-                # logging.info(f"ds_tmp: {ds_tmp}, sum(ds_tmp): {sum(ds_tmp)}, frame_length: {frame_length}, feats_lengths[i]: {feats_lengths[i]}")
+                logging.info(f"ds_tmp: {ds_tmp}, sum(ds_tmp): {sum(ds_tmp)}, frame_length: {frame_length}, feats_lengths[i]: {feats_lengths[i]}")
                 assert sum(ds_tmp) == frame_length and sum(ds_tmp) == feats_lengths[i]
 
                 ds.append(torch.tensor(ds_tmp))
@@ -697,7 +705,6 @@ class MuskitSVSModel(AbsMuskitModel):
             )
 
         logging.info(f"feats.shape: {feats.shape}")
-        logging.info(f"durations.shape: {durations.shape}")
         logging.info(f"score.shape: {score.shape}")
 
         input_dict = dict(text=text)

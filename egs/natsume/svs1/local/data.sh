@@ -21,12 +21,12 @@ log "$0 $*"
 
 . utils/parse_options.sh || exit 1;
 
-if [ -z "${Natsume}" ]; then
+if [ -z "${NATSUME}" ]; then
     log "Fill the value of 'Natsume' of db.sh"
     exit 1
 fi
 
-mkdir -p ${Natsume}
+mkdir -p ${NATSUME}
 
 train_set=tr_no_dev
 train_dev=dev
@@ -40,7 +40,7 @@ fi
 
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     log "stage 1: Dataset split "
-    python local/dataset_split.py ${Natsume}/Natsume_Singing_DB/wav `pwd`/data 0.1 0.1
+    python local/dataset_split.py ${NATSUME}/Natsume_Singing_DB/wav `pwd`/data 0.1 0.1
 
 fi
 

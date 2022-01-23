@@ -3,4 +3,4 @@
 if [ -z "${PS1:-}" ]; then
     PS1=__dummy__
 fi
-. /home/exx/jiatong/projects/svs/Muskits/tools/anaconda/etc/profile.d/conda.sh && conda deactivate && conda activate svs
+. /opt/conda/etc/profile.d/conda.sh && conda deactivate && conda activate muskit

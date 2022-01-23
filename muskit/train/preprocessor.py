@@ -10,6 +10,8 @@ import logging
 import numpy as np
 import scipy.signal
 import soundfile
+import random
+import pytsmod as tsm
 from typeguard import check_argument_types
 from typeguard import check_return_type
 
@@ -27,7 +29,7 @@ class AbsPreprocessor(ABC):
         self, 
         uid: str, 
         data: Dict[str, Union[str, np.ndarray]],
-        time_aug_factor: float
+        phone_time_aug_factor: float
     ) -> Dict[str, np.ndarray]:
         raise NotImplementedError
 
@@ -220,11 +222,113 @@ class CommonPreprocessor(AbsPreprocessor):
             self.noises = None
 
     def __call__(
-        self, uid: str, data: Dict[str, Union[str, np.ndarray, tuple]], time_aug_factor: float
+        self, uid: str, data: Dict[str, Union[str, np.ndarray, tuple]], phone_time_aug_factor: float
     ) -> Dict[str, np.ndarray]:
         assert check_argument_types()
+        assert phone_time_aug_factor >= 1   # support longer only
+
+        if self.midi_name in data and self.tokenizer is not None:
+            pitchseq, temposeq = data[self.midi_name]
+            nsamples = len(pitchseq)
+            pitchseq.astype(np.int64)
+            temposeq.astype(np.int64)
+            data.pop(self.midi_name)
+
+            data["score"] = pitchseq
+            data["tempo"] = temposeq
+
+        if self.label_name in data and self.tokenizer is not None:
+            timeseq, text = data[self.label_name]
+            # if not isinstance(text, np.ndarray):
+            text = " ".join(text)
+            text = self.text_cleaner(text)
+            tokens = self.tokenizer.text2tokens(text)
+            text_ints = self.token_id_converter.tokens2ids(tokens)
+
+            vowel_tokens = ["a", "e", "i", "o", "u"]
+            vowel_ints = self.token_id_converter.tokens2ids(vowel_tokens)
+
+            data.pop(self.label_name)
+            # [Shuai]: length of label - phone_id seq is the same of midi, 
+            # global_time_aug_factor has already been applied on midi length in dataset.py, step1. Load data from each loaders
+            # so the global_time_aug_factor won`t be applied here when init.
+            labelseq = np.zeros((nsamples))
+            offset = timeseq[0, 0]
+            anchor_pairs = []
+            for i in range(timeseq.shape[0]):
+                start = int((timeseq[i, 0] - offset) * self.fs)
+                end = int((timeseq[i, 1] - offset) * self.fs) + 1
+                if end > nsamples:
+                    end = nsamples - 1
+                labelseq[start:end] = text_ints[i]
+                
+                # phone-level augmentation for vowels
+                if text_ints[i] in vowel_ints and phone_time_aug_factor != 1.0:
+                    if random.random() < 0.5:
+                        anchor_pairs.append( (start, end, text_ints[i]) )
+            # logging.info(f"anchor_pairs: {anchor_pairs}， uid: {uid}, phone_time_aug_factor: {phone_time_aug_factor}")
+
+            # phone-level augmentation
+            if len(anchor_pairs) != 0:
+                insert_indexes_label = []
+                insert_values_label = []
+                insert_values_score = []
+                insert_values_tempo = []
+                insert_num_list = []
+                for anchor_pair in anchor_pairs:
+                    start, end, _label = anchor_pair
+                    index_gap_origin = end - start
+                    index_gap_aug = (end - start) * phone_time_aug_factor
+                    insert_num = int(index_gap_aug - index_gap_origin)
+                    insert_num_list.append(insert_num)
+
+                    insert_indexes_label += [end for _ in range(insert_num)]
+                    insert_values_label += [_label for _ in range(insert_num)]
+
+                    # logging.info(f"end: {end}, nsamples: {nsamples}")
+                    insert_values_score += [data['score'][end] for _ in range(insert_num)]
+                    insert_values_tempo += [data['tempo'][end] for _ in range(insert_num)]
+
+                labelseq = np.insert(labelseq, insert_indexes_label, insert_values_label)
+
+                data["score"] = np.insert(data["score"], insert_indexes_label, insert_values_score)
+                data["tempo"] = np.insert(data["tempo"], insert_indexes_label, insert_values_tempo)
+            labelseq.astype(np.int64)
+            data["durations"] = labelseq
 
         if self.singing_name in data:
+            # logging.info(f"In self.singing_name, len(anchor_pairs): {len(anchor_pairs)}")
+
+            # phone-level augmentation
+            insert_accumulative = 0
+            if phone_time_aug_factor != 1.0:
+                if len(anchor_pairs) != 0:
+                    singing = data[self.singing_name]
+                    nsamples = len(singing)
+                    s_ap = [[0],[0]]
+                    for i in range(len(anchor_pairs)):
+                        start, end, _ = anchor_pairs[i]
+                        if start != 0:
+                            s_ap[0].append(start)
+                        s_ap[0].append(end)
+
+                        insert_num = insert_num_list[i]
+                        if start + insert_accumulative != 0:
+                            s_ap[1].append(start + insert_accumulative)
+                        s_ap[1].append(end + insert_accumulative + insert_num)
+                        insert_accumulative += insert_num
+                    if end != nsamples:
+                        s_ap[0].append(nsamples)
+                        s_ap[1].append(nsamples + insert_accumulative)
+
+                    # logging.info(f"s_ap: {s_ap}, ndim of s_ap: {np.array(s_ap).ndim}, phone_time_aug_factor: {phone_time_aug_factor}")
+                    assert np.array(s_ap).ndim == 2
+                    singing = tsm.wsola(singing, np.array(s_ap))
+                    # logging.info(f"singing: {singing.shape}, nsamples: {nsamples}, phone_time_aug_factor: {phone_time_aug_factor}")
+                    data[self.singing_name] = singing
+
+            # quit()
+
             if self.train and self.rirs is not None and self.noises is not None:
                 singing = data[self.singing_name]
                 nsamples = len(singing)
@@ -310,42 +414,7 @@ class CommonPreprocessor(AbsPreprocessor):
                 singing = data[self.singing_name]
                 ma = np.max(np.abs(singing))
                 data[self.singing_name] = singing * self.singing_volume_normalize / ma
-
-        if self.midi_name in data and self.tokenizer is not None:
-            pitchseq, temposeq = data[self.midi_name]
-            nsamples = len(pitchseq)
-            pitchseq.astype(np.int64)
-            temposeq.astype(np.int64)
-            data.pop(self.midi_name)
-
-            data["score"] = pitchseq
-            data["tempo"] = temposeq
-
-        if self.label_name in data and self.tokenizer is not None:
-            timeseq, text = data[self.label_name]
-            # if not isinstance(text, np.ndarray):
-            text = " ".join(text)
-            text = self.text_cleaner(text)
-            tokens = self.tokenizer.text2tokens(text)
-            text_ints = self.token_id_converter.tokens2ids(tokens)
-
-            data.pop(self.label_name)
-            # [Shuai]: length of label - phone_id seq is the same of midi, 
-            # time_aug_factor has already been applied on midi length in dataset.py, step1. Load data from each loaders
-            # so the time_aug_factor won`t be applied here when init.
-            labelseq = np.zeros((nsamples))      
-            offset = timeseq[0, 0] * time_aug_factor
-            for i in range(timeseq.shape[0]):
-                start = int((timeseq[i, 0] - offset) * time_aug_factor * self.fs)
-                end = int((timeseq[i, 1] - offset) * time_aug_factor * self.fs) + 1
-                labelseq[start:end] = text_ints[i]
-            # data[self.label_name] = timeseq, np.array(text_ints, dtype=np.int64)
-            labelseq.astype(np.int64)
-            data["durations"] = labelseq
         
-        # logging.info(f"self.label_name: {self.label_name}")
-        # logging.info(f"self.text_name: {self.text_name}, self.tokenizer: {self.tokenizer}")
-        # logging.info(f"data: {data}")
         if self.text_name in data and self.tokenizer is not None:
             text = data[self.text_name]
             # logging.info(f"uid: {uid}, text: {text}")

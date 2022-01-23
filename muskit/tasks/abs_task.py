@@ -310,6 +310,8 @@ class AbsTask(ABC):
         group.add_argument("--pitch_aug_max", type=int, default=0, help="The upper bound of midi semitone when pitch augmentation")
         group.add_argument("--time_aug_min", type=float, default=1, help="The lower bound of time augmentation factor")
         group.add_argument("--time_aug_max", type=float, default=1, help="The upper bound of time augmentation factor")
+        group.add_argument("--random_crop", type=bool, default=False, help="Flag to use random crop augmentation during training")
+        group.add_argument("--mask_aug", type=bool, default=False, help="Flag to use masking augmentation during training")
         group.add_argument("--seed", type=int, default=0, help="Random seed")
         group.add_argument(
             "--num_workers",
@@ -1404,6 +1406,8 @@ class AbsTask(ABC):
             pitch_aug_max=args.pitch_aug_max,
             time_aug_min=args.time_aug_min,
             time_aug_max=args.time_aug_max,
+            random_crop=args.random_crop,
+            mask_aug=args.mask_aug
         )
         cls.check_task_requirements(
             dataset, args.allow_variable_data_keys, train=iter_options.train
