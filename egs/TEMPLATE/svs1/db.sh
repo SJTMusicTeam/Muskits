@@ -1,10 +1,10 @@
 # Set the path of your corpus
 # "downloads" means the corpus can be downloaded by the recipe automatically
 
-KIRITAN=
+KIRITAN=/root/data/hku_kg_cuda/NanHUO_HKU/Muskits_3/Muskits/egs/kiritan/download/
 ONIKU=
-OFUTON=
-NATSUME=
+OFUTON=/root/data/hku_kg_cuda/NanHUO_HKU/Muskits_3/Muskits/egs/ofuton_p_utagoe_db/download/OFUTON_P_UTAGOE_DB
+Natsume=/root/data/hku_kg_cuda/NanHUO_HKU/Muskits_3/Muskits/egs/natsume/download/
 
 # For only JHU environment
 if [[ "$(hostname -d)" == clsp.jhu.edu ]]; then
