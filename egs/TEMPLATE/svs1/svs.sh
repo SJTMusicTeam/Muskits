@@ -211,7 +211,7 @@ if [ $# -ne 0 ]; then
     exit 2
 fi
 
-. ./path.sh
+. ./path.sh || exit 1
 . ./cmd.sh
 
 # Check feature type
