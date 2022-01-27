@@ -3,23 +3,31 @@
 ##########################################################
 #                  SVS MODEL SETTING                     #
 ##########################################################
-svs: naive_rnn                   # model architecture
+svs: glu_transformer             # model architecture
 svs_conf:                        # keyword arguments for the selected model
+    #idim: 68 #phone_size
     midi_dim: 129                # midi dimension (note number + silence)
-    embed_dim: 512               # char or phn embedding dimension
-    eprenet_conv_layers: 0       # prenet (from bytesing) conv layers
-    eprenet_conv_chans: 256      # prenet (from bytesing) conv channels numbers
-    eprenet_conv_filts: 3        # prenet (from bytesing) conv filters size
-    elayers: 3                   # number of lstm layers in encoder
-    eunits: 512                  # number of lstm units
-    ebidirectional: True         # if bidirectional in encoder
-    midi_embed_integration_type: add # how to integrate midi information
-    dlayers: 5                   # number of lstm layers in decoder
-    dunits: 1024                 # number of lstm units in decoder
-    dbidirectional: True         # if bidirectional in decoder
+    tempo_dim: 300
+    # odim:  #output_dim
+    embed_dim: 256 # embed_size  # char or phn embedding dimension
+    # eprenet_conv_layers: 3       # prenet (from bytesing) conv layers
+    # eprenet_conv_chans: 256      # prenet (from bytesing) conv channels numbers
+    # eprenet_conv_filts: 3        # prenet (from bytesing) conv filters size
+    elayers: 3                   # number of glu_transformer layers in encoder
+    eunits: 256                  # number of glu_transformer units hidden_size
+    glu_num_layers: 3
+    glu_kernel: 3
+    edropout_rate: 0.1
+    ddropout_rate: 0.1
+    dlayers: 6
+    dhead: 4
     postnet_layers: 5            # number of layers in postnet
-    postnet_chans: 512           # number of channels in postnet
-    postnet_filts: 5             # filter size of postnet layer
+    postnet_chans: 256           # number of channels in postnet
+    postnet_filts: 5             # filter size of postnet layer    n_mels: -1
+    # double_mel_loss: true
+    local_gaussian: false
+    # semitone_size: 59
+    # Hz2semitone: false
     use_batch_norm: true         # whether to use batch normalization in postnet
     reduction_factor: 1          # reduction factor
     eprenet_dropout_rate: 0.2    # prenet dropout rate
@@ -28,8 +36,8 @@ svs_conf:                        # keyword arguments for the selected model
     postnet_dropout_rate: 0.5    # postnet dropout_rate
     init_type: pytorch           # parameter initialization
     use_masking: true            # whether to apply masking for padded part in loss calculation
+    embed_integration_type: add
     loss_type: L1
-
 
 ##########################################################
 #                  OPTIMIZER SETTING                     #
@@ -40,46 +48,23 @@ optim_conf:           # keyword arguments for selected optimizer
     eps: 1.0e-06      # epsilon
     weight_decay: 0.0 # weight decay coefficient
 
-# scheduler: ReduceLROnPlateau
-# scheduler_conf: 
-#     mode: min
-#     factor: 0.1
-#     patience: 10
-#     verbose: True
-
-# scheduler: StepLR
-# scheduler_conf: 
-#     step_size: 80
-#     gamma: 0.8
-
-
 ##########################################################
 #                OTHER TRAINING SETTING                  #
 ##########################################################
-# num_iters_per_epoch: 200    # number of iterations per epoch
-max_epoch: 500              # number of epochs
-grad_clip: 1.0              # gradient clipping norm
+num_iters_per_epoch: 500    # number of iterations per epoch
+max_epoch: 100              # number of epochs
+grad_clip: 5.0              # gradient clipping norm
 grad_noise: false           # whether to use gradient noise injection
 accum_grad: 1               # gradient accumulation
-
 # batch_bins: 1000000       # batch bins (for feats_type=fbank)
-# batch_bins: 10000000         # batch bins (for feats_type=raw, *= n_shift / n_mels)
-# batch_type: numel           # how to make batch
-
-batch_type: sorted
-batch_size: 16
-
-pitch_aug_min: 0            # Default: 0, [-1,-2,-3]
-pitch_aug_max: 0            # Default: 0, [1,2,3]
-time_aug_min: 0.99             # Default: 1, [0.99]
-time_aug_max: 1.01             # Default: 1, [1.01]
-
+batch_bins: 1000000         # batch bins (for feats_type=raw, *= n_shift / n_mels)
+batch_type: numel           # how to make batch
 sort_in_batch: descending   # how to sort data in making batch
 sort_batch: descending      # how to sort created batches
-num_workers: 10              # number of workers of data loader
+num_workers: 6              # number of workers of data loader
 train_dtype: float32        # dtype in training
 log_interval: null          # log interval in iterations
-keep_nbest_models: 2        # number of models to keep
+keep_nbest_models: 5        # number of models to keep
 num_att_plot: 3             # number of attention figures to be saved in every check
 seed: 0                     # random seed number
 best_model_criterion:
@@ -91,4 +76,4 @@ best_model_criterion:
     - min
 
 gpu_id: 1
-vocoder_checkpoint: /data5/gs/vocoder_peter/hifigan-vocoder/exp/train_hifigan.v1_train_nodev_clean_libritts_hifigan-2.v1/checkpoint-50000steps.pkl
+vocoder_checkpoint: /data3/qt/ParallelWaveGAN/checkpoint-50000steps.pkl

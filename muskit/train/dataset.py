@@ -189,7 +189,7 @@ def sound_loader(path, float_dtype=None):
     return AdapterForSoundScpReader(loader, float_dtype)
 
 
-def midi_loader(path, float_dtype=None, rate=np.int16(24000)):
+def midi_loader(path, float_dtype=None, rate=np.int32(24000)):
     # The file is as follows:
     #   utterance_id_A /some/where/a.mid
     #   utterance_id_B /some/where/b.midi
@@ -397,6 +397,8 @@ class MuskitDataset(AbsDataset):
         pitch_aug_max: int = 0,
         time_aug_min: float = 1.0,
         time_aug_max: float = 1.0,
+        random_crop: bool = False,
+        mask_aug: bool = False,
     ):
         assert check_argument_types()
         if len(path_name_type_list) == 0:
@@ -439,6 +441,8 @@ class MuskitDataset(AbsDataset):
         self.pitch_aug_max = pitch_aug_max
         self.time_aug_min = time_aug_min
         self.time_aug_max = time_aug_max
+        self.random_crop = random_crop
+        self.mask_aug = mask_aug
 
         assert self.pitch_aug_min <= self.pitch_aug_max
         assert self.time_aug_min <= self.time_aug_max
@@ -516,8 +520,8 @@ class MuskitDataset(AbsDataset):
             pitch_aug_factor = random.randint(self.pitch_aug_min, self.pitch_aug_max)
 
             _time_list = [i/100 for i in range(int(self.time_aug_min*100),int(self.time_aug_max*100+1),1)]
-            # _time_list = [i/1e3 for i in range(int(self.time_aug_min*1e3),int(self.time_aug_max*1e3+1),1)]
-            # for _ in range(7):
+            # _time_list = [1, 1.06, 1.12, 1.18, 1.24]
+            # for _ in range(8):
             #     _time_list.append(1.0)
             time_aug_factor = random.sample(_time_list, 1)[0]
         else:
@@ -530,7 +534,8 @@ class MuskitDataset(AbsDataset):
             # name: text, singing, label, midi
             try:
                 if name == "midi" or name == "singing":
-                    value = loader[(uid, pitch_aug_factor, time_aug_factor)]
+                    global_time_aug_factor = 1
+                    value = loader[(uid, pitch_aug_factor, global_time_aug_factor)]
                 else:
                     value = loader[uid]
                 # if name == "text" or name == "label":
@@ -568,13 +573,34 @@ class MuskitDataset(AbsDataset):
             [len(data[key]) for key in data.keys() if key not in self.not_align]
         )
         # logging.info(f"length: {length}")
-        
-        # logging.info(f"time_aug_factor: {time_aug_factor}")
+
+        if self.mode == "train" and self.mask_aug:
+            # mask_length = 4500      # 1500 = 300 * 5
+            mask_length = random.randint(0, int(length * 0.2))
+            if length - mask_length > 0:
+                mask_index_begin = random.randint(0, int(length - mask_length))
+                mask_index_end = mask_index_begin + mask_length
+            else:
+                mask_index_begin = 0
+                mask_index_end = length
+
+        if self.mode == "train" and self.random_crop:
+            crop_length = random.randint(int(length * 0.8), length)
+            crop_index_begin = random.randint(0, int(length - crop_length))
+            crop_index_end = crop_index_begin + crop_length
+
         for key, value in data.items():
             if key in self.not_align:
                 continue
             # logging.info(f"key: {key}, data[key].shape: {data[key].shape}")
             data[key] = data[key][:length]
+            if self.mode == "train" and self.mask_aug:
+                data[key][mask_index_begin : mask_index_end] = 0
+            if self.mode == "train" and self.random_crop:
+                data[key] = data[key][crop_index_begin : crop_index_end]
+        
+        # phone-level time augmentation
+
         # quit()
         data['pitch_aug'] = np.array([pitch_aug_factor])
         data['time_aug'] = np.array([time_aug_factor])

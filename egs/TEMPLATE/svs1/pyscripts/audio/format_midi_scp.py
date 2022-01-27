@@ -56,7 +56,7 @@ def main():
     parser.add_argument("--segments", default=None)
     parser.add_argument(
         "--fs",
-        type=np.int16,
+        type=np.int32,
         default=None,
         help="If the sampling rate specified, " "Change the sampling rate.",
     )

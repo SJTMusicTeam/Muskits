@@ -30,7 +30,7 @@ def get_parser():
     parser.add_argument("outdir", type=str, help="segmented data folder path")
     parser.add_argument(
         "fs",
-        type=np.int16,
+        type=np.int32,
         default=None,
         help="If the sampling rate specified, " "Change the sampling rate.",
     )
@@ -71,7 +71,7 @@ def segmentation(
 
     if args_fs is not None and args.fs != rate:
         wave = resampy.resample(wave.astype(np.float64), rate, args_fs, axis=0)
-        wave = wave.astype(np.int16)
+        # wave = wave.astype(np.int16)
         rate = args_fs
 
     sub_wav = get_subsequence(segment_begin, segment_end, wave, rate)
@@ -140,7 +140,7 @@ if __name__ == "__main__":
 
     wav_reader = SoundScpReader(args.scp + "/wav.scp")
     if args.fs is not None:
-        midi_reader = MIDIScpReader(args.scp + "/midi.scp", rate=np.int16(args.fs))
+        midi_reader = MIDIScpReader(args.scp + "/midi.scp", rate=np.int32(args.fs))
     else:
         midi_reader = MIDIScpReader(args.scp + "/midi.scp")
 

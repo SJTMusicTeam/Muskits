@@ -30,7 +30,7 @@ class MIDIScpReader(collections.abc.Mapping):
         fname,
         dtype=np.int16,
         loader_type: str = "representation",
-        rate: np.int16 = np.int16(16000),
+        rate: np.int32 = np.int32(16000),
     ):
         assert check_argument_types()
         self.fname = fname
@@ -83,7 +83,7 @@ class MIDIScpWriter:
         scpfile: Union[Path, str],
         format="midi",
         dtype=None,
-        rate: np.int16 = np.int16(16000),
+        rate: np.int32 = np.int32(16000),
     ):
         assert check_argument_types()
         self.dir = Path(outdir)
