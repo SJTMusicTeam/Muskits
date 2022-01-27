@@ -86,15 +86,7 @@ def calculate_all_attentions(
                 att_w = [_w.detach().cpu() for _w in w]
                 outputs.setdefault(name, []).append(att_w)
             elif isinstance(
-                module,
-                (
-                    AttAdd,
-                    AttDot,
-                    AttForward,
-                    AttForwardTA,
-                    AttLoc,
-                    NoAtt,
-                ),
+                module, (AttAdd, AttDot, AttForward, AttForwardTA, AttLoc, NoAtt,),
             ):
                 c, w = output
                 att_w = w.detach().cpu()
@@ -128,7 +120,7 @@ def calculate_all_attentions(
                 if k + "_lengths" in batch
             }
         )
-        model(**_sample)
+        model(**_sample, flag_IsValid=True)
 
         # Derive the attention results
         for name, output in outputs.items():

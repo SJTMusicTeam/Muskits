@@ -48,10 +48,7 @@ def main(args):
         help="Disable cuda-related tests",
     )
     parser.add_argument(
-        "--no-cupy",
-        action="store_true",
-        default=False,
-        help="Disable cupy test",
+        "--no-cupy", action="store_true", default=False, help="Disable cupy test",
     )
     args = parser.parse_args(args)
 

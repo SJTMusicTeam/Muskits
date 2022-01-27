@@ -30,7 +30,7 @@ def get_parser():
     parser.add_argument("outdir", type=str, help="segmented data folder path")
     parser.add_argument(
         "fs",
-        type=np.int16,
+        type=np.int32,
         default=None,
         help="If the sampling rate specified, " "Change the sampling rate.",
     )
@@ -77,19 +77,15 @@ def segmentation(
     out_mididir = Path(args_outdir) / "midi"
 
     if args_fs is not None and args.fs != rate:
-        wave = resampy.resample(wave.astype(np.float64), rate, args_fs, axis=0)
-        wave = wave.astype(np.int16)
+        wave = resampy.resample(wave, rate, args_fs, axis=0)
+        # wave = wave.astype(np.int16)
         rate = args_fs
 
     sub_wav = get_subsequence(segment_begin, segment_end, wave, rate)
     sub_note = get_subsequence(segment_begin, segment_end, note_seq, rate)
     sub_tempo = get_subsequence(segment_begin, segment_end, tempo_seq, rate)
 
-    wav_writer = SoundScpWriter(
-        out_wavdir,
-        out_wavscp,
-        format="wav",
-    )
+    wav_writer = SoundScpWriter(out_wavdir, out_wavscp, format="wav",)
     midi_writer = MIDIScpWriter(out_mididir, out_midiscp, format="midi", rate=args_fs)
 
     wav_writer[key] = int(rate), sub_wav
@@ -142,7 +138,7 @@ if __name__ == "__main__":
 
     wav_reader = SoundScpReader(args.scp + "/wav.scp")
     if args.fs is not None:
-        midi_reader = MIDIScpReader(args.scp + "/midi.scp", rate=np.int16(args.fs))
+        midi_reader = MIDIScpReader(args.scp + "/midi.scp", rate=np.int32(args.fs))
     else:
         midi_reader = MIDIScpReader(args.scp + "/midi.scp")
 
@@ -173,3 +169,5 @@ if __name__ == "__main__":
             note_seq,
             tempo_seq,
         )
+
+

@@ -3,11 +3,10 @@
 # -e 'error', -u 'undefined variable', -o ... 'error in pipeline', -x 'print commands',
 set -e
 set -u
-set -o pipefail
+# set -o pipefail
 
 # spectrogram-related arguments
 fs=24000
-fmin=80
 fmax=7600
 n_fft=2048
 n_shift=300
@@ -35,7 +34,7 @@ cleaner=none
 
 ./svs.sh \
     --lang jp \
-    --stage 1 \
+    --stage 0 \
     --local_data_opts "--stage 0" \
     --feats_type raw \
     --pitch_extract None \

@@ -29,3 +29,11 @@ if [[ `hostname` == uranus_gs_2223 ]]; then
     OFUTON=/data1/gs/dataset/OFUTON_P_UTAGOE_DB
     NATSUME=/data1/gs/dataset/Natsume_Singing_DB
 fi
+
+# For only capri environment
+if [[ `hostname` == capri_gs_2345 ]]; then
+    KIRITAN=/data5/gs/dataset/
+    ONIKU=/data5/gs/dataset/ONIKU_KURUMI_UTAGOE_DB
+    OFUTON=/data5/gs/dataset/OFUTON_P_UTAGOE_DB
+    NATSUME=/data5/gs/dataset/
+fi
