@@ -22,6 +22,10 @@ from muskit.torch_utils.device_funcs import force_gatherable
 from muskit.torch_utils.initialize import initialize
 from muskit.svs.abs_svs import AbsSVS
 
+import random
+from torch.distributions import Beta
+
+Beta_distribution = Beta(torch.tensor([0.5]), torch.tensor([0.5]))
 
 class NaiveRNNLoss(torch.nn.Module):
     """Loss function module for Tacotron2."""
@@ -126,6 +130,8 @@ class NaiveRNN(AbsSVS):
         use_masking: bool = False,
         use_weighted_masking: bool = False,
         loss_type: str = "L1",
+        use_mixup_training: bool = False,
+        loss_mixup_wight: float = 0.1,
     ):
         """Initialize NaiveRNN module.
         Args: TODO
@@ -143,6 +149,10 @@ class NaiveRNN(AbsSVS):
         self.loss_type = loss_type
 
         self.midi_embed_integration_type = midi_embed_integration_type
+
+        # mixup - augmentation
+        self.use_mixup_training = use_mixup_training
+        self.loss_mixup_wight = loss_mixup_wight
 
         # use idx 0 as padding idx
         self.padding_idx = 0
@@ -266,14 +276,11 @@ class NaiveRNN(AbsSVS):
 
         # define loss function
         self.criterion = NaiveRNNLoss(
-            use_masking=use_masking,
-            use_weighted_masking=use_weighted_masking,
+            use_masking=use_masking, use_weighted_masking=use_weighted_masking,
         )
 
         # initialize parameters
-        self._reset_parameters(
-            init_type=init_type,
-        )
+        self._reset_parameters(init_type=init_type,)
 
     def _reset_parameters(self, init_type):
         # initialize parameters
@@ -290,6 +297,7 @@ class NaiveRNN(AbsSVS):
         label_lengths: torch.Tensor,
         midi: torch.Tensor,
         midi_lengths: torch.Tensor,
+        ds: torch.Tensor,
         tempo: Optional[torch.Tensor] = None,
         tempo_lengths: Optional[torch.Tensor] = None,
         spembs: Optional[torch.Tensor] = None,
@@ -303,10 +311,10 @@ class NaiveRNN(AbsSVS):
             text_lengths (LongTensor): Batch of lengths of each input batch (B,).
             feats (Tensor): Batch of padded target features (B, Lmax, odim).
             feats_lengths (LongTensor): Batch of the lengths of each target (B,).
-            label
-            label_lengths
-            midi
-            midi_lengths
+            label: (B, Tmax)
+            label_lengths: (B,)
+            midi: (B, Tmax)
+            midi_lengths: (B,)
             spembs (Optional[Tensor]): Batch of speaker embeddings (B, spk_embed_dim).
             sids (Optional[Tensor]): Batch of speaker IDs (B, 1).
             lids (Optional[Tensor]): Batch of language IDs (B, 1).
@@ -323,10 +331,53 @@ class NaiveRNN(AbsSVS):
         feats = feats[:, : feats_lengths.max()]  # for data-parallel
         midi = midi[:, : midi_lengths.max()]  # for data-parallel
         label = label[:, : label_lengths.max()]  # for data-parallel
-        batch_size = text.size(0)
+        batch_size = feats.size(0)
 
         label_emb = self.encoder_input_layer(label)  # FIX ME: label Float to Int
         midi_emb = self.midi_encoder_input_layer(midi)
+
+        if self.use_mixup_training and flag_IsValid == False:
+            # batch_size_mixup = batch_size // 2                  # !!! NOTE: origin - 2
+            # lst = [i for i in range(batch_size_mixup * 2)]
+            # random.shuffle(lst)
+
+            batch_size_mixup = 2
+            lst = random.sample([i for i in range(batch_size)], batch_size_mixup * 2)   # mix-up per 2 samples
+            
+            # mix-up augmentation
+            feats_mixup = torch.zeros((batch_size_mixup, feats.shape[1], feats.shape[2]), dtype=feats.dtype, layout=feats.layout, device=feats.device)
+            feats_lengths_mixup = torch.zeros(batch_size_mixup, dtype=feats_lengths.dtype, layout=feats_lengths.layout, device=feats_lengths.device)
+            
+            midi_embed_mixup = torch.zeros((batch_size_mixup, midi_emb.shape[1], midi_emb.shape[2]), dtype=midi_emb.dtype, layout=midi_emb.layout, device=midi_emb.device)
+            midi_lengths_mixup = torch.zeros(batch_size_mixup, dtype=midi_lengths.dtype, layout=midi_lengths.layout, device=midi_lengths.device)
+            
+            label_embed_mixup = torch.zeros((batch_size_mixup, label_emb.shape[1], label_emb.shape[2]), dtype=label_emb.dtype, layout=label_emb.layout, device=label_emb.device)
+            label_lengths_mixup = torch.zeros(batch_size_mixup, dtype=label_lengths.dtype, layout=label_lengths.layout, device=label_lengths.device)
+            
+            for i in range(batch_size_mixup):
+                index1 = lst[2*i]
+                index2 = lst[2*i + 1]
+
+                w1 = Beta_distribution.sample().to(feats.device)             # !!! NOTE:  random.random()
+                w2 = 1 - w1
+
+                feats_mixup[i] = w1 * feats[index1] + w2 * feats[index2]
+                feats_lengths_mixup[i] = max(feats_lengths[index1], feats_lengths[index2])
+
+                midi_embed_mixup[i] = w1 * midi_emb[index1] + w2 * midi_emb[index2]
+                midi_lengths_mixup[i] = max(midi_lengths[index1], midi_lengths[index2])
+
+                label_embed_mixup[i] = w1 * label_emb[index1] + w2 * label_emb[index2]
+                label_lengths_mixup[i] = max(label_lengths[index1], label_lengths[index2])
+
+            feats = torch.cat((feats, feats_mixup), 0)
+            feats_lengths = torch.cat((feats_lengths, feats_lengths_mixup), 0)
+            midi_emb = torch.cat((midi_emb, midi_embed_mixup), 0)
+            midi_lengths = torch.cat((midi_lengths, midi_lengths_mixup), 0)
+            label_emb = torch.cat((label_emb, label_embed_mixup), 0)
+            label_lengths = torch.cat((label_lengths, label_lengths_mixup), 0)
+            batch_size_origin = batch_size
+            batch_size = feats.size(0)
 
         label_emb = torch.nn.utils.rnn.pack_padded_sequence(
             label_emb, label_lengths.to("cpu"), batch_first=True, enforce_sorted=False
@@ -395,9 +446,31 @@ class NaiveRNN(AbsSVS):
             olens = feats_lengths
 
         # calculate loss values
-        l1_loss, l2_loss = self.criterion(
-            after_outs[:, : olens.max()], before_outs[:, : olens.max()], ys, olens
-        )
+        if self.use_mixup_training and flag_IsValid == False:
+            olens = feats_lengths[:batch_size_origin]
+            l1_loss_origin, l2_loss_origin = self.criterion(
+                after_outs[:batch_size_origin, : olens.max()], 
+                before_outs[:batch_size_origin, : olens.max()], 
+                feats[:batch_size_origin], 
+                feats_lengths[:batch_size_origin]
+            )
+            olens = feats_lengths[batch_size_origin : batch_size]
+            # logging.info(f"olens: {olens}, feats_lengths: {feats_lengths}")
+            # logging.info(f"after_outs: {after_outs.shape}")
+            # logging.info(f"feats: {feats.shape}")
+            # logging.info(f"feats[batch_size_origin : batch_size]: {feats[batch_size_origin : batch_size].shape}")
+            l1_loss_mixup, l2_loss_mixup = self.criterion(
+                after_outs[batch_size_origin : batch_size, : olens.max()], 
+                before_outs[batch_size_origin : batch_size, : olens.max()], 
+                feats[batch_size_origin : batch_size, : olens.max()], 
+                feats_lengths[batch_size_origin : batch_size]
+            )
+            l1_loss = (1 - self.loss_mixup_wight) * l1_loss_origin + self.loss_mixup_wight * l1_loss_mixup
+            l2_loss = (1 - self.loss_mixup_wight) * l2_loss_origin + self.loss_mixup_wight * l2_loss_mixup
+        else:
+            l1_loss, l2_loss = self.criterion(
+                after_outs[:, : olens.max()], before_outs[:, : olens.max()], ys, olens
+            )
 
         if self.loss_type == "L1":
             loss = l1_loss
@@ -413,12 +486,16 @@ class NaiveRNN(AbsSVS):
             l1_loss=l1_loss.item(),
             l2_loss=l2_loss.item(),
         )
+        if self.use_mixup_training and flag_IsValid == False:
+            stats.update(l1_loss_mixup=l1_loss_mixup)
 
         loss, stats, weight = force_gatherable((loss, stats, batch_size), loss.device)
 
         if flag_IsValid == False:
+            # training stage
             return loss, stats, weight
         else:
+            # validation stage
             return loss, stats, weight, after_outs[:, : olens.max()], ys, olens
 
     def inference(
@@ -426,6 +503,7 @@ class NaiveRNN(AbsSVS):
         text: torch.Tensor,
         label: torch.Tensor,
         midi: torch.Tensor,
+        ds: torch.Tensor,
         feats: torch.Tensor = None,
         tempo: Optional[torch.Tensor] = None,
         spembs: Optional[torch.Tensor] = None,

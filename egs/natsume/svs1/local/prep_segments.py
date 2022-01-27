@@ -126,7 +126,6 @@ if __name__ == "__main__":
         segments.append(
             make_segment(recording_id, temp_info, args.threshold, args.silence)
         )
-    
 
     for file in segments:
         for key, val in file.items():

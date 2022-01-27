@@ -537,9 +537,7 @@ class Reporter:
                 if key2 in ("time", "total_count"):
                     continue
                 summary_writer.add_scalar(
-                    f"{key1}_{key2}_epoch",
-                    self.stats[epoch][key1][key2],
-                    epoch,
+                    f"{key1}_{key2}_epoch", self.stats[epoch][key1][key2], epoch,
                 )
 
     def wandb_log(self, epoch: int = None, commit: bool = True):
