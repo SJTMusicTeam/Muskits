@@ -5,11 +5,8 @@ KIRITAN=/home/exx/jiatong/projects/svs/data/
 ONIKU=
 OFUTON=
 NATSUME=
-<<<<<<< HEAD
 COMBINE=
-=======
 CSD=downloads
->>>>>>> fdfbfedc87702a68ec427f862ac398153d02d20d
 
 # For only JHU environment
 if [[ "$(hostname -d)" == clsp.jhu.edu ]]; then
