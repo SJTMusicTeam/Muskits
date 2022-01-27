@@ -3,11 +3,10 @@
 # -e 'error', -u 'undefined variable', -o ... 'error in pipeline', -x 'print commands',
 set -e
 set -u
-set -o pipefail
+# set -o pipefail
 
 # spectrogram-related arguments
 fs=24000
-fmin=80
 fmax=7600
 n_fft=2048
 n_shift=300
@@ -55,5 +54,9 @@ cleaner=none
     --valid_set "${valid_set}" \
     --test_sets "${test_sets}" \
     --srctexts "data/${train_set}/text" \
+<<<<<<< HEAD
     --local_data_opts "${NOWPATH}/"\
     ${opts} "$@"
+=======
+    ${opts} "$@"
+>>>>>>> fdfbfedc87702a68ec427f862ac398153d02d20d

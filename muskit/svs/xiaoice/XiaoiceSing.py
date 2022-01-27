@@ -407,13 +407,9 @@ class XiaoiceSing(AbsSVS):
 
         # report extra information
         if self.encoder_type == "transformer" and self.use_scaled_pos_enc:
-            stats.update(
-                encoder_alpha=self.encoder.embed[-1].alpha.data.item(),
-            )
+            stats.update(encoder_alpha=self.encoder.embed[-1].alpha.data.item(),)
         if self.decoder_type == "transformer" and self.use_scaled_pos_enc:
-            stats.update(
-                decoder_alpha=self.decoder.embed[-1].alpha.data.item(),
-            )
+            stats.update(decoder_alpha=self.decoder.embed[-1].alpha.data.item(),)
 
         loss, stats, weight = force_gatherable((loss, stats, batch_size), loss.device)
 
@@ -425,13 +421,16 @@ class XiaoiceSing(AbsSVS):
     def inference(
         self,
         text: torch.Tensor,
-        feats: Optional[torch.Tensor] = None,
-        durations: Optional[torch.Tensor] = None,
+        feats: torch.Tensor,
+        label: torch.Tensor,
+        midi: torch.Tensor,
+        ds: torch.Tensor,
+        tempo: Optional[torch.Tensor] = None,
         spembs: Optional[torch.Tensor] = None,
         sids: Optional[torch.Tensor] = None,
         lids: Optional[torch.Tensor] = None,
-        alpha: float = 1.0,
-        use_teacher_forcing: bool = False,
+        # alpha: float = 1.0,
+        # use_teacher_forcing: bool = False,
     ) -> Dict[str, torch.Tensor]:
         """Generate the sequence of features given the sequences of characters.
         Args:
@@ -449,34 +448,56 @@ class XiaoiceSing(AbsSVS):
                 * feat_gen (Tensor): Output sequence of features (T_feats, odim).
                 * duration (Tensor): Duration sequence (T_text + 1,).
         """
-        
 
-        if use_teacher_forcing:
-            # use groundtruth of duration
-            ds = d.unsqueeze(0)
-            _, outs, d_outs = self._forward(
-                xs,
-                ilens,
-                ys,
-                ds=ds,
-                spembs=spembs,
-                sids=sids,
-                lids=lids,
-            )  # (1, T_feats, odim)
+        label_emb = self.phone_encode_layer(label)
+        midi_emb = self.midi_encode_layer(midi)
+        tempo_emb = self.tempo_encode_layer(tempo)
+        input_emb = label_emb + midi_emb + tempo_emb
+
+        x_masks = None          # self._source_mask(label_lengths)
+        hs, _ = self.encoder(input_emb, x_masks)  # (B, T_text, adim)
+
+        # forward duration predictor and length regulator
+        d_masks = None          # make_pad_mask(label_lengths).to(input_emb.device)
+        d_outs = self.duration_predictor.inference(hs, d_masks)  # (B, T_text)
+        d_outs_int = torch.floor(d_outs + 0.5).to(dtype=torch.long)  # (B, T_text)
+
+        logging.info(f"ds: {ds}")
+        logging.info(f"ds.shape: {ds.shape}")
+        logging.info(f"d_outs: {d_outs}")
+        logging.info(f"d_outs.shape: {d_outs.shape}")
+
+        # use G.T. duration
+        # hs = self.length_regulator(hs, ds)  # (B, T_feats, adim)
+
+        # use duration model output
+        hs = self.length_regulator(hs, d_outs_int)  # (B, T_feats, adim)
+
+        # forward decoder
+        h_masks = None          # self._source_mask(feats_lengths)
+        zs, _ = self.decoder(hs, h_masks)  # (B, T_feats, adim)
+        before_outs = self.feat_out(zs).view(
+            zs.size(0), -1, self.odim
+        )  # (B, T_feats, odim)
+
+        # postnet -> (B, Lmax//r * r, odim)
+        if self.postnet is None:
+            after_outs = before_outs
         else:
-            # inference
-            _, outs, d_outs = self._forward(
-                xs,
-                ilens,
-                ys,
-                spembs=spembs,
-                sids=sids,
-                lids=lids,
-                is_inference=True,
-                alpha=alpha,
-            )  # (1, T_feats, odim)
+            after_outs = before_outs + self.postnet(
+                before_outs.transpose(1, 2)
+            ).transpose(1, 2)
 
-        return dict(feat_gen=outs[0], duration=d_outs[0])
+        # ilens = torch.tensor([len(label)])
+        # olens = torch.tensor([len(feats)])
+        # ys = feats
+        # l1_loss, duration_loss = self.criterion(
+        #     after_outs, before_outs, d_outs, ys, ds, ilens, olens
+        # )
+        # loss = l1_loss + duration_loss
+        # logging.info(f"loss: {loss}, l1_loss: {l1_loss}, duration_loss: {duration_loss}")
+
+        return after_outs, None, None
 
     def _integrate_with_spk_embed(
         self, hs: torch.Tensor, spembs: torch.Tensor

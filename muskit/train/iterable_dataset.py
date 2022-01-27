@@ -7,6 +7,7 @@ from typing import Callable
 from typing import Collection
 from typing import Dict
 from typing import Iterable
+from typing import Iterator
 from typing import Tuple
 from typing import Union
 
@@ -142,7 +143,7 @@ class IterableMuskitDataset(IterableDataset):
         _mes += f"\n  preprocess: {self.preprocess})"
         return _mes
 
-    def __iter__(self) -> Iterable[Tuple[Union[str, int], Dict[str, np.ndarray]]]:
+    def __iter__(self) -> Iterator[Tuple[Union[str, int], Dict[str, np.ndarray]]]:
         if self.key_file is not None:
             uid_iter = (
                 line.rstrip().split(maxsplit=1)[0]
@@ -215,7 +216,8 @@ class IterableMuskitDataset(IterableDataset):
             # 3. [Option] Apply preprocessing
             #   e.g. muskit.train.preprocessor:CommonPreprocessor
             if self.preprocess is not None:
-                data = self.preprocess(uid, data, time_aug_factor=1.0)
+                time_aug_factor = 1.0
+                data = self.preprocess(uid, data, time_aug_factor)
 
             # 4. Force data-precision
             for name in data:

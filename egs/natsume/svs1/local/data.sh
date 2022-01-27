@@ -16,21 +16,22 @@ log() {
 SECONDS=0
 stage=1
 stop_stage=100
+fs=None
 
 log "$0 $*"
 
 . utils/parse_options.sh || exit 1;
 
-if [ -z "${Natsume}" ]; then
+if [ -z "${NATSUME}" ]; then
     log "Fill the value of 'Natsume' of db.sh"
     exit 1
 fi
 
-mkdir -p ${Natsume}
+mkdir -p ${NATSUME}
 
 train_set=tr_no_dev
 train_dev=dev
-recog_set=eval1
+recog_set=eval
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     log "stage 0: Data Download"
@@ -40,17 +41,17 @@ fi
 
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     log "stage 1: Dataset split "
-    python local/dataset_split.py ${Natsume}/Natsume_Singing_DB/wav `pwd`/data 0.1 0.1
+    python local/dataset_split.py ${NATSUME}/Natsume_Singing_DB/wav `pwd`/data 0.1 0.1
 
 fi
 
 
-for dataset in train dev eval1; do
+for dataset in ${train_set} ${train_dev} ${recog_set}; do
   echo "process for subset: ${dataset}"
   if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
       log "stage 2: Generate data directory"
       # scp files generation
-      local/data_pre.sh data/${dataset}_raw data/${dataset} 48000
+      local/data_pre.sh data/${dataset}_raw data/${dataset} ${fs}
   fi
 
   if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then

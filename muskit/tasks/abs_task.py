@@ -141,8 +141,7 @@ scheduler_classes = dict(
 )
 if LooseVersion(torch.__version__) >= LooseVersion("1.1.0"):
     scheduler_classes.update(
-        noamlr=NoamLR,
-        warmuplr=WarmupLR,
+        noamlr=NoamLR, warmuplr=WarmupLR,
     )
 if LooseVersion(torch.__version__) >= LooseVersion("1.3.0"):
     CosineAnnealingWarmRestarts = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts
@@ -253,8 +252,7 @@ class AbsTask(ABC):
         assert check_argument_types()
 
         class ArgumentDefaultsRawTextHelpFormatter(
-            argparse.RawTextHelpFormatter,
-            argparse.ArgumentDefaultsHelpFormatter,
+            argparse.RawTextHelpFormatter, argparse.ArgumentDefaultsHelpFormatter,
         ):
             pass
 
@@ -306,15 +304,14 @@ class AbsTask(ABC):
             help="The number of gpus. 0 indicates CPU mode",
         )
         group.add_argument(
-            "--gpu_id",
-            type=int,
-            default=0,
-            help="GPU_id, only works when ngpu=1",
+            "--gpu_id", type=int, default=0, help="GPU_id, only works when ngpu=1",
         )
         group.add_argument("--pitch_aug_min", type=int, default=0, help="The lower bound of midi semitone when pitch augmentation")
         group.add_argument("--pitch_aug_max", type=int, default=0, help="The upper bound of midi semitone when pitch augmentation")
         group.add_argument("--time_aug_min", type=float, default=1, help="The lower bound of time augmentation factor")
         group.add_argument("--time_aug_max", type=float, default=1, help="The upper bound of time augmentation factor")
+        group.add_argument("--random_crop", type=bool, default=False, help="Flag to use random crop augmentation during training")
+        group.add_argument("--mask_aug", type=bool, default=False, help="Flag to use masking augmentation during training")
         group.add_argument("--seed", type=int, default=0, help="Random seed")
         group.add_argument(
             "--num_workers",
@@ -332,10 +329,7 @@ class AbsTask(ABC):
 
         group = parser.add_argument_group("distributed training related")
         group.add_argument(
-            "--dist_backend",
-            default="nccl",
-            type=str,
-            help="distributed backend",
+            "--dist_backend", default="nccl", type=str, help="distributed backend",
         )
         group.add_argument(
             "--dist_init_method",
@@ -583,22 +577,13 @@ class AbsTask(ABC):
             help="Enable tensorboard logging",
         )
         group.add_argument(
-            "--use_wandb",
-            type=str2bool,
-            default=False,
-            help="Enable wandb logging",
+            "--use_wandb", type=str2bool, default=False, help="Enable wandb logging",
         )
         group.add_argument(
-            "--wandb_project",
-            type=str,
-            default=None,
-            help="Specify wandb project",
+            "--wandb_project", type=str, default=None, help="Specify wandb project",
         )
         group.add_argument(
-            "--wandb_id",
-            type=str,
-            default=None,
-            help="Specify wandb id",
+            "--wandb_id", type=str, default=None, help="Specify wandb id",
         )
         group.add_argument(
             "--detect_anomaly",
@@ -630,11 +615,7 @@ class AbsTask(ABC):
             "  --init_param some/where/model.pth:decoder:decoder:decoder.embed\n",
         )
         group.add_argument(
-            "--freeze_param",
-            type=str,
-            default=[],
-            nargs="*",
-            help="Freeze parameters",
+            "--freeze_param", type=str, default=[], nargs="*", help="Freeze parameters",
         )
 
         group = parser.add_argument_group("BatchSampler related")
@@ -835,9 +816,7 @@ class AbsTask(ABC):
 
     @classmethod
     def build_optimizers(
-        cls,
-        args: argparse.Namespace,
-        model: torch.nn.Module,
+        cls, args: argparse.Namespace, model: torch.nn.Module,
     ) -> List[torch.optim.Optimizer]:
         if cls.num_optimizers != 1:
             raise RuntimeError(
@@ -1038,9 +1017,7 @@ class AbsTask(ABC):
                 local_args.ngpu = 1
 
                 process = mp.Process(
-                    target=cls.main_worker,
-                    args=(local_args,),
-                    daemon=False,
+                    target=cls.main_worker, args=(local_args,), daemon=False,
                 )
                 process.start()
                 processes.append(process)
@@ -1222,26 +1199,18 @@ class AbsTask(ABC):
             # 7. Build iterator factories
             if args.multiple_iterator:
                 train_iter_factory = cls.build_multiple_iter_factory(
-                    args=args,
-                    distributed_option=distributed_option,
-                    mode="train",
+                    args=args, distributed_option=distributed_option, mode="train",
                 )
             else:
                 train_iter_factory = cls.build_iter_factory(
-                    args=args,
-                    distributed_option=distributed_option,
-                    mode="train",
+                    args=args, distributed_option=distributed_option, mode="train",
                 )
             valid_iter_factory = cls.build_iter_factory(
-                args=args,
-                distributed_option=distributed_option,
-                mode="valid",
+                args=args, distributed_option=distributed_option, mode="valid",
             )
             if args.num_att_plot != 0:
                 plot_attention_iter_factory = cls.build_iter_factory(
-                    args=args,
-                    distributed_option=distributed_option,
-                    mode="plot_att",
+                    args=args, distributed_option=distributed_option, mode="plot_att",
                 )
             else:
                 plot_attention_iter_factory = None
@@ -1266,10 +1235,7 @@ class AbsTask(ABC):
                         wandb_id = args.wandb_id
 
                     wandb.init(
-                        project=project,
-                        dir=output_dir,
-                        id=wandb_id,
-                        resume="allow",
+                        project=project, dir=output_dir, id=wandb_id, resume="allow",
                     )
                     wandb.config.update(args)
                 else:
@@ -1295,10 +1261,7 @@ class AbsTask(ABC):
 
     @classmethod
     def build_iter_options(
-        cls,
-        args: argparse.Namespace,
-        distributed_option: DistributedOption,
-        mode: str,
+        cls, args: argparse.Namespace, distributed_option: DistributedOption, mode: str,
     ):
         if mode == "train":
             preprocess_fn = cls.build_preprocess_fn(args, train=True)
@@ -1414,21 +1377,15 @@ class AbsTask(ABC):
 
         if args.iterator_type == "sequence":
             return cls.build_sequence_iter_factory(
-                args=args,
-                iter_options=iter_options,
-                mode=mode,
+                args=args, iter_options=iter_options, mode=mode,
             )
         elif args.iterator_type == "chunk":
             return cls.build_chunk_iter_factory(
-                args=args,
-                iter_options=iter_options,
-                mode=mode,
+                args=args, iter_options=iter_options, mode=mode,
             )
         elif args.iterator_type == "task":
             return cls.build_task_iter_factory(
-                args=args,
-                iter_options=iter_options,
-                mode=mode,
+                args=args, iter_options=iter_options, mode=mode,
             )
         else:
             raise RuntimeError(f"Not supported: iterator_type={args.iterator_type}")
@@ -1449,6 +1406,8 @@ class AbsTask(ABC):
             pitch_aug_max=args.pitch_aug_max,
             time_aug_min=args.time_aug_min,
             time_aug_max=args.time_aug_max,
+            random_crop=args.random_crop,
+            mask_aug=args.mask_aug
         )
         cls.check_task_requirements(
             dataset, args.allow_variable_data_keys, train=iter_options.train
@@ -1517,10 +1476,7 @@ class AbsTask(ABC):
 
     @classmethod
     def build_chunk_iter_factory(
-        cls,
-        args: argparse.Namespace,
-        iter_options: IteratorOptions,
-        mode: str,
+        cls, args: argparse.Namespace, iter_options: IteratorOptions, mode: str,
     ) -> AbsIterFactory:
         assert check_argument_types()
 
@@ -1590,10 +1546,7 @@ class AbsTask(ABC):
     # NOTE(kamo): Not abstract class
     @classmethod
     def build_task_iter_factory(
-        cls,
-        args: argparse.Namespace,
-        iter_options: IteratorOptions,
-        mode: str,
+        cls, args: argparse.Namespace, iter_options: IteratorOptions, mode: str,
     ) -> AbsIterFactory:
         """Build task specific iterator factory
         Example:
@@ -1748,9 +1701,7 @@ class AbsTask(ABC):
             if key_file is None:
                 key_file = data_path_and_name_and_type[0][0]
             batch_sampler = UnsortedBatchSampler(
-                batch_size=batch_size,
-                key_file=key_file,
-                drop_last=False,
+                batch_size=batch_size, key_file=key_file, drop_last=False,
             )
             kwargs.update(batch_sampler=batch_sampler)
 
@@ -1759,10 +1710,7 @@ class AbsTask(ABC):
         )
 
         return DataLoader(
-            dataset=dataset,
-            pin_memory=ngpu > 0,
-            num_workers=num_workers,
-            **kwargs,
+            dataset=dataset, pin_memory=ngpu > 0, num_workers=num_workers, **kwargs,
         )
 
     # ~~~~~~~~~ The methods below are mainly used for inference ~~~~~~~~~
