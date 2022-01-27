@@ -16,6 +16,7 @@ log() {
 SECONDS=0
 stage=1
 stop_stage=100
+fs=None
 
 log "$0 $*"
 
@@ -43,7 +44,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     log "stage 1: Dataset split "
     # We use a pre-defined split (see details in local/dataset_split.py)"
     python local/dataset_split.py ${OFUTON} \
-        data/${train_set} data/${train_dev} data/${recog_set}
+        data/${train_set} data/${train_dev} data/${recog_set} --fs ${fs}
 fi
 
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
