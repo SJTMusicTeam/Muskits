@@ -38,7 +38,11 @@ find "${db}" -name "*.wav" | sort | while read -r filename; do
         # default sampling rate
         echo "${utt_prefix}${id} sox ${filename} -b 16 -t wav - |" >> "${wav_scp}"
     else
-        echo "${utt_prefix}${id} sox ${filename} -b 16 -t wav -r ${fs} - |" >> "${wav_scp}"
+        rootp=$(dirname ${filename})
+        fname=$(basename ${filename} .wav)
+        fname_16bits="${rootp}/${fname}_bits16.wav"
+        sox ${filename} -c 1 -t wavpcm -b 16 -r ${fs} ${fname_16bits}
+        echo "${utt_prefix}${id} sox ${fname_16bits} -b 16 -t wav -r ${fs} - |" >> "${wav_scp}"
     fi
 
     echo "${utt_prefix}${id} ${utt_prefix}" >> "${utt2spk}"
