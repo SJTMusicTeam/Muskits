@@ -16,7 +16,7 @@ log() {
 SECONDS=0
 stage=1
 stop_stage=100
-fs=None
+fs=$5
 
 log "$0 $*"
 
@@ -58,7 +58,7 @@ for dataset in ${train_set} ${train_dev} ${recog_set}; do
 
   if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
       log "stage 3: Prepare segments"
-      src_data=$1data/${dataset}
+      src_data=$1/data/${dataset}
       local/prep_segments.py --silence pau --silence sil ${src_data} 10000 # in ms
       mv ${src_data}/segments.tmp ${src_data}/segments
       mv ${src_data}/label.tmp ${src_data}/label

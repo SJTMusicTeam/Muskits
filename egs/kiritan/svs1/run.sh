@@ -37,7 +37,7 @@ cleaner=none
 ./svs.sh \
     --lang jp \
     --stage 0 \
-    --local_data_opts "--stage 0" \
+    --local_data_opts "--stage 0 ${NOWPATH}" \
     --feats_type raw \
     --pitch_extract None \
     --fs "${fs}" \
@@ -54,5 +54,4 @@ cleaner=none
     --valid_set "${valid_set}" \
     --test_sets "${test_sets}" \
     --srctexts "data/${train_set}/text" \
-    --local_data_opts "${NOWPATH}" \
     ${opts} "$@"

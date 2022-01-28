@@ -57,8 +57,11 @@ for dataset in ${train_set} ${train_dev} ${recog_set}; do
     echo "process for subset: ${dataset}"
     opts="${COMBINE}data/${dataset}"
     for dir in $*; do
-        opts+=" ${dir}${dataset}"
-        # echo ${dir}
+        # echo "dir: ${dir}"
+        if test -d ${dir}; then
+            opts+=" ${dir}${dataset}"
+            # echo "valid dir: ${dir}"
+        fi
     done
     utils/combine_data.sh ${opts}
 done
