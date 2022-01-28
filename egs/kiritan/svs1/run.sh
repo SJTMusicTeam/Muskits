@@ -54,9 +54,4 @@ cleaner=none
     --valid_set "${valid_set}" \
     --test_sets "${test_sets}" \
     --srctexts "data/${train_set}/text" \
-<<<<<<< HEAD
-    --local_data_opts "${NOWPATH}/"\
     ${opts} "$@"
-=======
-    ${opts} "$@"
->>>>>>> fdfbfedc87702a68ec427f862ac398153d02d20d
