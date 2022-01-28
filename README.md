@@ -35,3 +35,6 @@ The full installation guide is available at https://github.com/SJTMusicTeam/Musk
 ### Demonstration
 (In progress)
 
+### Running instructions
+The tutorial of how to use Muskits is at https://github.com/SJTMusicTeam/Muskits/blob/main/doc/tutorial.md
+
