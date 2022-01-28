@@ -16,6 +16,7 @@ log() {
 SECONDS=0
 stage=1
 stop_stage=100
+fs=None
 
 log "$0 $*"
 
@@ -52,7 +53,7 @@ for dataset in ${train_set} ${train_dev} ${recog_set}; do
   if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
       log "stage 2: Generate data directory"
       # scp files generation
-      local/data_pre.sh $1data/local/${dataset}_raw $1data/${dataset} 48000
+      local/data_pre.sh data/local/${dataset}_raw data/${dataset} ${fs}
   fi
 
   if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
