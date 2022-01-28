@@ -16,6 +16,7 @@ log() {
 SECONDS=0
 stage=1
 stop_stage=100
+fs=None
 
 log "$0 $*"
 
