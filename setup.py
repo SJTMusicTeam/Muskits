@@ -24,6 +24,8 @@ requirements = {
         "wandb",
         "filelock",
         "pytsmod",
+        "kaldiio",
+        "kaldi-io",
         # DNN related packages are installed by Makefile
         # "chainer==6.0.0",
         # 'cupy==6.0.0',

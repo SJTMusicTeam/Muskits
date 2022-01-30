@@ -12,6 +12,8 @@ n_fft=2048
 n_shift=300
 win_length=1200
 
+NOWPATH=`pwd`
+
 opts=
 if [ "${fs}" -eq 48000 ]; then
     # To suppress recreation, specify wav format
@@ -20,9 +22,9 @@ else
     opts="--audio_format flac "
 fi
 
-train_set=train
+train_set=tr_no_dev
 valid_set=dev
-test_sets="dev eval1"
+test_sets=eval
 
 # training and inference configuration
 train_config=conf/train.yaml
@@ -35,7 +37,7 @@ cleaner=none
 ./svs.sh \
     --lang jp \
     --stage 0 \
-    --local_data_opts "--stage 0" \
+    --local_data_opts "--stage 0 ${NOWPATH}" \
     --feats_type raw \
     --pitch_extract None \
     --fs "${fs}" \

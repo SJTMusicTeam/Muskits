@@ -292,6 +292,7 @@ if ! "${skip_data_prep}"; then
         # [Task dependent] Need to create data.sh for new corpus
         local/data.sh ${local_data_opts} --fs "${fs}"
     fi
+    
 
 
     if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then

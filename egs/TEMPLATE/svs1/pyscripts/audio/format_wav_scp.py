@@ -96,6 +96,7 @@ def main():
 
         with out_num_samples.open("w") as fnum_samples:
             for uttid, (rate, wave) in tqdm(loader):
+                # logging.info(f'uttid={uttid}, wavelen={len(wave)}')
                 # wave: (Time,) or (Time, Nmic)
                 if wave.ndim == 2 and utt2ref_channels is not None:
                     wave = wave[:, utt2ref_channels(uttid)]
