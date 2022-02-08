@@ -220,6 +220,14 @@ class SingingGenerate:
             and "fs" in vocoder_conf
         ):
             logging.info(f"vocoder_conf: {vocoder_conf}")
+
+            logging.info(f"train_config: {train_config}")
+
+            train_config = Path(train_config)
+            with train_config.open("r", encoding="utf-8") as f:
+                train_args = yaml.safe_load(f)
+            vocoder_checkpoint = train_args['vocoder_checkpoint']  # the vocoder keep the same as Training Stage
+
             self.fs = vocoder_conf["fs"]
             if vocoder_type == "Grriffin-Lim":
                 self.spc2wav = Spectrogram2Waveform(**vocoder_conf)

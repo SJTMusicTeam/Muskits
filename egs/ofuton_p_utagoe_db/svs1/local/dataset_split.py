@@ -3,7 +3,7 @@ import os
 import shutil
 
 
-UTT_PREFIX = "oniku"
+UTT_PREFIX = "ofuton"
 DEV_LIST = ["chatsumi", "my_grandfathers_clock_3_2", "haruyo_koi", "momiji", "tetsudou_shouka"]
 TEST_LIST = ["usagito_kame", "my_grandfathers_clock_1_2", "antagata_dokosa", "momotarou", "furusato"]
 
