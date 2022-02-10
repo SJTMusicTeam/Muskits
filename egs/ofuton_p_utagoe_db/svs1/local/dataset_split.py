@@ -4,8 +4,8 @@ import shutil
 
 
 UTT_PREFIX = "oniku"
-DEV_LIST = ["chatsumi", "goin_home", "aoimeno_ningyou", "momiji", "tetsudou_shouka"]
-TEST_LIST = ["usagito_kame", "sousyunfu", "romance_anonimo", "momotarou", "furusato"]
+DEV_LIST = ["chatsumi", "my_grandfathers_clock_3_2", "haruyo_koi", "momiji", "tetsudou_shouka"]
+TEST_LIST = ["usagito_kame", "my_grandfathers_clock_1_2", "antagata_dokosa", "momotarou", "furusato"]
 
 
 def train_check(song):
@@ -48,7 +48,7 @@ def process_text_info(text):
     return " ".join(label_info), " ".join(text_info)
 
 
-def process_subset(src_data, subset, check_func):
+def process_subset(src_data, subset, check_func, fs):
     subfolder = os.listdir(src_data)
     makedir(subset)
     wavscp = open(os.path.join(subset, "wav.scp"), "w", encoding="utf-8")
@@ -63,9 +63,14 @@ def process_subset(src_data, subset, check_func):
         if not check_func(folder):
             continue
         utt_id = "{}_{}".format(UTT_PREFIX, pack_zero(folder))
+
+        cmd = f"sox {os.path.join(src_data, folder, folder)}.wav -c 1 -t wavpcm -b 16 -r {fs} {os.path.join(src_data, folder, folder)}_bits16.wav"
+        print(f"cmd: {cmd}")
+        os.system(cmd)
+        
         wavscp.write(
-            "{} sox -t wavpcm {} -c 1 -t wavpcm -b 16 -|\n".format(
-                utt_id, os.path.join(src_data, folder, "{}.wav".format(folder))
+            "{} sox {} -c 1 -t wavpcm -b 16 -|\n".format(
+                utt_id, os.path.join(src_data, folder, "{}_bits16.wav".format(folder))
             )
         )
         utt2spk.write("{} {}\n".format(utt_id, UTT_PREFIX))
@@ -87,8 +92,9 @@ if __name__ == "__main__":
     parser.add_argument("train", type=str, help="train set")
     parser.add_argument("dev", type=str, help="development set")
     parser.add_argument("test", type=str, help="test set")
+    parser.add_argument("--fs", type=int, help="frame rate (Hz)")
     args = parser.parse_args()
 
-    process_subset(args.src_data, args.train, train_check)
-    process_subset(args.src_data, args.dev, dev_check)
-    process_subset(args.src_data, args.test, test_check)
+    process_subset(args.src_data, args.train, train_check, args.fs)
+    process_subset(args.src_data, args.dev, dev_check, args.fs)
+    process_subset(args.src_data, args.test, test_check, args.fs)
