@@ -527,8 +527,25 @@ class MuskitDataset(AbsDataset):
                 note_seq, tempo_seq = loader[(uid, 0, 1)]   # pitch_aug_factor = 0, global_time_aug_factor = 1
 
                 sample_pitch_mean = np.mean(note_seq)
-                self.pitch_mean = float(self.pitch_mean)
-                gap = int((self.pitch_mean - sample_pitch_mean))
+
+                if isinstance( eval(self.pitch_mean), float ):
+                    # single dataset w/o spk-id
+                    global_pitch_mean = float(self.pitch_mean)
+                elif isinstance( eval(self.pitch_mean), list ):
+                    # multi datasets with spk-ids
+                    speaker_lst = ["oniku", "ofuton", "kiritan", "natsume"]     # NOTE: Fix me into args
+                    _find_num = 0
+                    _find_index = 0
+                    for index in range(len(speaker_lst)):
+                        if speaker_lst[index] in uid:
+                            _find_num += 1
+                            _find_index = index
+                    assert _find_num == 1
+                    global_pitch_mean = eval(self.pitch_mean)[_find_index]
+                else:
+                    ValueError("Not Support Type for pitch_mean: %s" % self.pitch_mean)
+
+                gap = int((global_pitch_mean - sample_pitch_mean))
                 if gap == 0:
                     lst = [0]
                 elif gap < 0:
