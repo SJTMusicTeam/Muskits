@@ -880,6 +880,19 @@ class XiaoiceSing_noDP(AbsSVS):
         x_masks = self._source_mask(text_lengths)
         hs, _ = self.encoder(text_emb, x_masks)  # (B, T_text, adim)
 
+        # integrate with SID and LID embeddings
+        if self.spks is not None:
+            sid_embs = self.sid_emb(sids.view(-1))   
+                  
+            hs = hs + sid_embs.unsqueeze(1)
+        if self.langs is not None:
+            lid_embs = self.lid_emb(lids.view(-1))
+            hs = hs + lid_embs.unsqueeze(1)
+
+        # integrate speaker embedding
+        if self.spk_embed_dim is not None:
+            hs = self._integrate_with_spk_embed(hs, spembs)
+
         hs = self.length_regulator(hs, ds)
 
         if self.use_mixup_training and flag_IsValid == False:
@@ -1031,6 +1044,18 @@ class XiaoiceSing_noDP(AbsSVS):
 
         x_masks = None      # self._source_mask(text_lengths)
         hs, _ = self.encoder(text_emb, x_masks)  # (B, T_text, adim)
+
+        # integrate with SID and LID embeddings
+        if self.spks is not None:
+            sid_embs = self.sid_emb(sids.view(-1))
+            hs = hs + sid_embs.unsqueeze(1)
+        if self.langs is not None:
+            lid_embs = self.lid_emb(lids.view(-1))
+            hs = hs + lid_embs.unsqueeze(1)
+
+        # integrate speaker embedding
+        if self.spk_embed_dim is not None:
+            hs = self._integrate_with_spk_embed(hs, spembs)
 
         hs = self.length_regulator(hs, ds)
 
