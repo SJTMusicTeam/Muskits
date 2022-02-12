@@ -45,7 +45,7 @@ from muskit.torch_utils.nets_utils import pad_list
 import random
 from torch.distributions import Beta
 
-Beta_distribution = Beta(torch.tensor([0.5]), torch.tensor([0.5]))
+Beta_distribution = Beta(torch.tensor([0.5]), torch.tensor([0.5]))      # NOTE(Shuai) Fix Me! Add to args
 
 class XiaoiceSing(AbsSVS):
     """XiaoiceSing module for Singing Voice Synthesis.
@@ -882,8 +882,7 @@ class XiaoiceSing_noDP(AbsSVS):
 
         # integrate with SID and LID embeddings
         if self.spks is not None:
-            sid_embs = self.sid_emb(sids.view(-1))   
-                  
+            sid_embs = self.sid_emb(sids.view(-1))
             hs = hs + sid_embs.unsqueeze(1)
         if self.langs is not None:
             lid_embs = self.lid_emb(lids.view(-1))

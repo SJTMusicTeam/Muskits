@@ -290,8 +290,6 @@ if ! "${skip_data_prep}"; then
     if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
         log "Stage 1: Data preparation for data/${train_set}, data/${valid_set}, etc."
         # [Task dependent] Need to create data.sh for new corpus
-        echo ${local_data_opts}
-        echo ${fs}
         local/data.sh ${local_data_opts} --fs "${fs}"
     fi
     
