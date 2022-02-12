@@ -63,7 +63,7 @@ for dataset in ${train_set} ${train_dev} ${recog_set}; do
             # echo "valid dir: ${dir}"
         fi
     done
-    utils/combine_data.sh ${opts}
+    utils/combine_data.sh --extra_files "midi.scp label" ${opts} 
 done
 
 log "Successfully finished. [elapsed=${SECONDS}s]"

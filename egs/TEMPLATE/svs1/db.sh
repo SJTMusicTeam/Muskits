@@ -39,4 +39,5 @@ if [[ `hostname` == capri_gs_2345 ]]; then
     ONIKU=/data5/gs/dataset/ONIKU_KURUMI_UTAGOE_DB
     OFUTON=/data5/gs/dataset/OFUTON_P_UTAGOE_DB
     NATSUME=/data5/gs/dataset/
+    COMBINE=/data5/gs/Muskits/egs/combine_data/svs1/
 fi

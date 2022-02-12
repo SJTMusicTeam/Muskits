@@ -395,6 +395,7 @@ class MuskitDataset(AbsDataset):
         mode: str = "valid",  # train, valid, plot_att, ...
         pitch_aug_min: int = 0,
         pitch_aug_max: int = 0,
+        pitch_mean: str = "None",
         time_aug_min: float = 1.0,
         time_aug_max: float = 1.0,
         random_crop: bool = False,
@@ -439,6 +440,7 @@ class MuskitDataset(AbsDataset):
 
         self.pitch_aug_min = pitch_aug_min
         self.pitch_aug_max = pitch_aug_max
+        self.pitch_mean = pitch_mean
         self.time_aug_min = time_aug_min
         self.time_aug_max = time_aug_max
         self.random_crop = random_crop
@@ -446,6 +448,9 @@ class MuskitDataset(AbsDataset):
 
         assert self.pitch_aug_min <= self.pitch_aug_max
         assert self.time_aug_min <= self.time_aug_max
+        if self.pitch_mean != "None":
+            assert self.pitch_aug_min == 0
+            assert self.pitch_aug_max == 0
 
     def _build_loader(
         self, path: str, loader_type: str
@@ -517,7 +522,40 @@ class MuskitDataset(AbsDataset):
             return uid, data
 
         if self.mode == "train":
-            pitch_aug_factor = random.randint(self.pitch_aug_min, self.pitch_aug_max)
+            if self.pitch_mean != "None":
+                loader = self.loader_dict["midi"]
+                note_seq, tempo_seq = loader[(uid, 0, 1)]   # pitch_aug_factor = 0, global_time_aug_factor = 1
+
+                sample_pitch_mean = np.mean(note_seq)
+
+                if isinstance( eval(self.pitch_mean), float ):
+                    # single dataset w/o spk-id
+                    global_pitch_mean = float(self.pitch_mean)
+                elif isinstance( eval(self.pitch_mean), list ):
+                    # multi datasets with spk-ids
+                    speaker_lst = ["oniku", "ofuton", "kiritan", "natsume"]     # NOTE: Fix me into args
+                    _find_num = 0
+                    _find_index = 0
+                    for index in range(len(speaker_lst)):
+                        if speaker_lst[index] in uid:
+                            _find_num += 1
+                            _find_index = index
+                    assert _find_num == 1
+                    global_pitch_mean = eval(self.pitch_mean)[_find_index]
+                else:
+                    ValueError("Not Support Type for pitch_mean: %s" % self.pitch_mean)
+
+                gap = int((global_pitch_mean - sample_pitch_mean))
+                if gap == 0:
+                    lst = [0]
+                elif gap < 0:
+                    lst = [i for i in range(gap, 1)]
+                else:
+                    lst = [i for i in range(0, gap+1)]
+                # logging.info(f"type: {type(note_seq)}, mean: {np.mean(note_seq)}, lst: {lst}, gap: {gap}")
+                pitch_aug_factor = random.sample(lst, 1)[0]
+            else:
+                pitch_aug_factor = random.randint(self.pitch_aug_min, self.pitch_aug_max)
 
             _time_list = [i/100 for i in range(int(self.time_aug_min*100),int(self.time_aug_max*100+1),1)]
             # _time_list = [1, 1.06, 1.12, 1.18, 1.24]
@@ -538,10 +576,6 @@ class MuskitDataset(AbsDataset):
                     value = loader[(uid, pitch_aug_factor, global_time_aug_factor)]
                 else:
                     value = loader[uid]
-                # if name == "text" or name == "label":
-                #     logging.info(f"name: {name}, loader: {loader}")
-                #     logging.info(f"uid: {uid}, value: {value}")
-                #     quit()
                 if isinstance(value, list):
                     value = np.array(value)
                 if not isinstance(

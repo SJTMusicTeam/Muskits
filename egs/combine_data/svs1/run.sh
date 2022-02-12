@@ -20,6 +20,10 @@ combine_data_path=""
 combine_data_path+=" ${NOWPATH}/oniku_kurumi_utagoe_db/svs1/data/"
 combine_data_path+=" ${NOWPATH}/ofuton_p_utagoe_db/svs1/data/"
 combine_data_path+=" ${NOWPATH}/kiritan/svs1/data/"
+combine_data_path+=" ${NOWPATH}/natsume/svs1/data/"
+
+score_feats_extract=frame_score_feats   # frame_score_feats | syllable_score_feats
+expdir=exp/2-9-Xiaoice_noDP-adaptivePitchAug
 
 opts=
 if [ "${fs}" -eq 48000 ]; then
@@ -34,7 +38,8 @@ valid_set=dev
 test_sets=eval
 
 # training and inference configuration
-train_config=conf/train.yaml
+# train_config=conf/train.yaml
+train_config=conf/tuning/train_xiaoice_noDP.yaml
 inference_config=conf/decode.yaml
 
 # text related processing arguments
@@ -43,7 +48,8 @@ cleaner=none
 
 ./svs.sh \
     --lang jp \
-    --stage 0 \
+    --stage 7 \
+    --stop_stage 7 \
     --local_data_opts "--stage 0 ${combine_data_path}" \
     --feats_type raw \
     --pitch_extract None \
@@ -60,5 +66,8 @@ cleaner=none
     --train_set "${train_set}" \
     --valid_set "${valid_set}" \
     --test_sets "${test_sets}" \
+    --score_feats_extract "${score_feats_extract}" \
     --srctexts "data/${train_set}/text" \
+    --svs_exp ${expdir} \
+    --ngpu 1 \
     ${opts} "$@"
