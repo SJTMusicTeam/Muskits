@@ -278,7 +278,7 @@ class MLPSinger(AbsSVS):
         if self.midi_embed_integration_type == "add":
             hs = label_emb + midi_emb
         else:
-            hs = torch.cat(label_emb, midi_emb, dim=-1)
+            hs = torch.cat((label_emb, midi_emb), dim=-1)
 
         hs = self.encoder(hs)
 
@@ -325,7 +325,8 @@ class MLPSinger(AbsSVS):
         else:
             ys = feats
             olens = feats_lengths
-
+        
+        # logging.info("{} {} {}".format(after_outs.size(), before_outs.size(), ys.size()))
         # calculate loss values
         l1_loss, l2_loss = self.criterion(
             after_outs[:, : olens.max()], before_outs[:, : olens.max()], ys, olens
@@ -388,7 +389,7 @@ class MLPSinger(AbsSVS):
         if self.midi_embed_integration_type == "add":
             hs = label_emb + midi_emb
         else:
-            hs = torch.cat(label_emb, midi_emb, dim=-1)
+            hs = torch.cat((label_emb, midi_emb), dim=-1)
 
         hs = self.encoder(hs)
 
@@ -497,5 +498,6 @@ class MLPSinger(AbsSVS):
         segmented_hs = segmented_hs[:, :, self.overlap_size : -self.overlap_size]
 
         hs = segmented_hs.reshape(batch_size, segment_len * valid_dim, feature_dim)
-        hs = hs[:, : -(pad_right - self.overlap_size), :]
+        if pad_right != self.overlap_size:
+            hs = hs[:, : -(pad_right - self.overlap_size), :]
         return hs

@@ -323,6 +323,10 @@ class AbsTask(ABC):
             default=0,
             help="The upper bound of midi semitone when pitch augmentation",
         )
+        group.add_argument("--pitch_mean",
+            type=str,
+            default="None",
+            help="The mean midi-value of training split, None means no-adaptive-pitch-augmentation")
         group.add_argument(
             "--time_aug_min",
             type=float,
@@ -347,13 +351,6 @@ class AbsTask(ABC):
             default=False,
             help="Flag to use masking augmentation during training",
         )
-        group.add_argument("--pitch_aug_min", type=int, default=0, help="The lower bound of midi semitone when pitch augmentation")
-        group.add_argument("--pitch_aug_max", type=int, default=0, help="The upper bound of midi semitone when pitch augmentation")
-        group.add_argument("--pitch_mean", type=str, default="None", help="The mean midi-value of training split, None means no-adaptive-pitch-augmentation")
-        group.add_argument("--time_aug_min", type=float, default=1, help="The lower bound of time augmentation factor")
-        group.add_argument("--time_aug_max", type=float, default=1, help="The upper bound of time augmentation factor")
-        group.add_argument("--random_crop", type=bool, default=False, help="Flag to use random crop augmentation during training")
-        group.add_argument("--mask_aug", type=bool, default=False, help="Flag to use masking augmentation during training")
         group.add_argument("--seed", type=int, default=0, help="Random seed")
         group.add_argument(
             "--num_workers",
