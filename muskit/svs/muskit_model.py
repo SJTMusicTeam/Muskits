@@ -156,41 +156,44 @@ class MuskitSVSModel(AbsMuskitModel):
                 label = label[:, : label_lengths.max()]  # for data-parallel
 
                 # calculate durations, new text & text_length
-                # Syllable Level duration info needs phone 
-                # NOTE(Shuai) Duplicate adjacent phones will appear in text files sometimes 
-                # e.g. oniku_0000000000000000hato_0002 
-                # 10.951 11.107 sh 
-                # 11.107 11.336 i 
-                # 11.336 11.610 i 
+                # Syllable Level duration info needs phone
+                # NOTE(Shuai) Duplicate adjacent phones will appear in text files sometimes
+                # e.g. oniku_0000000000000000hato_0002
+                # 10.951 11.107 sh
+                # 11.107 11.336 i
+                # 11.336 11.610 i
                 # 11.610 11.657 k
                 _text_cal = []
                 _text_length_cal = []
                 ds = []
                 for i, _ in enumerate(label_lengths):
-                    _phone = label[i, :label_lengths[i]]
+                    _phone = label[i, : label_lengths[i]]
 
-                    _output, counts = torch.unique_consecutive(_phone, return_counts=True)
-                    
+                    _output, counts = torch.unique_consecutive(
+                        _phone, return_counts=True
+                    )
+
                     _text_cal.append(_output)
                     _text_length_cal.append(len(_output))
                     ds.append(counts)
                 ds = pad_list(ds, pad_value=0).to(text.device)
-                text = pad_list(_text_cal, pad_value=0).to(text.device, dtype=torch.long)
+                text = pad_list(_text_cal, pad_value=0).to(
+                    text.device, dtype=torch.long
+                )
                 text_lengths = torch.tensor(_text_length_cal).to(text.device)
-
 
             elif isinstance(self.score_feats_extract, SyllableScoreFeats):
                 extractMethod_frame = FrameScoreFeats(
-                    fs          = self.score_feats_extract.fs,
-                    n_fft       = self.score_feats_extract.n_fft,
-                    win_length  = self.score_feats_extract.win_length,
-                    hop_length  = self.score_feats_extract.hop_length,
-                    window      = self.score_feats_extract.window,
-                    center      = self.score_feats_extract.center,
+                    fs=self.score_feats_extract.fs,
+                    n_fft=self.score_feats_extract.n_fft,
+                    win_length=self.score_feats_extract.win_length,
+                    hop_length=self.score_feats_extract.hop_length,
+                    window=self.score_feats_extract.window,
+                    center=self.score_feats_extract.center,
                 )
 
                 # logging.info(f"extractMethod_frame: {extractMethod_frame}")
-                
+
                 (
                     labelFrame,
                     labelFrame_lengths,
@@ -198,7 +201,7 @@ class MuskitSVSModel(AbsMuskitModel):
                     scoreFrame_lengths,
                     tempoFrame,
                     tempoFrame_lengths,
-                )= extractMethod_frame(
+                ) = extractMethod_frame(
                     durations=durations.unsqueeze(-1),
                     durations_lengths=durations_lengths,
                     score=score.unsqueeze(-1),
@@ -207,10 +210,14 @@ class MuskitSVSModel(AbsMuskitModel):
                     tempo_lengths=tempo_lengths,
                 )
 
-                labelFrame = labelFrame[:, : labelFrame_lengths.max()]  # for data-parallel
-                scoreFrame = scoreFrame[:, : scoreFrame_lengths.max()]  # for data-parallel
+                labelFrame = labelFrame[
+                    :, : labelFrame_lengths.max()
+                ]  # for data-parallel
+                scoreFrame = scoreFrame[
+                    :, : scoreFrame_lengths.max()
+                ]  # for data-parallel
 
-                # Extract Syllable Level label, score, tempo information from Frame Level 
+                # Extract Syllable Level label, score, tempo information from Frame Level
                 (
                     label,
                     label_lengths,
@@ -268,7 +275,10 @@ class MuskitSVSModel(AbsMuskitModel):
                             tempo_lengths[i] -= 1
                         else:
                             for indexFrame in range(start_index, frame_length):
-                                if _phoneFrame[indexFrame] == _findPhone and _midiFrame[indexFrame] == _findMidi:
+                                if (
+                                    _phoneFrame[indexFrame] == _findPhone
+                                    and _midiFrame[indexFrame] == _findMidi
+                                ):
                                     _length += 1
                                 else:
                                     # logging.info(f"_findPhone: {_findPhone}, _findMidi: {_findMidi}, _length: {_length}")
@@ -284,10 +294,12 @@ class MuskitSVSModel(AbsMuskitModel):
                                     break
 
                     # logging.info(f"ds_tmp: {ds_tmp}, sum(ds_tmp): {sum(ds_tmp)}, frame_length: {frame_length}, feats_lengths[i]: {feats_lengths[i]}")
-                    assert sum(ds_tmp) == frame_length and sum(ds_tmp) == feats_lengths[i]
+                    assert (
+                        sum(ds_tmp) == frame_length and sum(ds_tmp) == feats_lengths[i]
+                    )
 
                     ds.append(torch.tensor(ds_tmp))
-                ds = pad_list(ds, pad_value=0).to(label.device)            
+                ds = pad_list(ds, pad_value=0).to(label.device)
 
             if self.pitch_extract is not None and pitch is None:
                 pitch, pitch_lengths = self.pitch_extract(
@@ -447,7 +459,8 @@ class MuskitSVSModel(AbsMuskitModel):
             )
         if self.pitch_extract is not None:
             pitch, pitch_lengths = self.pitch_extract(
-                input=pitch.unsqueeze(-1), input_lengths=pitch_lengths,
+                input=pitch.unsqueeze(-1),
+                input_lengths=pitch_lengths,
             )
         if self.energy_extract is not None:
             energy, energy_lengths = self.energy_extract(
@@ -494,18 +507,18 @@ class MuskitSVSModel(AbsMuskitModel):
         Returns:
             Dict[str, Tensor]: Dict of outputs.
         """
-        singing_lengths = torch.tensor([len(singing)]) 
+        singing_lengths = torch.tensor([len(singing)])
         durations_lengths = torch.tensor([len(durations)])
         score_lengths = torch.tensor([len(score)])
         tempo_lengths = torch.tensor([len(tempo)])
 
         assert durations_lengths == score_lengths and durations_lengths == tempo_lengths
-        length  = torch.min(singing_lengths, durations_lengths)
+        length = torch.min(singing_lengths, durations_lengths)
         singing_lengths = length
         durations_lengths, score_lengths, tempo_lengths = length, length, length
 
         # unsqueeze of singing must be here, or it'll cause error in the return dim of STFT
-        singing = singing[:length].unsqueeze(0)      
+        singing = singing[:length].unsqueeze(0)
         text = text.unsqueeze(0)  # for data-parallel
         durations = durations[:length].unsqueeze(0)  # for data-parallel
         score = score[:length].unsqueeze(0)  # for data-parallel
@@ -555,12 +568,12 @@ class MuskitSVSModel(AbsMuskitModel):
             )
 
             # calculate durations, new text & text_length
-            # Syllable Level duration info needs phone 
-            # NOTE(Shuai) Duplicate adjacent phones will appear in text files sometimes 
-            # e.g. oniku_0000000000000000hato_0002 
-            # 10.951 11.107 sh 
-            # 11.107 11.336 i 
-            # 11.336 11.610 i 
+            # Syllable Level duration info needs phone
+            # NOTE(Shuai) Duplicate adjacent phones will appear in text files sometimes
+            # e.g. oniku_0000000000000000hato_0002
+            # 10.951 11.107 sh
+            # 11.107 11.336 i
+            # 11.336 11.610 i
             # 11.610 11.657 k
             _text_cal = []
             _text_length_cal = []
@@ -569,7 +582,7 @@ class MuskitSVSModel(AbsMuskitModel):
                 _phone = label[i]
 
                 _output, counts = torch.unique_consecutive(_phone, return_counts=True)
-                
+
                 _text_cal.append(_output)
                 _text_length_cal.append(len(_output))
                 ds.append(counts)
@@ -577,19 +590,18 @@ class MuskitSVSModel(AbsMuskitModel):
             text = pad_list(_text_cal, pad_value=0).to(text.device, dtype=torch.long)
             text_lengths = torch.tensor(_text_length_cal).to(text.device)
 
-
         elif isinstance(self.score_feats_extract, SyllableScoreFeats):
             extractMethod_frame = FrameScoreFeats(
-                fs          = self.score_feats_extract.fs,
-                n_fft       = self.score_feats_extract.n_fft,
-                win_length  = self.score_feats_extract.win_length,
-                hop_length  = self.score_feats_extract.hop_length,
-                window      = self.score_feats_extract.window,
-                center      = self.score_feats_extract.center,
+                fs=self.score_feats_extract.fs,
+                n_fft=self.score_feats_extract.n_fft,
+                win_length=self.score_feats_extract.win_length,
+                hop_length=self.score_feats_extract.hop_length,
+                window=self.score_feats_extract.window,
+                center=self.score_feats_extract.center,
             )
 
             # logging.info(f"extractMethod_frame: {extractMethod_frame}")
-            
+
             (
                 labelFrame,
                 labelFrame_lengths,
@@ -597,7 +609,7 @@ class MuskitSVSModel(AbsMuskitModel):
                 scoreFrame_lengths,
                 tempoFrame,
                 tempoFrame_lengths,
-            )= extractMethod_frame(
+            ) = extractMethod_frame(
                 durations=durations.unsqueeze(-1),
                 durations_lengths=durations_lengths,
                 score=score.unsqueeze(-1),
@@ -609,7 +621,7 @@ class MuskitSVSModel(AbsMuskitModel):
             labelFrame = labelFrame[:, : labelFrame_lengths.max()]  # for data-parallel
             scoreFrame = scoreFrame[:, : scoreFrame_lengths.max()]  # for data-parallel
 
-            # Extract Syllable Level label, score, tempo information from Frame Level 
+            # Extract Syllable Level label, score, tempo information from Frame Level
             (
                 label,
                 label_lengths,
@@ -667,7 +679,10 @@ class MuskitSVSModel(AbsMuskitModel):
                         tempo_lengths[i] -= 1
                     else:
                         for indexFrame in range(start_index, frame_length):
-                            if _phoneFrame[indexFrame] == _findPhone and _midiFrame[indexFrame] == _findMidi:
+                            if (
+                                _phoneFrame[indexFrame] == _findPhone
+                                and _midiFrame[indexFrame] == _findMidi
+                            ):
                                 _length += 1
                             else:
                                 # logging.info(f"_findPhone: {_findPhone}, _findMidi: {_findMidi}, _length: {_length}")
@@ -682,7 +697,9 @@ class MuskitSVSModel(AbsMuskitModel):
                                 # logging.info("Finish")
                                 break
 
-                logging.info(f"ds_tmp: {ds_tmp}, sum(ds_tmp): {sum(ds_tmp)}, frame_length: {frame_length}, feats_lengths[i]: {feats_lengths[i]}")
+                logging.info(
+                    f"ds_tmp: {ds_tmp}, sum(ds_tmp): {sum(ds_tmp)}, frame_length: {frame_length}, feats_lengths[i]: {feats_lengths[i]}"
+                )
                 assert sum(ds_tmp) == frame_length and sum(ds_tmp) == feats_lengths[i]
 
                 ds.append(torch.tensor(ds_tmp))

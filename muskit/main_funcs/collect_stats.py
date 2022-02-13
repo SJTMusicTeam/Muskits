@@ -68,11 +68,11 @@ def collect_stats(
                         )
 
                 # 2. Extract feats
-                del batch['pitch_aug']
-                del batch['pitch_aug_lengths']
-                del batch['time_aug']
-                del batch['time_aug_lengths']
-                
+                del batch["pitch_aug"]
+                del batch["pitch_aug_lengths"]
+                del batch["time_aug"]
+                del batch["time_aug_lengths"]
+
                 if ngpu <= 1:
                     data = model.collect_feats(**batch)
                 else:
@@ -97,7 +97,7 @@ def collect_stats(
                             seq = seq[None]
                         # Accumulate value, its square, and count
                         sum_dict[key] += seq.sum(0)
-                        sq_dict[key] += (seq ** 2).sum(0)
+                        sq_dict[key] += (seq**2).sum(0)
                         count_dict[key] += len(seq)
 
                         # 4. [Option] Write derived features as npy format file.

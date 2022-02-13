@@ -239,7 +239,8 @@ class Trainer:
         if distributed_option.distributed:
             if trainer_options.sharded_ddp:
                 dp_model = fairscale.nn.data_parallel.ShardedDataParallel(
-                    module=model, sharded_optimizer=optimizers,
+                    module=model,
+                    sharded_optimizer=optimizers,
                 )
             else:
                 dp_model = torch.nn.parallel.DistributedDataParallel(
@@ -515,10 +516,10 @@ class Trainer:
                         sids = torch.tensor(sids).to(batch['score'].device)
                         batch['sids'] = sids
 
-                    del batch['pitch_aug']
-                    del batch['pitch_aug_lengths']
-                    del batch['time_aug']
-                    del batch['time_aug_lengths']
+                    del batch["pitch_aug"]
+                    del batch["pitch_aug_lengths"]
+                    del batch["time_aug"]
+                    del batch["time_aug_lengths"]
 
                     retval = model(**batch)
 
@@ -607,7 +608,9 @@ class Trainer:
 
                 # compute the gradient norm to check if it is normal or not
                 grad_norm = torch.nn.utils.clip_grad_norm_(
-                    model.parameters(), max_norm=grad_clip, norm_type=grad_clip_type,
+                    model.parameters(),
+                    max_norm=grad_clip,
+                    norm_type=grad_clip_type,
                 )
                 # PyTorch<=1.4, clip_grad_norm_ returns float value
                 if not isinstance(grad_norm, torch.Tensor):
@@ -892,7 +895,14 @@ class Trainer:
     @classmethod
     @torch.no_grad()
     def log_figure(
-        cls, model_vocoder, step, output, spec, length, save_dir, att=None,
+        cls,
+        model_vocoder,
+        step,
+        output,
+        spec,
+        length,
+        save_dir,
+        att=None,
     ) -> None:
 
         """log_figure."""

@@ -30,7 +30,9 @@ def get_tick_to_time_mapping(ticks_per_beat, tempo_changes, max_tick=np.int32(1e
     return tick_to_time
 
 
-def midi_to_seq(midi_obj, dtype=np.int16, rate=22050, pitch_aug_factor=0, time_aug_factor=1):
+def midi_to_seq(
+    midi_obj, dtype=np.int16, rate=22050, pitch_aug_factor=0, time_aug_factor=1
+):
     """method for midi_obj.
     Input:
         miditoolkit_object, sampling rate
@@ -47,21 +49,27 @@ def midi_to_seq(midi_obj, dtype=np.int16, rate=22050, pitch_aug_factor=0, time_a
     tempos.sort(key=lambda x: (x.time, x.tempo))
 
     if len(tempos) == 1:
-        tempo_BPM = tempos[0].tempo         # global information, beats per minute
-        tempo_BPS = tempo_BPM / 60.0        # global information, beats per second
+        tempo_BPM = tempos[0].tempo  # global information, beats per minute
+        tempo_BPS = tempo_BPM / 60.0  # global information, beats per second
 
         note_seq = np.zeros(int(rate * max_time * time_aug_factor), dtype=dtype)
         tempo_seq = np.zeros(int(rate * max_time * time_aug_factor), dtype=dtype)
         for i in range(len(notes)):
             st = int(tick_to_time[notes[i].start] * rate * time_aug_factor)
             ed = int(tick_to_time[notes[i].end] * rate * time_aug_factor)
-            note_seq[st:ed] = notes[i].pitch if (pitch_aug_factor == 0 or notes[i].pitch == 0) else (notes[i].pitch + pitch_aug_factor)
+            note_seq[st:ed] = (
+                notes[i].pitch
+                if (pitch_aug_factor == 0 or notes[i].pitch == 0)
+                else (notes[i].pitch + pitch_aug_factor)
+            )
 
             st_time = tick_to_time[notes[i].start] * time_aug_factor
             ed_time = tick_to_time[notes[i].end] * time_aug_factor
-            note_duration = ed_time - st_time       # Beats in seconds
+            note_duration = ed_time - st_time  # Beats in seconds
             beat_num = note_duration * tempo_BPS  # Beats nums in note
-            beat_input = int(beat_num / 0.0125 + 0.5)       # FIX ME! time_shift should align with input, not fixed 0.0125
+            beat_input = int(
+                beat_num / 0.0125 + 0.5
+            )  # FIX ME! time_shift should align with input, not fixed 0.0125
             tempo_seq[st:ed] = beat_input
 
     else:
@@ -74,12 +82,12 @@ def midi_to_seq(midi_obj, dtype=np.int16, rate=22050, pitch_aug_factor=0, time_a
                 tempo_next_tick = tempos[tempo_index + 1].time
 
             tempo_dict = dict(
-                start = tempo_now_tick,
-                end = tempo_next_tick,
-                tempo = tempos[tempo_index].tempo,
+                start=tempo_now_tick,
+                end=tempo_next_tick,
+                tempo=tempos[tempo_index].tempo,
             )
-            tempos_anchor.append( tempo_dict )
-        
+            tempos_anchor.append(tempo_dict)
+
         notes_res = []
         tempo_begin_index = 0
         for note_index in range(len(notes)):
@@ -87,15 +95,15 @@ def midi_to_seq(midi_obj, dtype=np.int16, rate=22050, pitch_aug_factor=0, time_a
             note_ed_tick = notes[note_index].end
 
             for tempo_index in range(tempo_begin_index, len(tempos_anchor)):
-                tempo_st_tick = tempos_anchor[tempo_index]['start']
-                tempo_ed_tick = tempos_anchor[tempo_index]['end']
+                tempo_st_tick = tempos_anchor[tempo_index]["start"]
+                tempo_ed_tick = tempos_anchor[tempo_index]["end"]
 
                 if tempo_st_tick <= note_st_tick and note_ed_tick <= tempo_ed_tick:
                     res_dict = dict(
-                        start = note_st_tick,
-                        end = note_ed_tick,
-                        pitch = notes[note_index].pitch,
-                        tempo = tempos_anchor[tempo_index]['tempo'],
+                        start=note_st_tick,
+                        end=note_ed_tick,
+                        pitch=notes[note_index].pitch,
+                        tempo=tempos_anchor[tempo_index]["tempo"],
                     )
                     notes_res.append(res_dict)
                     break
@@ -103,17 +111,17 @@ def midi_to_seq(midi_obj, dtype=np.int16, rate=22050, pitch_aug_factor=0, time_a
                     # tempo_ed_tick between [note_st_tick, note_ed_tick), which means tempo changes during this note
                     assert tempo_index + 1 < len(tempos_anchor)
                     res_dict = dict(
-                        start = note_st_tick,
-                        end = tempo_ed_tick,
-                        pitch = notes[note_index].pitch,
-                        tempo = tempos_anchor[tempo_index]['tempo'],
+                        start=note_st_tick,
+                        end=tempo_ed_tick,
+                        pitch=notes[note_index].pitch,
+                        tempo=tempos_anchor[tempo_index]["tempo"],
                     )
                     notes_res.append(res_dict)
                     res_dict = dict(
-                        start = tempo_ed_tick,
-                        end = note_ed_tick,
-                        pitch = notes[note_index].pitch,
-                        tempo = tempos_anchor[tempo_index+1]['tempo'],
+                        start=tempo_ed_tick,
+                        end=note_ed_tick,
+                        pitch=notes[note_index].pitch,
+                        tempo=tempos_anchor[tempo_index + 1]["tempo"],
                     )
                     notes_res.append(res_dict)
 
@@ -126,17 +134,23 @@ def midi_to_seq(midi_obj, dtype=np.int16, rate=22050, pitch_aug_factor=0, time_a
         note_seq = np.zeros(int(rate * max_time * time_aug_factor), dtype=dtype)
         tempo_seq = np.zeros(int(rate * max_time * time_aug_factor), dtype=dtype)
         for i in range(len(notes_res)):
-            st = int(tick_to_time[notes_res[i]['start']] * rate * time_aug_factor)
-            ed = int(tick_to_time[notes_res[i]['end']] * rate * time_aug_factor)
-            note_seq[st:ed] = notes_res[i]['pitch'] if (pitch_aug_factor == 0 or notes_res[i]['pitch'] == 0) else (notes_res[i]['pitch'] + pitch_aug_factor)
+            st = int(tick_to_time[notes_res[i]["start"]] * rate * time_aug_factor)
+            ed = int(tick_to_time[notes_res[i]["end"]] * rate * time_aug_factor)
+            note_seq[st:ed] = (
+                notes_res[i]["pitch"]
+                if (pitch_aug_factor == 0 or notes_res[i]["pitch"] == 0)
+                else (notes_res[i]["pitch"] + pitch_aug_factor)
+            )
 
-            tempo_BPM = notes_res[i]['tempo']         # global information, beats per minute
-            tempo_BPS = tempo_BPM / 60.0              # global information, beats per second
-            st_time = tick_to_time[notes_res[i]['start']] * time_aug_factor
-            ed_time = tick_to_time[notes_res[i]['end']] * time_aug_factor
-            note_duration = ed_time - st_time         # Beats in seconds
-            beat_num = note_duration * tempo_BPS      # Beats nums in note
-            beat_input = int(beat_num / 0.0125 + 0.5)       # FIX ME! time_shift should align with input, not fixed 0.0125
+            tempo_BPM = notes_res[i]["tempo"]  # global information, beats per minute
+            tempo_BPS = tempo_BPM / 60.0  # global information, beats per second
+            st_time = tick_to_time[notes_res[i]["start"]] * time_aug_factor
+            ed_time = tick_to_time[notes_res[i]["end"]] * time_aug_factor
+            note_duration = ed_time - st_time  # Beats in seconds
+            beat_num = note_duration * tempo_BPS  # Beats nums in note
+            beat_input = int(
+                beat_num / 0.0125 + 0.5
+            )  # FIX ME! time_shift should align with input, not fixed 0.0125
             tempo_seq[st:ed] = beat_input
 
     return note_seq, tempo_seq
@@ -234,7 +248,7 @@ if __name__ == "__main__":
     #     note_seq, tempo_seq = midi_to_seq(midi_obj, np.int16, np.int16(16000))
     #     midi_obj = seq_to_midi(note_seq, tempo_seq, np.int16(16000))
     #     midi_path = "/data3/qt/songmass/output_res_prev/midiscp.mid"
-    #     midi_obj.dump(midi_path) 
+    #     midi_obj.dump(midi_path)
 
     import miditoolkit
     path = "/data5/gs/Muskits/egs/ofuton_p_utagoe_db/svs1/dump/raw/org/dev/data/format_midi.1/ofuton_00000000000000momiji_0000.midi"

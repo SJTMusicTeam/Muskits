@@ -1,7 +1,6 @@
-
-
 import numpy as np
 import torch
+
 
 class CBHG(torch.nn.Module):
     """CBHG Module."""

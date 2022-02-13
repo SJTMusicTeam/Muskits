@@ -91,7 +91,7 @@ class MultiHeadedAttention(nn.Module):
         )  # (batch, time1, d_model)
         # if gaussian_factor is not None:
         #     return self.linear_out(x), self.attn  # (batch, time1, d_model)
-        return self.linear_out(x)#, self.attn  # (batch, time1, d_model)
+        return self.linear_out(x)  # , self.attn  # (batch, time1, d_model)
 
     def forward(self, query, key, value, mask, gaussian_factor=None):
         """Compute scaled dot product attention.

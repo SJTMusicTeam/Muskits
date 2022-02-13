@@ -1,6 +1,6 @@
 import torch
 
-SCALE_WEIGHT = 0.5 ** 0.5
+SCALE_WEIGHT = 0.5**0.5
 
 
 def _shape_transform(x):

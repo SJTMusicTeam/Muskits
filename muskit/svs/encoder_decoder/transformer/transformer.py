@@ -399,7 +399,8 @@ class Transformer(AbsSVS):
         )
         if self.use_guided_attn_loss:
             self.attn_criterion = GuidedMultiHeadAttentionLoss(
-                sigma=guided_attn_loss_sigma, alpha=guided_attn_loss_lambda,
+                sigma=guided_attn_loss_sigma,
+                alpha=guided_attn_loss_lambda,
             )
 
         # initialize parameters
@@ -468,7 +469,13 @@ class Transformer(AbsSVS):
 
         # calculate transformer outputs
         after_outs, before_outs, logits = self._forward(
-            xs=xs, ilens=ilens, ys=ys, olens=olens, spembs=spembs, sids=sids, lids=lids,
+            xs=xs,
+            ilens=ilens,
+            ys=ys,
+            olens=olens,
+            spembs=spembs,
+            sids=sids,
+            lids=lids,
         )
 
         # modifiy mod part of groundtruth
@@ -500,7 +507,9 @@ class Transformer(AbsSVS):
             raise ValueError("unknown --loss-type " + self.loss_type)
 
         stats = dict(
-            l1_loss=l1_loss.item(), l2_loss=l2_loss.item(), bce_loss=bce_loss.item(),
+            l1_loss=l1_loss.item(),
+            l2_loss=l2_loss.item(),
+            bce_loss=bce_loss.item(),
         )
 
         # calculate guided attention loss
