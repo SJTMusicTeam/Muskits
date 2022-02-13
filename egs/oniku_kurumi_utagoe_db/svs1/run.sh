@@ -14,8 +14,8 @@ n_shift=300
 win_length=1200
 
 score_feats_extract=frame_score_feats   # frame_score_feats | syllable_score_feats
-expdir=exp/1-24-RNN-MixupW03_BetaWeightAdd_batchMix2
-# inference_model=196epoch.pth
+expdir=exp/1-24-RNN_P1
+# inference_model=68epoch.pth
 
 opts=
 if [ "${fs}" -eq 48000 ]; then
@@ -41,7 +41,7 @@ cleaner=none
 
 ./svs.sh \
     --lang jp \
-    --stage 6 \
+    --stage 0 \
     --stop_stage 6 \
     --local_data_opts "--stage 0" \
     --feats_type raw \

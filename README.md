@@ -26,7 +26,7 @@ Muskit is an open-source music processing toolkit. Currently we mostly focus on 
 - Various language support
   - Jp / En / Kr / Zh (in progress)
 - Integration with neural vocoders
-  - the style matches the (PWG repo)[https://github.com/kan-bayashi/ParallelWaveGAN] with supports of various of vocoders
+  - the style matches the [PWG repo](https://github.com/kan-bayashi/ParallelWaveGAN) with supports of various of vocoders
 
 
 ### Installation
@@ -34,4 +34,7 @@ The full installation guide is available at https://github.com/SJTMusicTeam/Musk
 
 ### Demonstration
 (In progress)
+
+### Running instructions
+The tutorial of how to use Muskits is at https://github.com/SJTMusicTeam/Muskits/blob/main/doc/tutorial.md
 

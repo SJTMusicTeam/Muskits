@@ -23,6 +23,8 @@ svs_conf:                        # keyword arguments for the selected model
     init_type: pytorch           # parameter initialization
     use_masking: true            # whether to apply masking for padded part in loss calculation
     loss_type: L1
+    use_mixup_training: False    # Default: False
+    loss_mixup_wight: 0          # Default: 0
 
 
 ##########################################################
@@ -48,16 +50,19 @@ accum_grad: 1               # gradient accumulation
 # batch_type: numel           # how to make batch
 
 batch_type: sorted
-batch_size: 14
+batch_size: 16
 
-pitch_aug_min: -2           # Default: 0, [-1,-2,-3]
-pitch_aug_max: 2            # Default: 0, [1,2,3]
+pitch_aug_min: 0            # Default: 0, [-1,-2,-3]
+pitch_aug_max: 0            # Default: 0, [1,2,3]
+pitch_mean: "None"          # Default: "None", "53.61" - for ofuton dataset(the mean midi-value of training split, used for adaptive pitch augmentation) | muskit/fileio/utils.py
 time_aug_min: 1             # Default: 1, [0.99]
 time_aug_max: 1             # Default: 1, [1.01]
+random_crop: False          # Default: False, crop length [0.9 * length, length]
+mask_aug: True             # Default: False, random mask length 1500 samples | muskit/train/dataset.py
 
 sort_in_batch: descending   # how to sort data in making batch
 sort_batch: descending      # how to sort created batches
-num_workers: 10              # number of workers of data loader
+num_workers: 8              # number of workers of data loader
 train_dtype: float32        # dtype in training
 log_interval: null          # log interval in iterations
 keep_nbest_models: 2        # number of models to keep
@@ -71,5 +76,5 @@ best_model_criterion:
     - loss
     - min
 
-gpu_id: 7
-vocoder_checkpoint: /data5/gs/vocoder_peter/hifigan-vocoder/exp/train_hifigan.v1_train_nodev_clean_libritts_hifigan-2.v1/checkpoint-50000steps.pkl
+gpu_id: 0
+vocoder_checkpoint: /data5/gs/ParallelWaveGAN/egs/ofuton_p_utagoe_db/voc1/exp/train_nodev_ofuton_hifigan.v1/checkpoint-300000steps.pkl

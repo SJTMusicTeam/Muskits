@@ -501,7 +501,20 @@ class Trainer:
             with autocast(scaler is not None):
                 with reporter.measure_time("forward_time"):
                     # print("'Shuai: What is **batch ? ", batch)
-                    # logging.info(f"filename_list: {filename_list}")
+                    speaker_lst = ["oniku", "ofuton", "kiritan", "natsume"]     # NOTE: Fix me into args
+                    # add spk-id to **batch
+                    if 'svs.sid_emb.weight' in model.state_dict().keys():
+                        sids = []
+                        for filename in filename_list:
+                            if "kiritan" in filename.split("_")[0]:
+                                filename = "kiritan"
+                            elif "natsume" in filename.split("_")[0]:
+                                filename = "natsume"
+                            else:
+                                filename = filename.split("_")[0]
+                            sids.append(speaker_lst.index(filename))
+                        sids = torch.tensor(sids).to(batch['score'].device)
+                        batch['sids'] = sids
 
                     del batch["pitch_aug"]
                     del batch["pitch_aug_lengths"]
@@ -728,10 +741,25 @@ class Trainer:
             if no_forward_run:
                 continue
 
-            del batch["pitch_aug"]
-            del batch["pitch_aug_lengths"]
-            del batch["time_aug"]
-            del batch["time_aug_lengths"]
+            speaker_lst = ["oniku", "ofuton", "kiritan", "natsume"]     # NOTE: Fix me into args
+            # add spk-id to **batch
+            if 'svs.sid_emb.weight' in model.state_dict().keys():
+                sids = []
+                for filename in index:
+                    if "kiritan" in filename.split("_")[0]:
+                        filename = "kiritan"
+                    elif "natsume" in filename.split("_")[0]:
+                        filename = "natsume"
+                    else:
+                        filename = filename.split("_")[0]
+                    sids.append(speaker_lst.index(filename))
+                sids = torch.tensor(sids).to(batch['score'].device)
+                batch['sids'] = sids
+
+            del batch['pitch_aug']
+            del batch['pitch_aug_lengths']
+            del batch['time_aug']
+            del batch['time_aug_lengths']
 
             retval = model(**batch, flag_IsValid=True)
             if isinstance(retval, dict):
@@ -804,10 +832,25 @@ class Trainer:
 
             # 1. Forwarding model and gathering all attentions
             #    calculate_all_attentions() uses single gpu only.
-            del batch["pitch_aug"]
-            del batch["pitch_aug_lengths"]
-            del batch["time_aug"]
-            del batch["time_aug_lengths"]
+            speaker_lst = ["oniku", "ofuton", "kiritan", "natsume"]     # NOTE: Fix me into args
+            # add spk-id to **batch
+            if 'svs.sid_emb.weight' in model.state_dict().keys():
+                sids = []
+                for filename in ids:
+                    if "kiritan" in filename.split("_")[0]:
+                        filename = "kiritan"
+                    elif "natsume" in filename.split("_")[0]:
+                        filename = "natsume"
+                    else:
+                        filename = filename.split("_")[0]
+                    sids.append(speaker_lst.index(filename))
+                sids = torch.tensor(sids).to(batch['score'].device)
+                batch['sids'] = sids
+
+            del batch['pitch_aug']
+            del batch['pitch_aug_lengths']
+            del batch['time_aug']
+            del batch['time_aug_lengths']
             att_dict = calculate_all_attentions(model, batch)
 
             # 2. Plot attentions: This part is slow due to matplotlib

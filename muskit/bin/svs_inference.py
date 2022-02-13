@@ -219,6 +219,14 @@ class SingingGenerate:
             and "fs" in vocoder_conf
         ):
             logging.info(f"vocoder_conf: {vocoder_conf}")
+
+            logging.info(f"train_config: {train_config}")
+
+            train_config = Path(train_config)
+            with train_config.open("r", encoding="utf-8") as f:
+                train_args = yaml.safe_load(f)
+            vocoder_checkpoint = train_args['vocoder_checkpoint']  # the vocoder keep the same as Training Stage
+
             self.fs = vocoder_conf["fs"]
             if vocoder_type == "Grriffin-Lim":
                 self.spc2wav = Spectrogram2Waveform(**vocoder_conf)
@@ -266,6 +274,8 @@ class SingingGenerate:
         tempo: Optional[torch.Tensor] = None,
         energy: Optional[torch.Tensor] = None,
         spembs: Union[torch.Tensor, np.ndarray] = None,
+        sids: Optional[torch.Tensor] = None,
+        lids: Optional[torch.Tensor] = None,
         speed_control_alpha: Optional[float] = None,
     ):
         assert check_argument_types()
@@ -279,6 +289,8 @@ class SingingGenerate:
             tempo=tempo,
             energy=energy,
             spembs=spembs,
+            sids=sids,
+            lids=lids,
         )
 
         cfg = self.decode_config
@@ -537,7 +549,24 @@ def inference(
             # because inference() requires 1-seq, not mini-batch.
             batch = {k: v[0] for k, v in batch.items() if not k.endswith("_lengths")}
 
+            filename_list = keys
+            speaker_lst = ["oniku", "ofuton", "kiritan", "natsume"]     # NOTE: Fix me into args
+            # add spk-id to **batch
+            if 'svs.sid_emb.weight' in singingGenerate.model.state_dict().keys():
+                sids = []
+                for filename in filename_list:
+                    if "kiritan" in filename.split("_")[0]:
+                        filename = "kiritan"
+                    elif "natsume" in filename.split("_")[0]:
+                        filename = "natsume"
+                    else:
+                        filename = filename.split("_")[0]
+                    sids.append(speaker_lst.index(filename))
+                sids = torch.tensor(sids).to(batch['score'].device)
+                batch['sids'] = sids
+
             logging.info(f"batch: {batch}")
+            logging.info(f"keys: {keys}")
 
             logging.info(f"batch['pitch_aug']: {batch['pitch_aug'].item()}")
             logging.info(f"batch['time_aug']: {batch['time_aug'].item()}")

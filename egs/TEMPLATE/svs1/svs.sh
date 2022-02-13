@@ -89,7 +89,7 @@ inference_config="" # Config for decoding.
 inference_args=""   # Arguments for decoding, e.g., "--threshold 0.75".
                     # Note that it will overwrite args in inference config.
 inference_tag=""    # Suffix for decoding directory.
-inference_model=valid.loss.ave.pth # Model path for decoding.
+inference_model=valid.loss.best.pth # Model path for decoding.
                                    # e.g.
                                    # inference_model=train.loss.best.pth
                                    # inference_model=3epoch.pth
@@ -292,6 +292,7 @@ if ! "${skip_data_prep}"; then
         # [Task dependent] Need to create data.sh for new corpus
         local/data.sh ${local_data_opts} --fs "${fs}"
     fi
+    
 
 
     if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then

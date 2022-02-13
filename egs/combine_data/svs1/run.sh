@@ -3,7 +3,7 @@
 # -e 'error', -u 'undefined variable', -o ... 'error in pipeline', -x 'print commands',
 set -e
 set -u
-# set -o pipefail
+set -o pipefail
 
 # spectrogram-related arguments
 fs=24000
@@ -13,9 +13,17 @@ n_fft=2048
 n_shift=300
 win_length=1200
 
+NOWPATH=`pwd`
+NOWPATH=${NOWPATH%/*}
+NOWPATH=${NOWPATH%/*}
+combine_data_path=""
+combine_data_path+=" ${NOWPATH}/oniku_kurumi_utagoe_db/svs1/data/"
+combine_data_path+=" ${NOWPATH}/ofuton_p_utagoe_db/svs1/data/"
+combine_data_path+=" ${NOWPATH}/kiritan/svs1/data/"
+combine_data_path+=" ${NOWPATH}/natsume/svs1/data/"
+
 score_feats_extract=frame_score_feats   # frame_score_feats | syllable_score_feats
-expdir=exp/2-8-Xiaoice_noDP-mask_length02
-# inference_model=196epoch.pth
+expdir=exp/2-9-Xiaoice_noDP-adaptivePitchAug
 
 opts=
 if [ "${fs}" -eq 48000 ]; then
@@ -27,12 +35,11 @@ fi
 
 train_set=tr_no_dev
 valid_set=dev
-test_sets="dev eval"
+test_sets=eval
 
 # training and inference configuration
-# train_config=conf/tuning/train_xiaoice.yaml
-train_config=conf/tuning/train_xiaoice_noDP.yaml
 # train_config=conf/train.yaml
+train_config=conf/tuning/train_xiaoice_noDP.yaml
 inference_config=conf/decode.yaml
 
 # text related processing arguments
@@ -41,9 +48,9 @@ cleaner=none
 
 ./svs.sh \
     --lang jp \
-    --stage 6 \
-    --stop_stage 6 \
-    --local_data_opts "--stage 0" \
+    --stage 7 \
+    --stop_stage 7 \
+    --local_data_opts "--stage 0 ${combine_data_path}" \
     --feats_type raw \
     --pitch_extract None \
     --fs "${fs}" \
