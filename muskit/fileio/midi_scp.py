@@ -45,7 +45,9 @@ class MIDIScpReader(collections.abc.Mapping):
         midi_obj = miditoolkit.midi.parser.MidiFile(self.data[key])
 
         if self.rep == "representation":
-            note_seq, tempo_seq = midi_to_seq(midi_obj, self.dtype, self.rate, pitch_aug_factor, time_aug_factor)
+            note_seq, tempo_seq = midi_to_seq(
+                midi_obj, self.dtype, self.rate, pitch_aug_factor, time_aug_factor
+            )
         return note_seq, tempo_seq
 
     def get_path(self, key):

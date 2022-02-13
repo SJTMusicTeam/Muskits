@@ -122,4 +122,3 @@ class Postnet(torch.nn.Module):
         for i in six.moves.range(len(self.postnet)):
             xs = self.postnet[i](xs)
         return xs
-

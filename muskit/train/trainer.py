@@ -239,7 +239,8 @@ class Trainer:
         if distributed_option.distributed:
             if trainer_options.sharded_ddp:
                 dp_model = fairscale.nn.data_parallel.ShardedDataParallel(
-                    module=model, sharded_optimizer=optimizers,
+                    module=model,
+                    sharded_optimizer=optimizers,
                 )
             else:
                 dp_model = torch.nn.parallel.DistributedDataParallel(
@@ -502,10 +503,10 @@ class Trainer:
                     # print("'Shuai: What is **batch ? ", batch)
                     # logging.info(f"filename_list: {filename_list}")
 
-                    del batch['pitch_aug']
-                    del batch['pitch_aug_lengths']
-                    del batch['time_aug']
-                    del batch['time_aug_lengths']
+                    del batch["pitch_aug"]
+                    del batch["pitch_aug_lengths"]
+                    del batch["time_aug"]
+                    del batch["time_aug_lengths"]
 
                     retval = model(**batch)
 
@@ -594,7 +595,9 @@ class Trainer:
 
                 # compute the gradient norm to check if it is normal or not
                 grad_norm = torch.nn.utils.clip_grad_norm_(
-                    model.parameters(), max_norm=grad_clip, norm_type=grad_clip_type,
+                    model.parameters(),
+                    max_norm=grad_clip,
+                    norm_type=grad_clip_type,
                 )
                 # PyTorch<=1.4, clip_grad_norm_ returns float value
                 if not isinstance(grad_norm, torch.Tensor):
@@ -725,10 +728,10 @@ class Trainer:
             if no_forward_run:
                 continue
 
-            del batch['pitch_aug']
-            del batch['pitch_aug_lengths']
-            del batch['time_aug']
-            del batch['time_aug_lengths']
+            del batch["pitch_aug"]
+            del batch["pitch_aug_lengths"]
+            del batch["time_aug"]
+            del batch["time_aug_lengths"]
 
             retval = model(**batch, flag_IsValid=True)
             if isinstance(retval, dict):
@@ -801,10 +804,10 @@ class Trainer:
 
             # 1. Forwarding model and gathering all attentions
             #    calculate_all_attentions() uses single gpu only.
-            del batch['pitch_aug']
-            del batch['pitch_aug_lengths']
-            del batch['time_aug']
-            del batch['time_aug_lengths']
+            del batch["pitch_aug"]
+            del batch["pitch_aug_lengths"]
+            del batch["time_aug"]
+            del batch["time_aug_lengths"]
             att_dict = calculate_all_attentions(model, batch)
 
             # 2. Plot attentions: This part is slow due to matplotlib
@@ -849,7 +852,14 @@ class Trainer:
     @classmethod
     @torch.no_grad()
     def log_figure(
-        cls, model_vocoder, step, output, spec, length, save_dir, att=None,
+        cls,
+        model_vocoder,
+        step,
+        output,
+        spec,
+        length,
+        save_dir,
+        att=None,
     ) -> None:
 
         """log_figure."""

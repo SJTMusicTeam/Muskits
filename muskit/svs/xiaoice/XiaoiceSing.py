@@ -200,7 +200,9 @@ class XiaoiceSing(AbsSVS):
             padding_idx=self.padding_idx,
         )
         self.tempo_encode_layer = torch.nn.Embedding(
-            num_embeddings=tempo_dim, embedding_dim=embed_dim, padding_idx=self.padding_idx
+            num_embeddings=tempo_dim,
+            embedding_dim=embed_dim,
+            padding_idx=self.padding_idx,
         )
         if encoder_type == "transformer":
             self.encoder = TransformerEncoder(
@@ -407,9 +409,13 @@ class XiaoiceSing(AbsSVS):
 
         # report extra information
         if self.encoder_type == "transformer" and self.use_scaled_pos_enc:
-            stats.update(encoder_alpha=self.encoder.embed[-1].alpha.data.item(),)
+            stats.update(
+                encoder_alpha=self.encoder.embed[-1].alpha.data.item(),
+            )
         if self.decoder_type == "transformer" and self.use_scaled_pos_enc:
-            stats.update(decoder_alpha=self.decoder.embed[-1].alpha.data.item(),)
+            stats.update(
+                decoder_alpha=self.decoder.embed[-1].alpha.data.item(),
+            )
 
         loss, stats, weight = force_gatherable((loss, stats, batch_size), loss.device)
 
@@ -454,11 +460,11 @@ class XiaoiceSing(AbsSVS):
         tempo_emb = self.tempo_encode_layer(tempo)
         input_emb = label_emb + midi_emb + tempo_emb
 
-        x_masks = None          # self._source_mask(label_lengths)
+        x_masks = None  # self._source_mask(label_lengths)
         hs, _ = self.encoder(input_emb, x_masks)  # (B, T_text, adim)
 
         # forward duration predictor and length regulator
-        d_masks = None          # make_pad_mask(label_lengths).to(input_emb.device)
+        d_masks = None  # make_pad_mask(label_lengths).to(input_emb.device)
         d_outs = self.duration_predictor.inference(hs, d_masks)  # (B, T_text)
         d_outs_int = torch.floor(d_outs + 0.5).to(dtype=torch.long)  # (B, T_text)
 
@@ -474,7 +480,7 @@ class XiaoiceSing(AbsSVS):
         hs = self.length_regulator(hs, d_outs_int)  # (B, T_feats, adim)
 
         # forward decoder
-        h_masks = None          # self._source_mask(feats_lengths)
+        h_masks = None  # self._source_mask(feats_lengths)
         zs, _ = self.decoder(hs, h_masks)  # (B, T_feats, adim)
         before_outs = self.feat_out(zs).view(
             zs.size(0), -1, self.odim
@@ -814,6 +820,7 @@ class XiaoiceSing_noDP(AbsSVS):
         )
 
         from muskit.svs.naive_rnn.naive_rnn import NaiveRNNLoss
+
         # define loss function
         self.criterion = NaiveRNNLoss(
             use_masking=use_masking,
@@ -927,7 +934,7 @@ class XiaoiceSing_noDP(AbsSVS):
             return loss, stats, weight
         else:
             return loss, stats, weight, after_outs[:, : olens.max()], ys, olens
-    
+
     def inference(
         self,
         text: torch.Tensor,
@@ -961,14 +968,14 @@ class XiaoiceSing_noDP(AbsSVS):
         text_emb = self.phone_encode_layer(text)
         midi_emb = self.midi_encode_layer(midi)
 
-        x_masks = None      # self._source_mask(text_lengths)
+        x_masks = None  # self._source_mask(text_lengths)
         hs, _ = self.encoder(text_emb, x_masks)  # (B, T_text, adim)
 
         hs = self.length_regulator(hs, ds)
 
         # Decoder
         hs += midi_emb
-        h_masks = None      # self._source_mask(feats_lengths)
+        h_masks = None  # self._source_mask(feats_lengths)
         zs, _ = self.decoder(hs, h_masks)  # (B, T_feats, adim)
         before_outs = self.feat_out(zs).view(
             zs.size(0), -1, self.odim

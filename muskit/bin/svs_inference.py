@@ -107,6 +107,7 @@ energy_normalize_choices = ClassChoices(
     optional=True,
 )
 
+
 class SingingGenerate:
     """SingingGenerate class
 
@@ -132,7 +133,6 @@ class SingingGenerate:
         normalize: Optional[AbsNormalize and InversibleInterface],
         pitch_normalize: Optional[AbsNormalize and InversibleInterface],
         energy_normalize: Optional[AbsNormalize and InversibleInterface],
-
         model_file: Optional[Union[Path, str]] = None,
         threshold: float = 0.5,
         minlenratio: float = 0.0,
@@ -148,7 +148,6 @@ class SingingGenerate:
         vocoder_checkpoint: str = "None",
         dtype: str = "float32",
         device: str = "cpu",
-        
     ):
         assert check_argument_types()
 
@@ -181,7 +180,7 @@ class SingingGenerate:
         self.pitch_normalize = pitch_normalize
         # self.tempo_normalize = tempo_normalize
         self.energy_normalize = energy_normalize
-        
+
         self.vocoder_type = vocoder_type
 
         logging.info(f"Normalization:\n{self.normalize}")
@@ -235,14 +234,18 @@ class SingingGenerate:
                 logging.info(f"config: {config}")
                 logging.info(f"vocoder_config: {vocoder_config}")
                 logging.info(f"device: {device}")
-                
+
                 # config.update(vars(args))
 
                 model_vocoder = load_model(vocoder_checkpoint, config)
                 logging.info(f"Loaded model parameters from {vocoder_checkpoint}.")
                 if True:
-                    assert hasattr(model_vocoder, "mean"), "Feature stats are not registered."
-                    assert hasattr(model_vocoder, "scale"), "Feature stats are not registered."
+                    assert hasattr(
+                        model_vocoder, "mean"
+                    ), "Feature stats are not registered."
+                    assert hasattr(
+                        model_vocoder, "scale"
+                    ), "Feature stats are not registered."
                 model_vocoder.remove_weight_norm()
                 model_vocoder = model_vocoder.eval().to(device)
 
@@ -305,7 +308,9 @@ class SingingGenerate:
             elif self.vocoder_type == "HIFI-GAN":
                 ### HiFi-GAN Vocoder
                 wav = (
-                    self.spc2wav.inference(outs_denorm.cpu().numpy(), normalize_before=True)
+                    self.spc2wav.inference(
+                        outs_denorm.cpu().numpy(), normalize_before=True
+                    )
                     .view(-1)
                     .cpu()
                 )
@@ -378,7 +383,6 @@ def inference(
     feats_extract_class = feats_extractor_choices.get_class(feats_extract)
     _feats_extract = feats_extract_class(**feats_extract_conf)
 
-
     # 3. Normalization layer
     if normalize is not None:
         normalize_class = normalize_choices.get_class(normalize)
@@ -405,9 +409,7 @@ def inference(
             score_feats_extract
         )
         logging.info(f"score_feats_extract_class: {score_feats_extract_class}")
-        _score_feats_extract = score_feats_extract_class(
-            **score_feats_extract_conf
-        )
+        _score_feats_extract = score_feats_extract_class(**score_feats_extract_conf)
     if getattr(args, "pitch_extract", None) is not None:
         pitch_extract_class = pitch_extractor_choices.get_class(args.pitch_extract)
         if pitch_extract_conf.get("reduction_factor", None) is not None:
@@ -415,9 +417,7 @@ def inference(
                 "reduction_factor", None
             ) == args.svs_conf.get("reduction_factor", 1)
         else:
-            pitch_extract_conf["reduction_factor"] = svs_conf.get(
-                "reduction_factor", 1
-            )
+            pitch_extract_conf["reduction_factor"] = svs_conf.get("reduction_factor", 1)
         pitch_extract = pitch_extract_class(**pitch_extract_conf)
     # logging.info(f'pitch_extract:{pitch_extract}')
     if getattr(args, "energy_extract", None) is not None:
@@ -429,14 +429,10 @@ def inference(
             args.energy_extract_conf["reduction_factor"] = args.svs_conf.get(
                 "reduction_factor", 1
             )
-        energy_extract_class = energy_extractor_choices.get_class(
-            args.energy_extract
-        )
+        energy_extract_class = energy_extractor_choices.get_class(args.energy_extract)
         energy_extract = energy_extract_class(**args.energy_extract_conf)
     if getattr(args, "pitch_normalize", None) is not None:
-        pitch_normalize_class = pitch_normalize_choices.get_class(
-            args.pitch_normalize
-        )
+        pitch_normalize_class = pitch_normalize_choices.get_class(args.pitch_normalize)
         pitch_normalize = pitch_normalize_class(**args.pitch_normalize_conf)
     if getattr(args, "energy_normalize", None) is not None:
         energy_normalize_class = energy_normalize_choices.get_class(
@@ -545,18 +541,24 @@ def inference(
 
             logging.info(f"batch['pitch_aug']: {batch['pitch_aug'].item()}")
             logging.info(f"batch['time_aug']: {batch['time_aug'].item()}")
-            
-            assert batch['pitch_aug'].item() == 0
-            assert batch['time_aug'].item() == 1
 
-            del batch['pitch_aug']
-            del batch['time_aug']
+            assert batch["pitch_aug"].item() == 0
+            assert batch["time_aug"].item() == 1
+
+            del batch["pitch_aug"]
+            del batch["time_aug"]
 
             start_time = time.perf_counter()
-            
-            wav, outs, outs_denorm, probs, att_ws, duration, focus_rate = singingGenerate(
-                **batch
-            )
+
+            (
+                wav,
+                outs,
+                outs_denorm,
+                probs,
+                att_ws,
+                duration,
+                focus_rate,
+            ) = singingGenerate(**batch)
 
             key = keys[0]
             insize = next(iter(batch.values())).size(0) + 1
@@ -632,7 +634,10 @@ def inference(
             # TODO(kamo): Write scp
             if wav is not None:
                 sf.write(
-                    f"{output_dir}/wav/{key}.wav", wav.numpy(), singingGenerate.fs, "PCM_16"
+                    f"{output_dir}/wav/{key}.wav",
+                    wav.numpy(),
+                    singingGenerate.fs,
+                    "PCM_16",
                 )
 
     # remove duration related files if attention is not provided

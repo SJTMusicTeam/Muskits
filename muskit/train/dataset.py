@@ -51,7 +51,7 @@ class AdapterForSoundScpReader(collections.abc.Mapping):
     def __iter__(self):
         return iter(self.loader)
 
-    def __getitem__(self, key: (str,int)) -> np.ndarray:
+    def __getitem__(self, key: (str, int)) -> np.ndarray:
         key, pitch_aug_factor, time_aug_factor = key
         retval = self.loader[(key, pitch_aug_factor, time_aug_factor)]
 
@@ -128,7 +128,7 @@ class AdapterForMIDIScpReader(collections.abc.Mapping):
     def __iter__(self):
         return iter(self.loader)
 
-    def __getitem__(self, key: (str,int)) -> np.ndarray:
+    def __getitem__(self, key: (str, int)) -> np.ndarray:
         key, pitch_aug_factor, time_aug_factor = key
         retval = self.loader[(key, pitch_aug_factor, time_aug_factor)]
 
@@ -519,7 +519,12 @@ class MuskitDataset(AbsDataset):
         if self.mode == "train":
             pitch_aug_factor = random.randint(self.pitch_aug_min, self.pitch_aug_max)
 
-            _time_list = [i/100 for i in range(int(self.time_aug_min*100),int(self.time_aug_max*100+1),1)]
+            _time_list = [
+                i / 100
+                for i in range(
+                    int(self.time_aug_min * 100), int(self.time_aug_max * 100 + 1), 1
+                )
+            ]
             # _time_list = [1, 1.06, 1.12, 1.18, 1.24]
             # for _ in range(8):
             #     _time_list.append(1.0)
@@ -595,15 +600,15 @@ class MuskitDataset(AbsDataset):
             # logging.info(f"key: {key}, data[key].shape: {data[key].shape}")
             data[key] = data[key][:length]
             if self.mode == "train" and self.mask_aug:
-                data[key][mask_index_begin : mask_index_end] = 0
+                data[key][mask_index_begin:mask_index_end] = 0
             if self.mode == "train" and self.random_crop:
-                data[key] = data[key][crop_index_begin : crop_index_end]
-        
+                data[key] = data[key][crop_index_begin:crop_index_end]
+
         # phone-level time augmentation
 
         # quit()
-        data['pitch_aug'] = np.array([pitch_aug_factor])
-        data['time_aug'] = np.array([time_aug_factor])
+        data["pitch_aug"] = np.array([pitch_aug_factor])
+        data["time_aug"] = np.array([time_aug_factor])
 
         # 3. Force data-precision
         for name in data:
