@@ -681,7 +681,7 @@ class GLU_Transformer(AbsSVS):
         if self.embed_integration_type == "add":
             hs = label_emb + midi_emb
         else:
-            hs = torch.cat(label_emb, midi_emb, dim=-1)
+            hs = torch.cat((label_emb, midi_emb), dim=-1)
 
         # hs = F.leaky_relu(self.projection(hs))
 
@@ -831,7 +831,7 @@ class GLU_Transformer(AbsSVS):
             hs = hs_label + hs_midi
             hs = self.projection(hs)
         else:
-            hs = torch.cat(hs_label, hs_midi, dim=-1)
+            hs = torch.cat((hs_label, hs_midi), dim=-1)
             hs = self.projection(hs)
 
         # integrate spk & lang embeddings

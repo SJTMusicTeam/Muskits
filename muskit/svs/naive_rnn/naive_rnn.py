@@ -442,7 +442,7 @@ class NaiveRNN(AbsSVS):
             hs = hs_label + hs_midi
             hs = F.leaky_relu(self.midi_projection(hs))
         else:
-            hs = torch.cat(hs_label, hs_midi, dim=-1)
+            hs = torch.cat((hs_label, hs_midi), dim=-1)
             hs = F.leaky_relu(self.midi_projection(hs))
         # integrate spk & lang embeddings
         if self.spks is not None:
@@ -584,7 +584,7 @@ class NaiveRNN(AbsSVS):
             hs = hs_label + hs_midi
             hs = F.leaky_relu(self.midi_projection(hs))
         else:
-            hs = torch.cat(hs_label, hs_midi, dim=-1)
+            hs = torch.cat((hs_label, hs_midi), dim=-1)
             hs = F.leaky_relu(self.midi_projection(hs))
         # integrate spk & lang embeddings
         if self.spks is not None:
