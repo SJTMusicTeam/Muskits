@@ -30,6 +30,7 @@ label_scp=${data_dir}/label
 
 # for single spk id
 utt_prefix=natsume
+NOWPATH=`pwd`
 
 # make wav.scp
 find "${db}" -name "*.wav" | sort | while read -r filename; do
@@ -41,8 +42,8 @@ find "${db}" -name "*.wav" | sort | while read -r filename; do
         rootp=$(dirname ${filename})
         fname=$(basename ${filename} .wav)
         fname_16bits="${rootp}/${fname}_bits16.wav"
-        sox ${filename} -c 1 -t wavpcm -b 16 -r ${fs} ${fname_16bits}
-        echo "${utt_prefix}${id} sox ${fname_16bits} -b 16 -t wav -r ${fs} - |" >> "${wav_scp}"
+        sox ${NOWPATH}/${filename} -c 1 -t wavpcm -b 16 -r ${fs} ${NOWPATH}/${fname_16bits}
+        echo "${utt_prefix}${id} ${NOWPATH}/${fname_16bits}" >> "${wav_scp}"
     fi
 
     echo "${utt_prefix}${id} ${utt_prefix}" >> "${utt2spk}"
@@ -53,7 +54,7 @@ echo "finished making wav.scp."
 # make midi.scp
 (find "${db}" -name "*.mid" || find "${db}" -name "*.midi" )| sort | while read -r filename; do
     id=$(basename ${filename} | sed -e "s/\.[^\.]*$//g")
-    echo "${utt_prefix}${id} ${filename}" >> "${midi_scp}"
+    echo "${utt_prefix}${id} ${NOWPATH}/${filename}" >> "${midi_scp}"
 done
 
 echo "finished making midi.scp."
