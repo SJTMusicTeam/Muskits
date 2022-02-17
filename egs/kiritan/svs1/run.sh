@@ -3,7 +3,10 @@
 # -e 'error', -u 'undefined variable', -o ... 'error in pipeline', -x 'print commands',
 set -e
 set -u
-# set -o pipefail
+set -o pipefail
+
+. ./path.sh || exit 1
+. ./cmd.sh || exit 1
 
 # spectrogram-related arguments
 fs=24000
@@ -13,7 +16,9 @@ n_fft=2048
 n_shift=300
 win_length=1200
 
-NOWPATH=`pwd`
+
+score_feats_extract=frame_score_feats   # frame_score_feats | syllable_score_feats
+expdir=exp/rnn
 
 opts=
 if [ "${fs}" -eq 48000 ]; then
@@ -40,7 +45,7 @@ cleaner=none
 ./svs.sh \
     --lang jp \
     --stage 0 \
-    --local_data_opts "--stage 0 ${NOWPATH}" \
+    --local_data_opts "--stage 0 $(pwd)" 
     --feats_type raw \
     --pitch_extract None \
     --fs "${fs}" \
