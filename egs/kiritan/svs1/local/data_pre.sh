@@ -30,7 +30,7 @@ label_scp=${data_dir}/label
 
 # for single spk id
 utt_prefix=kiritan
-# echo "fs ${fs}"
+NOWPATH=`pwd`
 
 # make wav.scp
 find "${db}" -name "*.wav" ! -name "*_bits16.wav" | sort | while read -r filename; do
@@ -54,7 +54,7 @@ echo "finished making wav.scp."
 # make midi.scp
 (find "${db}" -name "*.mid" || find "${db}" -name "*.midi" )| sort | while read -r filename; do
     id=$(basename ${filename} | sed -e "s/\.[^\.]*$//g")
-    echo "${utt_prefix}${id} ${filename}" >> "${midi_scp}"
+    echo "${utt_prefix}${id} ${NOWPATH}/${filename}" >> "${midi_scp}"
 done
 
 echo "finished making midi.scp."
