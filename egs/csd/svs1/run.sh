@@ -5,6 +5,9 @@ set -e
 set -u
 set -o pipefail
 
+. ./path.sh || exit 1
+. ./cmd.sh || exit 1
+
 fs=24000
 n_fft=2048
 n_shift=300
