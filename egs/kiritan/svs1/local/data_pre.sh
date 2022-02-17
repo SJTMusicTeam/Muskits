@@ -33,7 +33,7 @@ utt_prefix=kiritan
 NOWPATH=`pwd`
 
 # make wav.scp
-find "${db}" -name "*.wav" | sort | while read -r filename; do
+find "${db}" -name "*.wav" ! -name "*_bits16.wav" | sort | while read -r filename; do
     id=$(basename ${filename} | sed -e "s/\.[^\.]*$//g")
     if [ "${fs}" -eq 48000 ]; then
         # default sampling rate
@@ -42,10 +42,10 @@ find "${db}" -name "*.wav" | sort | while read -r filename; do
         rootp=$(dirname ${filename})
         fname=$(basename ${filename} .wav)
         fname_16bits="${rootp}/${fname}_bits16.wav"
-        sox ${NOWPATH}/${filename} -c 1 -t wavpcm -b 16 -r ${fs} ${NOWPATH}/${fname_16bits}
+        sox ${filename} -c 1 -t wavpcm -b 16 -r ${fs} ${fname_16bits}
         echo "${utt_prefix}${id} ${NOWPATH}/${fname_16bits}" >> "${wav_scp}"
     fi
-
+ 
     echo "${utt_prefix}${id} ${utt_prefix}" >> "${utt2spk}"
     
 done
@@ -63,15 +63,17 @@ echo "finished making midi.scp."
 find "${db}" -name "*.lab" | sort | while read -r filename; do
     id=$(basename ${filename} | sed -e "s/\.[^\.]*$//g")
 
-    echo -n "${utt_prefix}${id}" >> "${text_scp}"
-    echo -n "${utt_prefix}${id}" >> "${label_scp}"
+    echo -n "${utt_prefix}${id}" >> "${text_scp}.tmp"
+    echo -n "${utt_prefix}${id}" >> "${label_scp}.tmp"
     cat ${filename} | while read -r start end text
     do
-      echo -n " ${text}" >> "${text_scp}"
-      echo -n " ${start} ${end}  ${text}" >> "${label_scp}"
+      echo -n " ${text}" >> "${text_scp}.tmp"
+      echo -n " ${start} ${end}  ${text}" >> "${label_scp}.tmp"
     done
-    echo "" >> "${text_scp}"
-    echo "" >> "${label_scp}"
+    echo "" >> "${text_scp}.tmp"
+    echo "" >> "${label_scp}.tmp"
+    sed -e "s/\r//g" "${text_scp}.tmp" > "${text_scp}"
+    sed -e "s/\r//g" "${label_scp}.tmp" > "${label_scp}"
 done
 echo "finished making text and label.scp"
 
