@@ -225,7 +225,9 @@ class SingingGenerate:
             train_config = Path(train_config)
             with train_config.open("r", encoding="utf-8") as f:
                 train_args = yaml.safe_load(f)
-            vocoder_checkpoint = train_args['vocoder_checkpoint']  # the vocoder keep the same as Training Stage
+            vocoder_checkpoint = train_args[
+                "vocoder_checkpoint"
+            ]  # the vocoder keep the same as Training Stage
 
             self.fs = vocoder_conf["fs"]
             if vocoder_type == "Grriffin-Lim":
@@ -550,9 +552,14 @@ def inference(
             batch = {k: v[0] for k, v in batch.items() if not k.endswith("_lengths")}
 
             filename_list = keys
-            speaker_lst = ["oniku", "ofuton", "kiritan", "natsume"]     # NOTE: Fix me into args
+            speaker_lst = [
+                "oniku",
+                "ofuton",
+                "kiritan",
+                "natsume",
+            ]  # NOTE: Fix me into args
             # add spk-id to **batch
-            if 'svs.sid_emb.weight' in singingGenerate.model.state_dict().keys():
+            if "svs.sid_emb.weight" in singingGenerate.model.state_dict().keys():
                 sids = []
                 for filename in filename_list:
                     if "kiritan" in filename.split("_")[0]:
@@ -562,8 +569,8 @@ def inference(
                     else:
                         filename = filename.split("_")[0]
                     sids.append(speaker_lst.index(filename))
-                sids = torch.tensor(sids).to(batch['score'].device)
-                batch['sids'] = sids
+                sids = torch.tensor(sids).to(batch["score"].device)
+                batch["sids"] = sids
 
             logging.info(f"batch: {batch}")
             logging.info(f"keys: {keys}")

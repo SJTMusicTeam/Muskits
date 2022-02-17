@@ -48,6 +48,8 @@ class MIDIScpReader(collections.abc.Mapping):
             note_seq, tempo_seq = midi_to_seq(
                 midi_obj, self.dtype, self.rate, pitch_aug_factor, time_aug_factor
             )
+        else:
+            raise TypeError("Not supported loader type {}".format(self.rep))
         return note_seq, tempo_seq
 
     def get_path(self, key):
@@ -99,7 +101,8 @@ class MIDIScpWriter:
 
         self.data = {}
 
-    def __setitem__(self, key: str, value):
+    def __setitem__(self, key: str, value: tuple):
+        assert len(value) == 2, "The midi values should include  both note and tempo"
         note_seq, tempo_seq = value
         midi_path = self.dir / f"{key}.{self.format}"
         midi_path.parent.mkdir(parents=True, exist_ok=True)

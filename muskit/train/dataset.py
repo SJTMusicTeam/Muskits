@@ -524,16 +524,23 @@ class MuskitDataset(AbsDataset):
         if self.mode == "train":
             if self.pitch_mean != "None":
                 loader = self.loader_dict["midi"]
-                note_seq, tempo_seq = loader[(uid, 0, 1)]   # pitch_aug_factor = 0, global_time_aug_factor = 1
+                note_seq, tempo_seq = loader[
+                    (uid, 0, 1)
+                ]  # pitch_aug_factor = 0, global_time_aug_factor = 1
 
                 sample_pitch_mean = np.mean(note_seq)
 
-                if isinstance( eval(self.pitch_mean), float ):
+                if isinstance(eval(self.pitch_mean), float):
                     # single dataset w/o spk-id
                     global_pitch_mean = float(self.pitch_mean)
-                elif isinstance( eval(self.pitch_mean), list ):
+                elif isinstance(eval(self.pitch_mean), list):
                     # multi datasets with spk-ids
-                    speaker_lst = ["oniku", "ofuton", "kiritan", "natsume"]     # NOTE: Fix me into args
+                    speaker_lst = [
+                        "oniku",
+                        "ofuton",
+                        "kiritan",
+                        "natsume",
+                    ]  # NOTE: Fix me into args
                     _find_num = 0
                     _find_index = 0
                     for index in range(len(speaker_lst)):
@@ -551,11 +558,13 @@ class MuskitDataset(AbsDataset):
                 elif gap < 0:
                     lst = [i for i in range(gap, 1)]
                 else:
-                    lst = [i for i in range(0, gap+1)]
+                    lst = [i for i in range(0, gap + 1)]
                 # logging.info(f"type: {type(note_seq)}, mean: {np.mean(note_seq)}, lst: {lst}, gap: {gap}")
                 pitch_aug_factor = random.sample(lst, 1)[0]
             else:
-                pitch_aug_factor = random.randint(self.pitch_aug_min, self.pitch_aug_max)
+                pitch_aug_factor = random.randint(
+                    self.pitch_aug_min, self.pitch_aug_max
+                )
 
             _time_list = [
                 i / 100
