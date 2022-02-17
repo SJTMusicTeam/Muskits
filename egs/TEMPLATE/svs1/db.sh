@@ -4,6 +4,7 @@
 KIRITAN=/home/exx/jiatong/projects/svs/data/
 ONIKU=
 OFUTON=
+OPENCPOP=/home/exx/jiatong/projects/svs/data/Opencpop
 NATSUME=
 COMBINE=
 CSD=downloads

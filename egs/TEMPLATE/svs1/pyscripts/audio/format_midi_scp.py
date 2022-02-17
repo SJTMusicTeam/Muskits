@@ -133,7 +133,7 @@ def main():
     else:
         # midi_scp does not need to change, when no segments is applied
         # Note things will change, after finish other todos in the script
-        os.system("cp {} {}".format(args.scp, Path(args.outdir / f"{args.name}.scp")))
+        os.system("cp {} {}".format(args.scp, Path(args.outdir) / f"{args.name}.scp"))
 
 
 if __name__ == "__main__":
