@@ -13,6 +13,9 @@ n_fft=2048
 n_shift=300
 win_length=1200
 
+score_feats_extract=frame_score_feats   # frame_score_feats | syllable_score_feats
+expdir=exp/2-15-RNN-batch16-test_flac
+
 NOWPATH=`pwd`
 
 opts=
@@ -20,7 +23,7 @@ if [ "${fs}" -eq 48000 ]; then
     # To suppress recreation, specify wav format
     opts="--audio_format wav "
 else
-    opts="--audio_format wav "
+    opts="--audio_format flac "
 fi
 
 train_set=tr_no_dev
@@ -28,9 +31,10 @@ valid_set=dev
 test_sets="dev eval"
 
 # training and inference configuration
+train_config=conf/tuning/train_naive_rnn.yaml
 # train_config=conf/tuning/train_xiaoice.yaml
 # train_config=conf/tuning/train_xiaoice_noDP.yaml
-train_config=conf/train.yaml
+# train_config=conf/train.yaml
 inference_config=conf/decode.yaml
 
 # text related processing arguments
@@ -40,6 +44,7 @@ cleaner=none
 ./svs.sh \
     --lang jp \
     --stage 0 \
+    --stop_stage 6 \
     --local_data_opts "--stage 0 ${NOWPATH}" \
     --feats_type raw \
     --pitch_extract None \

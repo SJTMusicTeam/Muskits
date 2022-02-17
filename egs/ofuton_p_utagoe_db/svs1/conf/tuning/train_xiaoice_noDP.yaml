@@ -23,8 +23,15 @@ svs_conf:                        # keyword arguments for the selected model
     init_type: pytorch           # parameter initialization
     use_masking: true            # whether to apply masking for padded part in loss calculation
     loss_type: L1
-    use_mixup_training: False    # Default: False
-    loss_mixup_wight: 0          # Default: 0
+    use_mixup_training: True    # Default: False
+    loss_mixup_wight: 0.2          # Default: 0
+    use_cycle_process: True      # Default: False
+    cycle_type: single           # Default: single, bi-direct
+    w_svs: 0.7                     # Default: 1
+    w_predictor: 0.2               # Default: 1
+    w_cycle: 0.1                   # Default: 1
+    predict_type: ["midi", "label"]     # Default: ["midi", "label"]
+    predict_criterion_type: CrossEntropy         # Default: CTC, CrossEntropy
 
 
 ##########################################################
@@ -54,11 +61,11 @@ batch_size: 16
 
 pitch_aug_min: 0            # Default: 0, [-1,-2,-3]
 pitch_aug_max: 0            # Default: 0, [1,2,3]
-pitch_mean: "None"          # Default: "None", "53.61" - for ofuton dataset(the mean midi-value of training split, used for adaptive pitch augmentation) | muskit/fileio/utils.py
+pitch_mean: "53.61"          # Default: "None", "53.61" - for ofuton dataset(the mean midi-value of training split, used for adaptive pitch augmentation) | muskit/fileio/utils.py
 time_aug_min: 1             # Default: 1, [0.99]
 time_aug_max: 1             # Default: 1, [1.01]
 random_crop: False          # Default: False, crop length [0.9 * length, length]
-mask_aug: True             # Default: False, random mask length 1500 samples | muskit/train/dataset.py
+mask_aug: False             # Default: False, random mask length 1500 samples | muskit/train/dataset.py
 
 sort_in_batch: descending   # how to sort data in making batch
 sort_batch: descending      # how to sort created batches
