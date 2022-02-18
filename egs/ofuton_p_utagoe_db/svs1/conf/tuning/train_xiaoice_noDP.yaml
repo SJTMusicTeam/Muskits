@@ -26,7 +26,7 @@ svs_conf:                        # keyword arguments for the selected model
     use_mixup_training: True    # Default: False
     loss_mixup_wight: 0.2          # Default: 0
     use_cycle_process: True      # Default: False
-    cycle_type: single           # Default: single, bi-direct
+    cycle_type: bi-direct           # Default: single, bi-direct
     w_svs: 0.7                     # Default: 1
     w_predictor: 0.2               # Default: 1
     w_cycle: 0.1                   # Default: 1
@@ -61,7 +61,7 @@ batch_size: 16
 
 pitch_aug_min: 0            # Default: 0, [-1,-2,-3]
 pitch_aug_max: 0            # Default: 0, [1,2,3]
-pitch_mean: "53.61"          # Default: "None", "53.61" - for ofuton dataset(the mean midi-value of training split, used for adaptive pitch augmentation) | muskit/fileio/utils.py
+pitch_mean: "53.15"          # Default: "None", "53.15" - for ofuton dataset(the mean midi-value of training split, used for adaptive pitch augmentation) | muskit/fileio/utils.py
 time_aug_min: 1             # Default: 1, [0.99]
 time_aug_max: 1             # Default: 1, [1.01]
 random_crop: False          # Default: False, crop length [0.9 * length, length]

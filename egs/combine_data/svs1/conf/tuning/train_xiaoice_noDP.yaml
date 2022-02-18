@@ -63,7 +63,7 @@ batch_size: 16
 
 pitch_aug_min: 0            # Default: 0, [-1,-2,-3]
 pitch_aug_max: 0            # Default: 0, [1,2,3]
-pitch_mean: "[66.01, 53.61, 63.84, 55.20]"          # Default: "None", "[66.01, 53.61, 63.84, 55.20]" - for ["oniku", "ofuton", "kiritan", "natsume"] dataset(the mean midi-value of training split, used for adaptive pitch augmentation) | muskit/fileio/utils.py
+pitch_mean: "[66.02, 53.15, 55.20, 53.83]"          # Default: "None", "[66.02, 53.15, 55.20, 53.83]" - for ["oniku", "ofuton", "kiritan", "natsume"] dataset(the mean midi-value of training split, used for adaptive pitch augmentation) | muskit/fileio/utils.py
 time_aug_min: 1             # Default: 1, [0.99]
 time_aug_max: 1             # Default: 1, [1.01]
 random_crop: False          # Default: False, crop length [0.9 * length, length]
