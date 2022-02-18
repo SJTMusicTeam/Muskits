@@ -69,7 +69,7 @@ def process_subset(src_data, subset, check_func, fs):
         os.system(cmd)
         
         wavscp.write(
-            "{} sox {} -c 1 -t wavpcm -b 16 -|\n".format(
+            "{} {}\n".format(
                 utt_id, os.path.join(src_data, folder, "{}_bits16.wav".format(folder))
             )
         )
