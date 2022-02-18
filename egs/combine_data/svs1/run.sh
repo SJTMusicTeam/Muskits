@@ -55,7 +55,7 @@ cleaner=none
 
 ./svs.sh \
     --lang jp \
-    --stage 5 \
+    --stage 6 \
     --stop_stage 7 \
     --local_data_opts "--stage 0 ${combine_data_path}" \
     --feats_type raw \

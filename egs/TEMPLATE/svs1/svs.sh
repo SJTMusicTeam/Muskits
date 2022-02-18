@@ -308,13 +308,13 @@ if ! "${skip_data_prep}"; then
 
         if [ "${feats_type}" = raw ]; then
             log "Stage 2: Format wav.scp: data/ -> ${data_feats}/"
-            for dset in "${train_set}" "${valid_set}" ${test_sets}; do
+            for dset in "${train_set}" "${valid_set}" ${test_sets} ; do
                 if [ "${dset}" = "${train_set}" ] || [ "${dset}" = "${valid_set}" ]; then
                     _suf="/org"
                 else
                     _suf=""
                 fi
-                scripts/utils/copy_data_dir.sh data/"${dset}" "${data_feats}${_suf}/${dset}"
+                scripts/utils/copy_data_dir.sh "data/${dset}" "${data_feats}${_suf}/${dset}"
                 rm -f ${data_feats}${_suf}/${dset}/{segments,wav.scp,reco2file_and_channel}
                 _opts=
                 if [ -e data/"${dset}"/segments ]; then
