@@ -16,7 +16,7 @@ Muskit is an open-source music processing toolkit. Currently we mostly focus on 
   - RNN-based non-autoregressive model
   - Xiaoice
   - Sequence-to-sequence Transformer (with GLU-based encoder)
-  - MLP singer (in progress)
+  - MLP singer
   - Bytesing (in progress)
   - DiffSinger (to be published)
 - Multi-speaker & Multilingual extention

@@ -28,7 +28,7 @@ train_config=conf/train.yaml
 inference_config=conf/decode.yaml
 
 ./svs.sh \
-    --lang jp \
+    --lang english \
     --feats_type raw \
     --fs "${fs}" \
     --n_fft "${n_fft}" \
