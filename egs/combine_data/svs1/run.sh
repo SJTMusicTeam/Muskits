@@ -22,11 +22,11 @@ NOWPATH=${NOWPATH%/*}
 combine_data_path=""
 combine_data_path+=" ${NOWPATH}/oniku_kurumi_utagoe_db/svs1/data/"
 combine_data_path+=" ${NOWPATH}/ofuton_p_utagoe_db/svs1/data/"
-combine_data_path+=" ${NOWPATH}/kiritan/svs1/data/"
+# combine_data_path+=" ${NOWPATH}/kiritan/svs1/data/"
 combine_data_path+=" ${NOWPATH}/natsume/svs1/data/"
 
 score_feats_extract=frame_score_feats   # frame_score_feats | syllable_score_feats
-expdir=exp/2-9-Xiaoice_noDP-adaptivePitchAug
+expdir=exp/2-16-3combine-Xiaoice_noDP-midi_label_spk_cycleW07W02W01_all_CTCloss
 
 opts=
 if [ "${fs}" -eq 48000 ]; then
@@ -51,7 +51,7 @@ cleaner=none
 
 ./svs.sh \
     --lang jp \
-    --stage 7 \
+    --stage 6 \
     --stop_stage 7 \
     --local_data_opts "--stage 0 ${combine_data_path}" \
     --feats_type raw \

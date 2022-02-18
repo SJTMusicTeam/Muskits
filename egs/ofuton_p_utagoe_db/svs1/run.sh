@@ -17,7 +17,7 @@ n_shift=300
 win_length=1200
 
 score_feats_extract=frame_score_feats   # frame_score_feats | syllable_score_feats
-expdir=exp/2-8-Xiaoice_noDP-mask_length02
+expdir=exp/2-15-Xiaoice_noDP-midi_label_cycleW07W02W01_all_CrossEntropyloss
 # inference_model=196epoch.pth
 
 opts=
@@ -45,7 +45,7 @@ cleaner=none
 ./svs.sh \
     --lang jp \
     --stage 6 \
-    --stop_stage 6 \
+    --stop_stage 7 \
     --local_data_opts "--stage 0" \
     --feats_type raw \
     --pitch_extract None \
