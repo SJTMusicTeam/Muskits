@@ -31,12 +31,16 @@ class MIDIScpReader(collections.abc.Mapping):
         dtype=np.int16,
         loader_type: str = "representation",
         rate: np.int32 = np.int32(16000),
+        mode: str = "format",
+        time_shift: float = 0.0125,
     ):
         assert check_argument_types()
         self.fname = fname
         self.dtype = dtype
         self.rep = loader_type
         self.rate = rate
+        self.mode = mode
+        self.time_shift = time_shift
         self.data = read_2column_text(fname)  # get key-value dict
 
     def __getitem__(self, key):
@@ -46,7 +50,7 @@ class MIDIScpReader(collections.abc.Mapping):
 
         if self.rep == "representation":
             note_seq, tempo_seq = midi_to_seq(
-                midi_obj, self.dtype, self.rate, pitch_aug_factor, time_aug_factor
+                midi_obj, self.dtype, self.rate, pitch_aug_factor, time_aug_factor, self.mode, self.time_shift
             )
         return note_seq, tempo_seq
 
