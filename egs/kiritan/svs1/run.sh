@@ -56,7 +56,7 @@ cleaner=none
     --train_set "${train_set}" \
     --valid_set "${valid_set}" \
     --test_sets "${test_sets}" \
-    --score_feats_extract "${score_feats_extract}" \
+    # --score_feats_extract "${score_feats_extract}" \
     --srctexts "data/${train_set}/text" \
     --svs_exp ${expdir} \
     --ngpu 1 \

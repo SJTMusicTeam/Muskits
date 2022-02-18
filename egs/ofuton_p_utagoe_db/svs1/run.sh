@@ -41,8 +41,8 @@ cleaner=none
 
 ./svs.sh \
     --lang jp \
-    --stage 6 \
-    --stop_stage 6 \
+    --stage 0 \
+    --stop_stage 7 \
     --local_data_opts "--stage 0" \
     --feats_type raw \
     --pitch_extract None \

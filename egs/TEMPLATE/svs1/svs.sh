@@ -372,6 +372,33 @@ if ! "${skip_data_prep}"; then
             done
         fi
     fi
+    if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
+        if "${use_sid}"; then
+            log "Stage 2+: sid extract: data/ -> ${data_feats}/"
+            for dset in "${train_set}" "${valid_set}" ${test_sets}; do
+                if [ "${dset}" = "${train_set}" ] || [ "${dset}" = "${valid_set}" ]; then
+                    _suf="/org"
+                else
+                    _suf=""
+                fi
+                # 1. Copy datadir
+                # scripts/utils/copy_data_dir.sh data/"${dset}" "${data_feats}${_suf}/${dset}"
+                
+                # 1.Generate spk2sid
+                if [ "${dset}" = "${train_set}" ]; then
+                    # Make spk2sid
+                    # NOTE(kan-bayashi): 0 is reserved for unknown speakers
+                    echo "<unk> 0" > "${data_feats}${_suf}/${dset}/spk2sid"
+                    cut -f 2 -d " " "${data_feats}${_suf}/${dset}/utt2spk" | sort | uniq | \
+                        awk '{print $1 " " NR}' >> "${data_feats}${_suf}/${dset}/spk2sid"
+                fi
+                pyscripts/utils/utt2spk_to_utt2sid.py \
+                    "${data_feats}/org/${train_set}/spk2sid" \
+                    "${data_feats}${_suf}/${dset}/utt2spk" \
+                    > "${data_feats}${_suf}/${dset}/utt2sid"
+            done
+        fi
+    fi
 
 
     if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
