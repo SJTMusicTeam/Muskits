@@ -3,7 +3,10 @@
 # -e 'error', -u 'undefined variable', -o ... 'error in pipeline', -x 'print commands',
 set -e
 set -u
-# set -o pipefail
+set -o pipefail
+
+. ./path.sh || exit 1
+. ./cmd.sh || exit 1
 
 # spectrogram-related arguments
 fs=24000
