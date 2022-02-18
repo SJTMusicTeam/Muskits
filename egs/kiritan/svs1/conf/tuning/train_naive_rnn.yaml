@@ -82,4 +82,5 @@ best_model_criterion:
     - min
 
 gpu_id: 0
-vocoder_checkpoint: /data5/gs/vocoder_peter/hifigan-vocoder/exp/train_hifigan.v1_train_nodev_clean_libritts_hifigan-2.v1/checkpoint-50000steps.pkl
+vocoder_checkpoint: pre_trained_vocoder/checkpoint-300000steps.pkl
+# vocoder_checkpoint: /data5/gs/vocoder_peter/hifigan-vocoder/exp/train_hifigan.v1_train_nodev_clean_libritts_hifigan-2.v1/checkpoint-50000steps.pkl
