@@ -21,10 +21,12 @@ NOWPATH=`pwd`
 NOWPATH=${NOWPATH%/*}
 NOWPATH=${NOWPATH%/*}
 combine_data_path=""
+# dump version
 # combine_data_path+=" ${NOWPATH}/oniku_kurumi_utagoe_db/svs1/dump/raw/"
 # combine_data_path+=" ${NOWPATH}/ofuton_p_utagoe_db/svs1/dump/raw/"
 # combine_data_path+=" ${NOWPATH}/kiritan/svs1/dump/raw/"
 # combine_data_path+=" ${NOWPATH}/natsume/svs1/dump/raw/"
+# data version
 combine_data_path+=" ${NOWPATH}/oniku_kurumi_utagoe_db/svs1/data/"
 combine_data_path+=" ${NOWPATH}/ofuton_p_utagoe_db/svs1/data/"
 # combine_data_path+=" ${NOWPATH}/kiritan/svs1/data/"

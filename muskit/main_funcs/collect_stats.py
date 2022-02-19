@@ -75,6 +75,7 @@ def collect_stats(
                         del batch[key]
                 
                 # logging.info(f'batch.keys={batch.keys()}')
+                # logging.info(f'batch.values={batch.values()}')
                 
 
                 if ngpu <= 1:
@@ -87,6 +88,8 @@ def collect_stats(
                         range(ngpu),
                         module_kwargs=batch,
                     )
+                
+                # logging.info(f'data={data}')
 
                 # 3. Calculate sum and square sum
                 for key, v in data.items():

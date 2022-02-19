@@ -1474,6 +1474,14 @@ class AbsTask(ABC):
         cls, args: argparse.Namespace, iter_options: IteratorOptions, mode: str
     ) -> AbsIterFactory:
         assert check_argument_types()
+        
+        midi_loader_mode = (
+            "xiaoice"
+            if "xiaoice" in args.config
+            else "format"
+        )  # NOTE(Shuai) format, xiaoice (tempo means index_nums)
+        time_shift = args.feats_extract_conf['hop_length'] / args.feats_extract_conf['fs']
+
         dataset = MuskitDataset(
             iter_options.data_path_and_name_and_type,
             float_dtype=args.train_dtype,
@@ -1481,6 +1489,8 @@ class AbsTask(ABC):
             max_cache_size=iter_options.max_cache_size,
             max_cache_fd=iter_options.max_cache_fd,
             mode=mode,
+            midi_loader_mode=midi_loader_mode,
+            time_shift=time_shift,
             pitch_aug_min=args.pitch_aug_min,
             pitch_aug_max=args.pitch_aug_max,
             pitch_mean=args.pitch_mean,

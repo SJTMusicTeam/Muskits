@@ -520,7 +520,9 @@ class Trainer:
                     for key in del_keys:
                         if key in batch.keys():
                             del batch[key]
-
+                    # logging.info('train')
+                    # logging.info(f'batch.keys={batch.keys()}')
+                    # logging.info(f'batch.values={batch.values()}')
 
                     retval = model(**batch)
 

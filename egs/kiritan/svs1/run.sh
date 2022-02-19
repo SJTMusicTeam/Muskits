@@ -25,7 +25,7 @@ if [ "${fs}" -eq 48000 ]; then
     # To suppress recreation, specify wav format
     opts="--audio_format wav "
 else
-    opts="--audio_format wav "
+    opts="--audio_format flac "
 fi
 
 train_set=tr_no_dev
@@ -33,9 +33,10 @@ valid_set=dev
 test_sets="dev eval"
 
 # training and inference configuration
+train_config=conf/tuning/train_naive_rnn.yaml
 # train_config=conf/tuning/train_xiaoice.yaml
 # train_config=conf/tuning/train_xiaoice_noDP.yaml
-train_config=conf/train.yaml
+# train_config=conf/train.yaml
 inference_config=conf/decode.yaml
 
 # text related processing arguments

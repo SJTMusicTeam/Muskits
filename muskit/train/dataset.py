@@ -189,12 +189,12 @@ def sound_loader(path, float_dtype=None):
     return AdapterForSoundScpReader(loader, float_dtype)
 
 
-def midi_loader(path, float_dtype=None, rate=np.int32(24000)):
+def midi_loader(path, float_dtype=None, rate=np.int32(24000), mode="format", time_shift=0.0125):
     # The file is as follows:
     #   utterance_id_A /some/where/a.mid
     #   utterance_id_B /some/where/b.midi
 
-    loader = MIDIScpReader(fname=path, rate=rate)
+    loader = MIDIScpReader(fname=path, rate=rate, mode=mode, time_shift=time_shift)
 
     # MIDIScpReader.__getitem__() returns ndarray
     return AdapterForMIDIScpReader(loader)
@@ -238,7 +238,7 @@ DATA_TYPES = {
     # TODO(TaoQian)
     "midi": dict(
         func=midi_loader,
-        kwargs=["float_dtype"],
+        kwargs=["float_dtype", "mode", "time_shift"],
         help="MIDI format types which supported by sndfile mid, midi, etc."
         "\n\n"
         "   utterance_id_a a.mid\n"
@@ -391,8 +391,10 @@ class MuskitDataset(AbsDataset):
         int_dtype: str = "long",
         max_cache_size: Union[float, int, str] = 0.0,
         max_cache_fd: int = 0,
-        not_align: list = ["text"],  # TODO(Tao): add to args
+        not_align: list = ["text", "sids", "lids"],  # TODO(Tao): add to args
         mode: str = "valid",  # train, valid, plot_att, ...
+        midi_loader_mode: str = "format",   # format, xiaoice (tempo means index_nums)
+        time_shift: float = 0.0125,
         pitch_aug_min: int = 0,
         pitch_aug_max: int = 0,
         pitch_mean: str = "None",
@@ -413,6 +415,8 @@ class MuskitDataset(AbsDataset):
         self.float_dtype = float_dtype
         self.int_dtype = int_dtype
         self.max_cache_fd = max_cache_fd
+        self.midi_loader_mode = midi_loader_mode
+        self.time_shift = time_shift
 
         self.loader_dict = {}
         self.debug_info = {}
@@ -436,7 +440,7 @@ class MuskitDataset(AbsDataset):
         else:
             self.cache = None
         self.not_align = not_align
-        self.mode = mode
+        self.mode = mode   
 
         self.pitch_aug_min = pitch_aug_min
         self.pitch_aug_max = pitch_aug_max
@@ -475,6 +479,10 @@ class MuskitDataset(AbsDataset):
                         kwargs["int_dtype"] = self.int_dtype
                     elif key2 == "max_cache_fd":
                         kwargs["max_cache_fd"] = self.max_cache_fd
+                    elif key2 == "mode":
+                        kwargs["mode"] = self.midi_loader_mode
+                    elif key2 == "time_shift":
+                        kwargs["time_shift"] = self.time_shift
                     else:
                         raise RuntimeError(f"Not implemented keyword argument: {key2}")
 
