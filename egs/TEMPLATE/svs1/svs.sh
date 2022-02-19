@@ -283,8 +283,8 @@ fi
 if [ -z "${svs_exp}" ]; then
     svs_exp="${expdir}/svs_${tag}"
 fi
-
-
+echo "1"
+echo "${train_set} ${valid_set} ${test_sets}"
 # ========================== Main stages start from here. ==========================
 
 if ! "${skip_data_prep}"; then
@@ -305,7 +305,7 @@ if ! "${skip_data_prep}"; then
         # and also it can also change the audio-format and sampling rate.
         # If nothing is need, then format_wav_scp.sh does nothing:
         # i.e. the input file format and rate is same as the output.
-
+        echo "${train_set} ${valid_set} ${test_sets}"
         if [ "${feats_type}" = raw ]; then
             log "Stage 2: Format wav.scp: data/ -> ${data_feats}/"
             for dset in "${train_set}" "${valid_set}" ${test_sets} ; do
