@@ -503,7 +503,7 @@ class Trainer:
             with autocast(scaler is not None):
                 with reporter.measure_time("forward_time"):
 
-                    del_keys = ["pitch_aug", "pitch_aug_lengths", "time_aug", "time_aug_lengths", "sids_lengths", "lids_lengths"]
+                    del_keys = ["pitch_aug", "pitch_aug_lengths", "time_aug", "time_aug_lengths"]
                     for key in del_keys:
                         if key in batch.keys():
                             del batch[key]
@@ -731,7 +731,7 @@ class Trainer:
             if no_forward_run:
                 continue
 
-            del_keys = ["pitch_aug", "pitch_aug_lengths", "time_aug", "time_aug_lengths", "sids_lengths", "lids_lengths"]
+            del_keys = ["pitch_aug", "pitch_aug_lengths", "time_aug", "time_aug_lengths"]
             for key in del_keys:
                 if key in batch.keys():
                     del batch[key]

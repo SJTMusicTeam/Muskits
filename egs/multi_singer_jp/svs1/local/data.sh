@@ -14,56 +14,41 @@ log() {
 }
 
 SECONDS=0
-stage=1
-stop_stage=100
 
 log "$0 $*"
 
 . utils/parse_options.sh || exit 1;
 
-if [ -z "${KIRITAN}" ]; then
-    log "Fill the value of 'KIRITAN' of db.sh"
-    exit 1
-fi
 
-if [ -z "${ONIKU}" ]; then
-    log "Fill the value of 'ONIKU' of db.sh"
-    exit 1
-fi
-
-if [ -z "${OFUTON}" ]; then
-    log "Fill the value of 'OFUTON' of db.sh"
-    exit 1
-fi
-
-if [ -z "${NATSUME}" ]; then
-    log "Fill the value of 'NATSUME' of db.sh"
-    exit 1
-fi
-
-if [ -z "${COMBINE}" ]; then
-    log "Fill the value of 'COMBINE' of db.sh"
-    exit 1
-fi
-
-mkdir -p ${COMBINE}/data
+mkdir -p data
 
 train_set=tr_no_dev
 train_dev=dev
-recog_set=eval
+test_set=eval
 
 log "combine data: start "
-for dataset in ${train_set} ${train_dev} ${recog_set}; do
+log "[IMPORTANT] assume merging with dumpped files"
+for dataset in ${train_set} ${train_dev} ${test_set}; do
     echo "process for subset: ${dataset}"
-    opts="${COMBINE}data/${dataset}"
+    opts="data/${dataset}"
     for dir in $*; do
         # echo "dir: ${dir}"
         if [ -d ${dir} ]; then
-            opts+=" ${dir}${dataset}"
-            # echo "valid dir: ${dir}"
+	    org_workspace=$(realpath ${dir}/../../..)
+	    org_name=$(basename ${org_workspace})
+	    scripts/utils/copy_data_dir.sh ${dir}/${dataset} data/"${org_name}_${dataset}"
+	    python local/relative_path_convert.py ${org_workspace}/svs1 data/"${org_name}_${dataset}"/midi.scp \
+		    data/"${org_name}_${dataset}"/midi.scp.tmp
+	    python local/relative_path_convert.py ${org_workspace}/svs1 data/"${org_name}_${dataset}"/wav.scp \
+		    data/"${org_name}_${dataset}"/wav.scp.tmp
+	    sort -o data/"${org_name}_${dataset}"/midi.scp.tmp data/"${org_name}_${dataset}"/midi.scp.tmp
+	    sort -o data/"${org_name}_${dataset}"/wav.scp.tmp data/"${org_name}_${dataset}"/wav.scp.tmp
+	    mv data/"${org_name}_${dataset}"/midi.scp.tmp data/"${org_name}_${dataset}"/midi.scp
+	    mv data/"${org_name}_${dataset}"/wav.scp.tmp data/"${org_name}_${dataset}"/wav.scp
+	    opts+=" data/${org_name}_${dataset}"
         fi
     done
-    utils/combine_data.sh --extra_files "midi.scp label" ${opts} 
+    scripts/utils/combine_data.sh ${opts} 
 done
 
 log "Successfully finished. [elapsed=${SECONDS}s]"

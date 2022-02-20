@@ -2,10 +2,10 @@
 # "downloads" means the corpus can be downloaded by the recipe automatically
 
 KIRITAN=/home/exx/jiatong/projects/svs/data/
-ONIKU=
-OFUTON=
+ONIKU=/home/exx/jiatong/projects/svs/data/ONIKU_KURUMI_UTAGOE_DB
+OFUTON=/home/exx/jiatong/projects/svs/data/OFUTON_P_UTAGOE_DB
 OPENCPOP=/home/exx/jiatong/projects/svs/data/Opencpop
-NATSUME=
+NATSUME=/home/exx/jiatong/projects/svs/data/
 COMBINE=
 CSD=downloads
 

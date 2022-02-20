@@ -382,10 +382,8 @@ if ! "${skip_data_prep}"; then
                 else
                     _suf=""
                 fi
-                # 1. Copy datadir
-                # scripts/utils/copy_data_dir.sh data/"${dset}" "${data_feats}${_suf}/${dset}"
-                
                 # 1.Generate spk2sid
+
                 if [ "${dset}" = "${train_set}" ]; then
                     # Make spk2sid
                     # NOTE(kan-bayashi): 0 is reserved for unknown speakers
@@ -459,13 +457,6 @@ if ! "${skip_data_prep}"; then
             # fix_data_dir.sh leaves only utts which exist in all files
             scripts/utils/fix_data_dir.sh "${data_feats}/${dset}"
 
-#            # Filter x-vector
-#            if "${use_xvector}"; then
-#                cp "${dumpdir}/xvector/${dset}"/xvector.{scp,scp.bak}
-#                <"${dumpdir}/xvector/${dset}/xvector.scp.bak" \
-#                    utils/filter_scp.pl "${data_feats}/${dset}/wav.scp"  \
-#                    >"${dumpdir}/xvector/${dset}/xvector.scp"
-#            fi
         done
 
         # shellcheck disable=SC2002
