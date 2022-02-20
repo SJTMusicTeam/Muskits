@@ -808,7 +808,6 @@ class Trainer:
 
             reporter.register(stats, weight)
             reporter.next()
-            exit(1)
 
         else:
             if distributed:
