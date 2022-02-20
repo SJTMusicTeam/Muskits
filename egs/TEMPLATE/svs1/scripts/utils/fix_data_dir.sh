@@ -126,7 +126,7 @@ function filter_speakers {
   filter_file $tmpdir/speakers $data/spk2utt
   utils/spk2utt_to_utt2spk.pl $data/spk2utt > $data/utt2spk
 
-  for s in cmvn.scp spk2gender $spk_extra_files; do
+  for s in cmvn.scp spk2gender spk2sid $spk_extra_files; do
     f=$data/$s
     if [ -f $f ]; then
       filter_file $tmpdir/speakers $f
@@ -222,16 +222,5 @@ filter_speakers
 filter_recordings
 
 utils/utt2spk_to_spk2utt.pl $data/utt2spk > $data/spk2utt
-if [ -f $data/spk2sid ]; then
-  rm $data/spk2sid
-fi
-echo "<unk> 0" > ${data}/spk2sid
-cut -f 2 -d " " "${data}/utt2spk" | sort | uniq | \
-  awk '{print $1 " " NR}' >> "${data}/spk2sid"
-
-pyscripts/utils/utt2spk_to_utt2sid.py \
-  "${data}/spk2sid" \
-  "${data}/utt2spk" \
-  > "${data}/utt2sid"
 
 echo "fix_data_dir.sh: old files are kept in $data/.backup"
