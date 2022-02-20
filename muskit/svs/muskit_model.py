@@ -122,6 +122,7 @@ class MuskitSVSModel(AbsMuskitModel):
             #         input_lengths=text_lengths,
             #     )
             # Extract features
+            # logging.info(f'singing.shape={singing.shape}, singing_lengths.shape={singing_lengths.shape}')
             if self.feats_extract is not None:
                 feats, feats_lengths = self.feats_extract(
                     singing, singing_lengths

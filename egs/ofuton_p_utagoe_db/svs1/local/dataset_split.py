@@ -48,7 +48,7 @@ def process_text_info(text):
     return " ".join(label_info), " ".join(text_info)
 
 
-def process_subset(src_data, subset, check_func, fs):
+def process_subset(src_data, subset, check_func, fs, wav_dump):
     subfolder = os.listdir(src_data)
     makedir(subset)
     wavscp = open(os.path.join(subset, "wav.scp"), "w", encoding="utf-8")
@@ -64,13 +64,12 @@ def process_subset(src_data, subset, check_func, fs):
             continue
         utt_id = "{}_{}".format(UTT_PREFIX, pack_zero(folder))
 
-        cmd = f"sox {os.path.join(src_data, folder, folder)}.wav -c 1 -t wavpcm -b 16 -r {fs} {os.path.join(src_data, folder, folder)}_bits16.wav"
-        print(f"cmd: {cmd}")
+        cmd = f"sox {os.path.join(src_data, folder, folder)}.wav -c 1 -t wavpcm -b 16 -r {fs} {os.path.join(wav_dump, folder)}_bits16.wav"
         os.system(cmd)
         
         wavscp.write(
-            "{} sox {} -c 1 -t wavpcm -b 16 -|\n".format(
-                utt_id, os.path.join(src_data, folder, "{}_bits16.wav".format(folder))
+            "{} {}\n".format(
+                utt_id, os.path.join(wav_dump, "{}_bits16.wav".format(folder))
             )
         )
         utt2spk.write("{} {}\n".format(utt_id, UTT_PREFIX))
@@ -93,8 +92,12 @@ if __name__ == "__main__":
     parser.add_argument("dev", type=str, help="development set")
     parser.add_argument("test", type=str, help="test set")
     parser.add_argument("--fs", type=int, help="frame rate (Hz)")
+    parser.add_argument("--wav_dump", type=str, default="wav_dump", help="wav dump directory")
     args = parser.parse_args()
 
-    process_subset(args.src_data, args.train, train_check, args.fs)
-    process_subset(args.src_data, args.dev, dev_check, args.fs)
-    process_subset(args.src_data, args.test, test_check, args.fs)
+    if not os.path.exists(args.wav_dump):
+        os.makedirs(args.wav_dump)
+
+    process_subset(args.src_data, args.train, train_check, args.fs, args.wav_dump)
+    process_subset(args.src_data, args.dev, dev_check, args.fs, args.wav_dump)
+    process_subset(args.src_data, args.test, test_check, args.fs, args.wav_dump)

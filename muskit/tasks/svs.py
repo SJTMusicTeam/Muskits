@@ -236,7 +236,7 @@ class SVSTask(AbsTask):
     ]:
         assert check_argument_types()
         return CommonCollateFn(
-            float_pad_value=0.0, int_pad_value=0, not_sequence=["spembs"]
+            float_pad_value=0.0, int_pad_value=0, not_sequence=["spembs", "sids", "lids"]
         )
 
     @classmethod
@@ -276,10 +276,10 @@ class SVSTask(AbsTask):
         cls, train: bool = True, inference: bool = False
     ) -> Tuple[str, ...]:
         if not inference:
-            retval = ("spembs", "durations", "pitch", "energy")
+            retval = ("spembs", "durations", "pitch", "energy", "sids")
         else:
             # Inference mode
-            retval = ("spembs", "singing", "durations")
+            retval = ("spembs", "singing", "durations", "sids")
         return retval
 
     @classmethod

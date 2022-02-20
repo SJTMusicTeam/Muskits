@@ -5,9 +5,6 @@ set -e
 set -u
 set -o pipefail
 
-. ./path.sh || exit 1
-. ./cmd.sh || exit 1
-
 # spectrogram-related arguments
 fs=24000
 fmin=80
@@ -45,7 +42,7 @@ cleaner=none
 
 ./svs.sh \
     --lang jp \
-    --stage 0 \
+    --stage 0\
     --local_data_opts "--stage 0 $(pwd)" 
     --feats_type raw \
     --pitch_extract None \

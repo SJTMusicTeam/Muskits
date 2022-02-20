@@ -54,7 +54,8 @@ def collect_stats(
         with DatadirWriter(output_dir / mode) as datadir_writer:
             for iiter, (keys, batch) in enumerate(itr, 1):
                 batch = to_device(batch, "cuda" if ngpu > 0 else "cpu")
-
+                # logging.info(f'keys:{keys}')
+                # logging.info(f'batch:{batch}')
                 # 1. Write shape file
                 for name in batch:
                     if name.endswith("_lengths"):
@@ -68,10 +69,14 @@ def collect_stats(
                         )
 
                 # 2. Extract feats
-                del batch["pitch_aug"]
-                del batch["pitch_aug_lengths"]
-                del batch["time_aug"]
-                del batch["time_aug_lengths"]
+                del_keys = ["pitch_aug", "pitch_aug_lengths", "time_aug", "time_aug_lengths", "sids_lengths", "lids_lengths"]
+                for key in del_keys:
+                    if key in batch.keys():
+                        del batch[key]
+                
+                # logging.info(f'batch.keys={batch.keys()}')
+                # logging.info(f'batch.values={batch.values()}')
+                
 
                 if ngpu <= 1:
                     data = model.collect_feats(**batch)
@@ -83,6 +88,8 @@ def collect_stats(
                         range(ngpu),
                         module_kwargs=batch,
                     )
+                
+                # logging.info(f'data={data}')
 
                 # 3. Calculate sum and square sum
                 for key, v in data.items():

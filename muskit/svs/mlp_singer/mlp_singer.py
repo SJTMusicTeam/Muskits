@@ -325,7 +325,7 @@ class MLPSinger(AbsSVS):
         else:
             ys = feats
             olens = feats_lengths
-        
+
         # logging.info("{} {} {}".format(after_outs.size(), before_outs.size(), ys.size()))
         # calculate loss values
         l1_loss, l2_loss = self.criterion(

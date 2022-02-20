@@ -42,6 +42,8 @@ from muskit.train.distributed_utils import DistributedOption
 from muskit.train.reporter import Reporter
 from muskit.train.reporter import SubReporter
 from muskit.utils.build_dataclass import build_dataclass
+from muskit.utils.griffin_lim import logmel2linear
+from muskit.utils.griffin_lim import griffin_lim
 
 from librosa.display import specshow
 import matplotlib.pyplot as plt
@@ -500,26 +502,11 @@ class Trainer:
 
             with autocast(scaler is not None):
                 with reporter.measure_time("forward_time"):
-                    # print("'Shuai: What is **batch ? ", batch)
-                    speaker_lst = ["oniku", "ofuton", "kiritan", "natsume"]     # NOTE: Fix me into args
-                    # add spk-id to **batch
-                    if 'svs.sid_emb.weight' in model.state_dict().keys():
-                        sids = []
-                        for filename in filename_list:
-                            if "kiritan" in filename.split("_")[0]:
-                                filename = "kiritan"
-                            elif "natsume" in filename.split("_")[0]:
-                                filename = "natsume"
-                            else:
-                                filename = filename.split("_")[0]
-                            sids.append(speaker_lst.index(filename))
-                        sids = torch.tensor(sids).to(batch['score'].device)
-                        batch['sids'] = sids
 
-                    del batch["pitch_aug"]
-                    del batch["pitch_aug_lengths"]
-                    del batch["time_aug"]
-                    del batch["time_aug_lengths"]
+                    del_keys = ["pitch_aug", "pitch_aug_lengths", "time_aug", "time_aug_lengths"]
+                    for key in del_keys:
+                        if key in batch.keys():
+                            del batch[key]
 
                     retval = model(**batch)
 
@@ -708,24 +695,27 @@ class Trainer:
 
         print(f"options: {options}")
 
-        # load config
-        if options.vocoder_config == "":
-            dirname = os.path.dirname(options.vocoder_checkpoint)
-            print(f"dirname: {dirname}")
-            options.vocoder_config = os.path.join(dirname, "config.yml")
-        logging.info(f"options.vocoder_config: {options.vocoder_config}")
-        with open(options.vocoder_config) as f:
-            config = yaml.load(f, Loader=yaml.Loader)
-        config.update(vars(options))
+        if options.vocoder_checkpoint != "":
+            # load config
+            if options.vocoder_config == "":
+                dirname = os.path.dirname(options.vocoder_checkpoint)
+                print(f"dirname: {dirname}")
+                options.vocoder_config = os.path.join(dirname, "config.yml")
+            logging.info(f"options.vocoder_config: {options.vocoder_config}")
+            with open(options.vocoder_config) as f:
+                config = yaml.load(f, Loader=yaml.Loader)
+            config.update(vars(options))
 
-        model_vocoder = load_model(options.vocoder_checkpoint, config)
-        logging.info(f"Loaded model parameters from {options.vocoder_checkpoint}.")
-        # if options.normalize_before:
-        # if True:
-        #     assert hasattr(model_vocoder, "mean"), "Feature stats are not registered."
-        #     assert hasattr(model_vocoder, "scale"), "Feature stats are not registered."
-        model_vocoder.remove_weight_norm()
-        model_vocoder = model_vocoder.eval().to("cuda" if ngpu > 0 else "cpu")
+            model_vocoder = load_model(options.vocoder_checkpoint, config)
+            logging.info(f"Loaded model parameters from {options.vocoder_checkpoint}.")
+            # if options.normalize_before:
+            # if True:
+            #     assert hasattr(model_vocoder, "mean"), "Feature stats are not registered."
+            #     assert hasattr(model_vocoder, "scale"), "Feature stats are not registered."
+            model_vocoder.remove_weight_norm()
+            model_vocoder = model_vocoder.eval().to("cuda" if ngpu > 0 else "cpu")
+        else:
+            model_vocoder = None
 
         # [For distributed] Because iteration counts are not always equals between
         # processes, send stop-flag to the other processes if iterator is finished
@@ -741,25 +731,10 @@ class Trainer:
             if no_forward_run:
                 continue
 
-            speaker_lst = ["oniku", "ofuton", "kiritan", "natsume"]     # NOTE: Fix me into args
-            # add spk-id to **batch
-            if 'svs.sid_emb.weight' in model.state_dict().keys():
-                sids = []
-                for filename in index:
-                    if "kiritan" in filename.split("_")[0]:
-                        filename = "kiritan"
-                    elif "natsume" in filename.split("_")[0]:
-                        filename = "natsume"
-                    else:
-                        filename = filename.split("_")[0]
-                    sids.append(speaker_lst.index(filename))
-                sids = torch.tensor(sids).to(batch['score'].device)
-                batch['sids'] = sids
-
-            del batch['pitch_aug']
-            del batch['pitch_aug_lengths']
-            del batch['time_aug']
-            del batch['time_aug_lengths']
+            del_keys = ["pitch_aug", "pitch_aug_lengths", "time_aug", "time_aug_lengths"]
+            for key in del_keys:
+                if key in batch.keys():
+                    del batch[key]
 
             retval = model(**batch, flag_IsValid=True)
             if isinstance(retval, dict):
@@ -777,6 +752,7 @@ class Trainer:
                 spec_gt_denorm, _ = model.normalize.inverse(spec_gt.clone())
 
                 cls.log_figure(
+                    model,
                     model_vocoder,
                     index[0],
                     spec_predicted_denorm,
@@ -832,9 +808,14 @@ class Trainer:
 
             # 1. Forwarding model and gathering all attentions
             #    calculate_all_attentions() uses single gpu only.
-            speaker_lst = ["oniku", "ofuton", "kiritan", "natsume"]     # NOTE: Fix me into args
+            speaker_lst = [
+                "oniku",
+                "ofuton",
+                "kiritan",
+                "natsume",
+            ]  # NOTE: Fix me into args
             # add spk-id to **batch
-            if 'svs.sid_emb.weight' in model.state_dict().keys():
+            if "svs.sid_emb.weight" in model.state_dict().keys():
                 sids = []
                 for filename in ids:
                     if "kiritan" in filename.split("_")[0]:
@@ -844,13 +825,13 @@ class Trainer:
                     else:
                         filename = filename.split("_")[0]
                     sids.append(speaker_lst.index(filename))
-                sids = torch.tensor(sids).to(batch['score'].device)
-                batch['sids'] = sids
+                sids = torch.tensor(sids).to(batch["score"].device)
+                batch["sids"] = sids
 
-            del batch['pitch_aug']
-            del batch['pitch_aug_lengths']
-            del batch['time_aug']
-            del batch['time_aug_lengths']
+            del batch["pitch_aug"]
+            del batch["pitch_aug_lengths"]
+            del batch["time_aug"]
+            del batch["time_aug_lengths"]
             att_dict = calculate_all_attentions(model, batch)
 
             # 2. Plot attentions: This part is slow due to matplotlib
@@ -896,6 +877,7 @@ class Trainer:
     @torch.no_grad()
     def log_figure(
         cls,
+        model,
         model_vocoder,
         step,
         output,
@@ -925,28 +907,37 @@ class Trainer:
         p.parent.mkdir(parents=True, exist_ok=True)
         plt.savefig(p)
 
-        ### HiFi-GAN Vocoder
-        wav = (
-            model_vocoder.inference(output, normalize_before=True)
-            .view(-1)
-            .cpu()
-            .numpy()
-        )
-        wav_true = (
-            model_vocoder.inference(out_spec, normalize_before=True)
-            .view(-1)
-            .cpu()
-            .numpy()
-        )
-
-        ### Griffin-Lim Vocoder
-        # from muskit.utils.griffin_lim import logmel2linear
-        # from muskit.utils.griffin_lim import griffin_lim
-
-        # spc = logmel2linear(output, fs=24000, n_fft=2048, n_mels=80, fmin=80, fmax=7600)
-        # wav = griffin_lim(spc, n_fft=2048, n_shift=300, win_length=1200)
-        # spec_true = logmel2linear(out_spec, fs=24000, n_fft=2048, n_mels=80, fmin=80, fmax=7600)
-        # wav_true = griffin_lim(spec_true, n_fft=2048, n_shift=300, win_length=1200)
+        if model_vocoder is None:
+            # Griffin-Lim Vocoder
+            logging.info("outpu_shape: {}".format(output.shape))
+            fs = model.feats_extract.fs
+            n_fft = model.feats_extract.n_fft
+            n_mels = model.feats_extract.output_size()
+            logging.info("{} {} {}".format(fs, n_fft, n_mels))
+            hop_length = model.feats_extract.hop_length
+            win_length = model.feats_extract.win_length
+            spc = logmel2linear(output, fs=fs, n_fft=n_fft, n_mels=n_mels)
+            wav = griffin_lim(
+                spc, n_fft=n_fft, n_shift=hop_length, win_length=win_length
+            )
+            spec_true = logmel2linear(out_spec, fs=fs, n_fft=n_fft, n_mels=n_mels)
+            wav_true = griffin_lim(
+                spec_true, n_fft=n_fft, n_shift=hop_length, win_length=win_length
+            )
+        else:
+            # Neural Vocoder
+            wav = (
+                model_vocoder.inference(output, normalize_before=True)
+                .view(-1)
+                .cpu()
+                .numpy()
+            )
+            wav_true = (
+                model_vocoder.inference(out_spec, normalize_before=True)
+                .view(-1)
+                .cpu()
+                .numpy()
+            )
 
         sf.write(
             os.path.join(save_dir, "{}.wav".format(step)),

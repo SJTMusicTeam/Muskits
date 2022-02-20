@@ -5,9 +5,6 @@ set -e
 set -u
 set -o pipefail
 
-. ./path.sh || exit 1
-. ./cmd.sh || exit 1
-
 # spectrogram-related arguments
 fs=24000
 fmin=80
@@ -15,18 +12,17 @@ fmax=7600
 n_fft=2048
 n_shift=300
 win_length=1200
+use_sid=true
 
-NOWPATH=`pwd`
-NOWPATH=${NOWPATH%/*}
-NOWPATH=${NOWPATH%/*}
-combine_data_path=""
-combine_data_path+=" ${NOWPATH}/oniku_kurumi_utagoe_db/svs1/data/"
-combine_data_path+=" ${NOWPATH}/ofuton_p_utagoe_db/svs1/data/"
-# combine_data_path+=" ${NOWPATH}/kiritan/svs1/data/"
-combine_data_path+=" ${NOWPATH}/natsume/svs1/data/"
+combine_path=""
+combine_path+="$(realpath ../../oniku_kurumi_utagoe_db/svs1/dump/raw/)"
+combine_path+=" $(realpath ../../ofuton_p_utagoe_db/svs1/dump/raw/)"
+combine_path+=" $(realpath ../../kiritan/svs1/dump/raw/)"
+combine_path+=" $(realpath ../../natsume/svs1/dump/raw/)"
+
 
 score_feats_extract=frame_score_feats   # frame_score_feats | syllable_score_feats
-expdir=exp/2-16-3combine-Xiaoice_noDP-midi_label_spk_cycleW07W02W01_all_CTCloss
+expdir=exp/rnn
 
 opts=
 if [ "${fs}" -eq 48000 ]; then
@@ -42,7 +38,7 @@ test_sets=eval
 
 # training and inference configuration
 # train_config=conf/train.yaml
-train_config=conf/tuning/train_xiaoice_noDP.yaml
+train_config=conf/tuning/train_naive_rnn.yaml
 inference_config=conf/decode.yaml
 
 # text related processing arguments
@@ -51,10 +47,11 @@ cleaner=none
 
 ./svs.sh \
     --lang jp \
-    --stage 6 \
+    --stage 0 \
     --stop_stage 7 \
-    --local_data_opts "--stage 0 ${combine_data_path}" \
+    --local_data_opts "${combine_path}" \
     --feats_type raw \
+    --use_sid ${use_sid} \
     --pitch_extract None \
     --fs "${fs}" \
     --fmax "${fmax}" \

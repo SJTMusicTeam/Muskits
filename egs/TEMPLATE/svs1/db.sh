@@ -2,10 +2,10 @@
 # "downloads" means the corpus can be downloaded by the recipe automatically
 
 KIRITAN=/home/exx/jiatong/projects/svs/data/
-ONIKU=
-OFUTON=
+ONIKU=/home/exx/jiatong/projects/svs/data/ONIKU_KURUMI_UTAGOE_DB
+OFUTON=/home/exx/jiatong/projects/svs/data/OFUTON_P_UTAGOE_DB
 OPENCPOP=/home/exx/jiatong/projects/svs/data/Opencpop
-NATSUME=
+NATSUME=/home/exx/jiatong/projects/svs/data/
 COMBINE=
 CSD=downloads
 
@@ -22,7 +22,7 @@ if [[ `hostname` == venus_qt_2241 ]]; then
     KIRITAN=/data3/qt/
     ONIKU=/data3/qt/OFUTON_P_UTAGOE_DB/
     OFUTON=/data3/qt/ONIKU_KURUMI_UTAGOE_DB/
-    NATSUME=/data3/qt/
+    NATSUME=/data3/qt
     COMBINE=/data3/qt/Muskits/egs/combine_data/svs1/
 fi
 
