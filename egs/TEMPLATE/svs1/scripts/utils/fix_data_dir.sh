@@ -53,7 +53,7 @@ function check_sorted {
   fi
 }
 
-for x in utt2spk spk2utt feats.scp text segments wav.scp cmvn.scp vad.scp \
+for x in utt2spk spk2utt utt2sid spk2sid feats.scp text segments wav.scp cmvn.scp vad.scp \
     reco2file_and_channel spk2gender utt2lang utt2uniq utt2dur reco2dur \
     utt2num_frames label midi.scp; do
   if [ -f $data/$x ]; then
@@ -222,5 +222,16 @@ filter_speakers
 filter_recordings
 
 utils/utt2spk_to_spk2utt.pl $data/utt2spk > $data/spk2utt
+if [ -f $data/spk2sid ]; then
+  rm $data/spk2sid
+fi
+echo "<unk> 0" > ${data}/spk2sid
+cut -f 2 -d " " "${data}/utt2spk" | sort | uniq | \
+  awk '{print $1 " " NR}' >> "${data}/spk2sid"
+
+pyscripts/utils/utt2spk_to_utt2sid.py \
+  "${data}/spk2sid" \
+  "${data}/utt2spk" \
+  > "${data}/utt2sid"
 
 echo "fix_data_dir.sh: old files are kept in $data/.backup"

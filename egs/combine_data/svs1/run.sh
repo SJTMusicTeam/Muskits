@@ -15,18 +15,24 @@ fmax=7600
 n_fft=2048
 n_shift=300
 win_length=1200
+use_sid=true
 
 NOWPATH=`pwd`
 NOWPATH=${NOWPATH%/*}
 NOWPATH=${NOWPATH%/*}
 combine_data_path=""
+# dump version
+# combine_data_path+=" ${NOWPATH}/oniku_kurumi_utagoe_db/svs1/dump/raw/"
+# combine_data_path+=" ${NOWPATH}/ofuton_p_utagoe_db/svs1/dump/raw/"
+# combine_data_path+=" ${NOWPATH}/kiritan/svs1/dump/raw/"
+# combine_data_path+=" ${NOWPATH}/natsume/svs1/dump/raw/"
+# data version
 combine_data_path+=" ${NOWPATH}/oniku_kurumi_utagoe_db/svs1/data/"
 combine_data_path+=" ${NOWPATH}/ofuton_p_utagoe_db/svs1/data/"
 # combine_data_path+=" ${NOWPATH}/kiritan/svs1/data/"
 combine_data_path+=" ${NOWPATH}/natsume/svs1/data/"
-
 score_feats_extract=frame_score_feats   # frame_score_feats | syllable_score_feats
-expdir=exp/2-16-3combine-Xiaoice_noDP-midi_label_spk_cycleW07W02W01_all_CTCloss
+expdir=exp/2-15-glu-MS
 
 opts=
 if [ "${fs}" -eq 48000 ]; then
@@ -42,7 +48,7 @@ test_sets=eval
 
 # training and inference configuration
 # train_config=conf/train.yaml
-train_config=conf/tuning/train_xiaoice_noDP.yaml
+train_config=conf/train.yaml
 inference_config=conf/decode.yaml
 
 # text related processing arguments
@@ -51,10 +57,11 @@ cleaner=none
 
 ./svs.sh \
     --lang jp \
-    --stage 6 \
+    --stage 0 \
     --stop_stage 7 \
     --local_data_opts "--stage 0 ${combine_data_path}" \
     --feats_type raw \
+    --use_sid ${use_sid} \
     --pitch_extract None \
     --fs "${fs}" \
     --fmax "${fmax}" \

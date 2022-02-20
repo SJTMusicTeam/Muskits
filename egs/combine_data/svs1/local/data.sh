@@ -58,7 +58,7 @@ for dataset in ${train_set} ${train_dev} ${recog_set}; do
     opts="${COMBINE}data/${dataset}"
     for dir in $*; do
         # echo "dir: ${dir}"
-        if test -d ${dir}; then
+        if [ -d ${dir} ]; then
             opts+=" ${dir}${dataset}"
             # echo "valid dir: ${dir}"
         fi

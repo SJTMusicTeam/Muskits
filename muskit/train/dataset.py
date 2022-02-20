@@ -391,7 +391,7 @@ class MuskitDataset(AbsDataset):
         int_dtype: str = "long",
         max_cache_size: Union[float, int, str] = 0.0,
         max_cache_fd: int = 0,
-        not_align: list = ["text"],  # TODO(Tao): add to args
+        not_align: list = ["text", "sids", "lids"],  # TODO(Tao): add to args
         mode: str = "valid",  # train, valid, plot_att, ...
         midi_loader_mode: str = "format",   # format, xiaoice (tempo means index_nums)
         time_shift: float = 0.0125,

@@ -48,6 +48,8 @@ export LC_ALL=C
 srcdir=$1
 destdir=$2
 
+echo "${srcdir}"
+
 if [ ! -f $srcdir/utt2spk ]; then
   echo "copy_data_dir.sh: no such file $srcdir/utt2spk"
   exit 1;
@@ -69,6 +71,16 @@ cat $srcdir/utt2spk | utils/apply_map.pl -f 1 $destdir/utt_map  | \
   utils/apply_map.pl -f 2 $destdir/spk_map >$destdir/utt2spk
 
 utils/utt2spk_to_spk2utt.pl <$destdir/utt2spk >$destdir/spk2utt
+
+
+if [ -f $srcdir/spk2sid ]; then
+  cp $srcdir/spk2sid $destdir
+fi
+
+if [ -f $srcdir/utt2sid ]; then
+  cp $srcdir/utt2sid $destdir
+fi
+
 
 if [ -f $srcdir/segments ]; then
   utils/apply_map.pl -f 1 $destdir/utt_map <$srcdir/segments >$destdir/segments
@@ -106,7 +118,7 @@ rm $destdir/spk_map $destdir/utt_map
 
 echo "$0: copied data from $srcdir to $destdir"
 
-for f in utt2lang utt2dur utt2num_frames text wav.scp midi.scp label; do
+for f in utt2lang utt2dur utt2num_frames text wav.scp midi.scp label ; do
   if [ -f $destdir/$f ] && [ ! -f $srcdir/$f ]; then
     echo "$0: file $f exists in dest $destdir but not in src $srcdir.  Moving it to"
     echo " ... $destdir/.backup/$f"
