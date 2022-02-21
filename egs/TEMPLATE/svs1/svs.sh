@@ -1030,6 +1030,44 @@ else
     log "Skip the evaluation stages"
 fi
 
+packed_model="${svs_exp}/${svs_exp##*/}_${inference_model%.*}.zip"
+if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ]; then
+    log "Stage 8: Pack model: ${packed_model}"
+
+    _opts=""
+    if [ -e "${svs_stats_dir}/train/feats_stats.npz" ]; then
+        _opts+=" --option ${svs_stats_dir}/train/feats_stats.npz"
+    fi
+    if [ -e "${svs_stats_dir}/train/pitch_stats.npz" ]; then
+        _opts+=" --option ${svs_stats_dir}/train/pitch_stats.npz"
+    fi
+    if [ -e "${svs_stats_dir}/train/energy_stats.npz" ]; then
+        _opts+=" --option ${svs_stats_dir}/train/energy_stats.npz"
+    fi
+    if "${use_xvector}"; then
+        for dset in "${train_set}" ${test_sets}; do
+            _opts+=" --option ${dumpdir}/xvector/${dset}/spk_xvector.scp"
+            _opts+=" --option ${dumpdir}/xvector/${dset}/spk_xvector.ark"
+        done
+    fi
+    if "${use_sid}"; then
+        _opts+=" --option ${data_feats}/org/${train_set}/spk2sid"
+    fi
+    if "${use_lid}"; then
+        _opts+=" --option ${data_feats}/org/${train_set}/lang2lid"
+    fi
+    ${python} -m muskit.bin.pack svs \
+        --train_config "${svs_exp}"/config.yaml \
+        --model_file "${svs_exp}"/"${inference_model}" \
+        --option "${svs_exp}"/images  \
+        --outpath "${packed_model}" \
+        ${_opts}
+
+    # NOTE(kamo): If you'll use packed model to inference in this script, do as follows
+    #   % unzip ${packed_model}
+    #   % ./run.sh --stage 8 --svs_exp $(basename ${packed_model} .zip) --inference_model pretrain.pth
+fi
+
 ### TODO: other stages
 
 log "Successfully finished. [elapsed=${SECONDS}s]"

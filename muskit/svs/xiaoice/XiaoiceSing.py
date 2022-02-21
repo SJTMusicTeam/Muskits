@@ -434,10 +434,10 @@ class XiaoiceSing(AbsSVS):
     def inference(
         self,
         text: torch.Tensor,
-        feats: torch.Tensor,
         label: torch.Tensor,
         midi: torch.Tensor,
         ds: torch.Tensor,
+        feats: torch.Tensor = None,
         tempo: Optional[torch.Tensor] = None,
         spembs: Optional[torch.Tensor] = None,
         sids: Optional[torch.Tensor] = None,
@@ -1242,10 +1242,10 @@ class XiaoiceSing_noDP(AbsSVS):
     def inference(
         self,
         text: torch.Tensor,
-        feats: torch.Tensor,
         label: torch.Tensor,
         midi: torch.Tensor,
         ds: torch.Tensor,
+        feats: torch.Tensor = None,
         tempo: Optional[torch.Tensor] = None,
         spembs: Optional[torch.Tensor] = None,
         sids: Optional[torch.Tensor] = None,
