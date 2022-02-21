@@ -23,11 +23,8 @@ requirements = {
         "wandb",
         "filelock",
         "pytsmod",
-        "kaldiio",
-        "kaldi-io",
+        "kaldiio>=2.17.0",
         # DNN related packages are installed by Makefile
-        # "chainer==6.0.0",
-        # 'cupy==6.0.0',
         "tensorboard>=1.14",  # For pytorch>=1.1.0
         "tensorboardX>=1.8",  # For pytorch<1.1.0
         # Signal processing related
@@ -44,6 +41,7 @@ requirements = {
         "kaldiio",
         # SVS related
         "pyworld>=0.2.10",
+        "torch>=1.3.0",
         "torch_complex",
         "g2p_en",
     ],
@@ -57,7 +55,7 @@ requirements = {
         "mir-eval>=0.6",
         "fastdtw",
     ],
-    "setup": ["numpy", "pytest-runner"],
+    "setup": ["numpy<=1.21.3", "pytest-runner"],
     "test": [
         "pytest>=3.3.0",
         "pytest-timeouts>=1.2.1",
