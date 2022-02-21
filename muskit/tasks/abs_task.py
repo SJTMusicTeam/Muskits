@@ -895,6 +895,57 @@ class AbsTask(ABC):
             optim = optim_class(model.parameters(), **args.optim_conf)
 
         optimizers = [optim]
+
+        # model_params_svs = set()
+        # model_params_predicter = set()
+        # for name, param in model.named_parameters(): #查看可优化的参数有哪些
+        #     logging.info(f"name: {name}, param: {param}")
+        #     if param.requires_grad:
+        #         if "predictor." in name:
+        #             model_params_predicter |= set(param)
+        #         else:
+        #             model_params_svs |= set(param)
+        # model_params = model.parameters()
+        # logging.info(f"model_params: {model_params}, type(model_params): {type(model_params)}")
+
+        # logging.info(f"\n***************************\n")
+
+        # for param in model_params:
+        #     logging.info(f"param: {param}")
+        
+        # for param in model_params_predicter:
+        #     logging.info(f"param: {param}")
+        
+
+        # nets = [encoder, decoder]
+        # parameters = set()
+        # for net in nets:
+        #     parameters |= set(net.parameters())
+
+        # quit()
+        
+
+        # # define predictor optimizer
+        # optim_d_class = optim_classes.get(args.optim2)
+        # if optim_d_class is None:
+        #     raise ValueError(f"must be one of {list(optim_classes)}: {args.optim2}")
+        # if args.sharded_ddp:
+        #     try:
+        #         import fairscale
+        #     except ImportError:
+        #         raise RuntimeError("Requiring fairscale. Do 'pip install fairscale'")
+        #     optim_d = fairscale.optim.oss.OSS(
+        #         params=model.tts.discriminator.parameters(),
+        #         optim=optim_d_class,
+        #         **args.optim2_conf,
+        #     )
+        # else:
+        #     optim_d = optim_d_class(
+        #         model.tts.discriminator.parameters(),
+        #         **args.optim2_conf,
+        #     )
+        # optimizers += [optim_d]
+
         return optimizers
 
     @classmethod

@@ -20,7 +20,7 @@ svs_conf:                        # keyword arguments for the selected model
     postnet_dropout_rate: 0.5    # postnet dropout_rate
     use_batch_norm: true         # whether to use batch normalization in postnet
     reduction_factor: 1          # reduction factor
-    init_type: pytorch           # parameter initialization
+    init_type: xavier_uniform    # parameter initialization
     use_masking: true            # whether to apply masking for padded part in loss calculation
     loss_type: L1
     spks: 4
@@ -33,7 +33,7 @@ svs_conf:                        # keyword arguments for the selected model
     w_predictor: 0.2               # Default: 1
     w_cycle: 0.1                   # Default: 1
     predict_type: ["midi", "label", "spk"]     # Default: ["midi", "label"]
-    predict_criterion_type: CTC         # Default: CTC, CrossEntropy
+    predict_criterion_type: CrossEntropy         # Default: CTC, CrossEntropy
     
 
 ##########################################################
@@ -41,9 +41,14 @@ svs_conf:                        # keyword arguments for the selected model
 ##########################################################
 optim: adam           # optimizer type
 optim_conf:           # keyword arguments for selected optimizer
-    lr: 1.0e-03       # learning rate
-    eps: 1.0e-06      # epsilon
+    lr: 1             # learning rate
+    betas: [0.9, 0.98]
+    eps: 1.0e-09      # epsilon
     weight_decay: 0.0 # weight decay coefficient
+
+scheduler: noamlr
+scheduler_conf:
+    warmup_steps: 4000
 
 ##########################################################
 #                OTHER TRAINING SETTING                  #
@@ -59,7 +64,7 @@ accum_grad: 1               # gradient accumulation
 # batch_type: numel           # how to make batch
 
 batch_type: sorted
-batch_size: 16
+batch_size: 14
 
 pitch_aug_min: 0            # Default: 0, [-1,-2,-3]
 pitch_aug_max: 0            # Default: 0, [1,2,3]
@@ -85,5 +90,5 @@ best_model_criterion:
     - loss
     - min
 
-gpu_id: 5
+gpu_id: 0
 vocoder_checkpoint: /data5/gs/vocoder_peter/hifigan-vocoder/exp/train_hifigan.v1_train_nodev_clean_libritts_hifigan-2.v1/checkpoint-50000steps.pkl
