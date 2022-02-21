@@ -19,7 +19,6 @@ requirements = {
         "matplotlib==3.1.0",
         "pillow>=6.1.0",
         "editdistance==0.5.2",
-        "ctc-segmentation<1.8,>=1.6.6",
         "wandb",
         "filelock",
         "pytsmod",
