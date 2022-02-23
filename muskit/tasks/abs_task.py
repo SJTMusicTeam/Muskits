@@ -323,10 +323,12 @@ class AbsTask(ABC):
             default=0,
             help="The upper bound of midi semitone when pitch augmentation",
         )
-        group.add_argument("--pitch_mean",
+        group.add_argument(
+            "--pitch_mean",
             type=str,
             default="None",
-            help="The mean midi-value of training split, None means no-adaptive-pitch-augmentation")
+            help="The mean midi-value of training split, None means no-adaptive-pitch-augmentation",
+        )
         group.add_argument(
             "--time_aug_min",
             type=float,

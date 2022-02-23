@@ -8,6 +8,8 @@ from pathlib import Path
 import shutil
 import sys
 import time
+from typing import Any
+from typing import Dict
 from typing import Optional
 from typing import Sequence
 from typing import Tuple
@@ -38,74 +40,6 @@ from muskit.utils.types import str2bool
 from muskit.utils.types import str2triple_str
 from muskit.utils.types import str_or_none
 
-from muskit.train.class_choices import ClassChoices
-from muskit.svs.feats_extract.abs_feats_extract import AbsFeatsExtract
-from muskit.layers.abs_normalize import AbsNormalize
-from muskit.layers.inversible_interface import InversibleInterface
-from muskit.svs.feats_extract.dio import Dio
-from muskit.svs.feats_extract.score_feats_extract import FrameScoreFeats
-from muskit.svs.feats_extract.score_feats_extract import SyllableScoreFeats
-from muskit.svs.feats_extract.energy import Energy
-from muskit.svs.feats_extract.log_mel_fbank import LogMelFbank
-from muskit.svs.feats_extract.log_spectrogram import LogSpectrogram
-from muskit.layers.global_mvn import GlobalMVN
-
-import os
-import yaml
-from parallel_wavegan.utils import load_model
-
-
-feats_extractor_choices = ClassChoices(
-    "feats_extract",
-    classes=dict(fbank=LogMelFbank, spectrogram=LogSpectrogram),
-    type_check=AbsFeatsExtract,
-    default="fbank",
-)
-
-score_feats_extractor_choices = ClassChoices(
-    "score_feats_extract",
-    classes=dict(
-        frame_score_feats=FrameScoreFeats, syllable_score_feats=SyllableScoreFeats
-    ),
-    type_check=AbsFeatsExtract,
-    default="frame_score_feats",
-)
-
-pitch_extractor_choices = ClassChoices(
-    "pitch_extract",
-    classes=dict(dio=Dio),
-    type_check=AbsFeatsExtract,
-    default=None,
-    optional=True,
-)
-energy_extractor_choices = ClassChoices(
-    "energy_extract",
-    classes=dict(energy=Energy),
-    type_check=AbsFeatsExtract,
-    default=None,
-    optional=True,
-)
-normalize_choices = ClassChoices(
-    "normalize",
-    classes=dict(global_mvn=GlobalMVN),
-    type_check=AbsNormalize,
-    default="global_mvn",
-    optional=True,
-)
-pitch_normalize_choices = ClassChoices(
-    "pitch_normalize",
-    classes=dict(global_mvn=GlobalMVN),
-    type_check=AbsNormalize,
-    default=None,
-    optional=True,
-)
-energy_normalize_choices = ClassChoices(
-    "energy_normalize",
-    classes=dict(global_mvn=GlobalMVN),
-    type_check=AbsNormalize,
-    default=None,
-    optional=True,
-)
 
 
 class SingingGenerate:
@@ -122,32 +56,13 @@ class SingingGenerate:
     def __init__(
         self,
         train_config: Optional[Union[Path, str]],
-        # Extraction Methods
-        text_extract: Optional[AbsFeatsExtract],
-        feats_extract: Optional[AbsFeatsExtract],
-        score_feats_extract: Optional[AbsFeatsExtract],
-        durations_extract: Optional[AbsFeatsExtract],
-        pitch_extract: Optional[AbsFeatsExtract],
-        tempo_extract: Optional[AbsFeatsExtract],
-        energy_extract: Optional[AbsFeatsExtract],
-        normalize: Optional[AbsNormalize and InversibleInterface],
-        pitch_normalize: Optional[AbsNormalize and InversibleInterface],
-        energy_normalize: Optional[AbsNormalize and InversibleInterface],
         model_file: Optional[Union[Path, str]] = None,
-        threshold: float = 0.5,
-        minlenratio: float = 0.0,
-        maxlenratio: float = 10.0,
         use_teacher_forcing: bool = False,
-        use_att_constraint: bool = False,
-        backward_window: int = 1,
-        forward_window: int = 3,
-        speed_control_alpha: float = 1.0,
-        vocoder_conf: dict = None,
-        vocoder_type: str = "HIFI-GAN",
-        vocoder_config: str = "",
-        vocoder_checkpoint: str = "None",
+        vocoder_config: Union[Path, str] = None,
+        vocoder_checkpoint: Union[Path, str] = None,
         dtype: str = "float32",
         device: str = "cpu",
+        seed: int = 777,
     ):
         assert check_argument_types()
 
@@ -162,113 +77,34 @@ class SingingGenerate:
         self.svs = model.svs
         self.normalize = model.normalize
         self.feats_extract = model.feats_extract
-        # self.duration_calculator = DurationCalculator()
+        # self.duration_calculator = DurationCalculator() # TODO
         self.preprocess_fn = SVSTask.build_preprocess_fn(train_args, False)
         self.use_teacher_forcing = use_teacher_forcing
 
-        # Extraction Methods
-        self.text_extract = text_extract
-        self.feats_extract = feats_extract
-        self.score_feats_extract = score_feats_extract
-        self.durations_extract = durations_extract
-        self.pitch_extract = pitch_extract
-        self.tempo_extract = tempo_extract
-        self.energy_extract = energy_extract
-        self.normalize = normalize
-        # self.text_normalize = text_normalize
-        # self.durations_normalize = durations_normalize
-        self.pitch_normalize = pitch_normalize
-        # self.tempo_normalize = tempo_normalize
-        self.energy_normalize = energy_normalize
-
-        self.vocoder_type = vocoder_type
-
-        logging.info(f"Normalization:\n{self.normalize}")
+        self.vocoder = None
+        if vocoder_checkpoint is not None:
+            vocoder = SVSTask.build_vocoder_from_file(
+                vocoder_config, vocoder_checkpoint, model, device
+            )
+            if isinstance(vocoder, torch.nn.Module):
+                vocoder.to(dtype=getattr(torch, dtype)).eval()
+            self.vocoder = vocoder
+        
+        logging.info(f"Extractor:\n{self.feats_extract}")
+        logging.info(f"Normalizer:\n{self.normalize}")
         logging.info(f"SVS:\n{self.svs}")
 
         decode_config = {}
-        # if isinstance(self.svs, (Tacotron2, Transformer)):
-        #     decode_config.update(
-        #         {
-        #             "threshold": threshold,
-        #             "maxlenratio": maxlenratio,
-        #             "minlenratio": minlenratio,
-        #         }
-        #     )
-        # if isinstance(self.svs, Tacotron2):
-        #     decode_config.update(
-        #         {
-        #             "use_att_constraint": use_att_constraint,
-        #             "forward_window": forward_window,
-        #             "backward_window": backward_window,
-        #         }
-        #     )
-        # if isinstance(self.svs, (FastSpeech, FastSpeech2)):
-        #     decode_config.update({"alpha": speed_control_alpha})
         decode_config.update({"use_teacher_forcing": use_teacher_forcing})
 
         self.decode_config = decode_config
-
-        if vocoder_conf is None:
-            vocoder_conf = {}
-        if self.feats_extract is not None:
-            vocoder_conf.update(self.feats_extract.get_parameters())
-        if (
-            "n_fft" in vocoder_conf
-            and "n_shift" in vocoder_conf
-            and "fs" in vocoder_conf
-        ):
-            logging.info(f"vocoder_conf: {vocoder_conf}")
-
-            logging.info(f"train_config: {train_config}")
-
-            train_config = Path(train_config)
-            with train_config.open("r", encoding="utf-8") as f:
-                train_args = yaml.safe_load(f)
-            vocoder_checkpoint = train_args['vocoder_checkpoint']  # the vocoder keep the same as Training Stage
-
-            self.fs = vocoder_conf["fs"]
-            if vocoder_type == "Grriffin-Lim":
-                self.spc2wav = Spectrogram2Waveform(**vocoder_conf)
-            elif vocoder_type == "HIFI-GAN":
-                # load config - HiFi-GAN vocoder
-                if vocoder_config == "":
-                    dirname = os.path.dirname(vocoder_checkpoint)
-                    print(f"dirname: {dirname}")
-                    vocoder_config = os.path.join(dirname, "config.yml")
-                logging.info(f"vocoder_config: {vocoder_config}")
-                with open(vocoder_config) as f:
-                    config = yaml.load(f, Loader=yaml.Loader)
-                logging.info(f"config: {config}")
-                logging.info(f"vocoder_config: {vocoder_config}")
-                logging.info(f"device: {device}")
-
-                # config.update(vars(args))
-
-                model_vocoder = load_model(vocoder_checkpoint, config)
-                logging.info(f"Loaded model parameters from {vocoder_checkpoint}.")
-                if True:
-                    assert hasattr(
-                        model_vocoder, "mean"
-                    ), "Feature stats are not registered."
-                    assert hasattr(
-                        model_vocoder, "scale"
-                    ), "Feature stats are not registered."
-                model_vocoder.remove_weight_norm()
-                model_vocoder = model_vocoder.eval().to(device)
-
-                self.spc2wav = model_vocoder
-                logging.info(f"Vocoder: {self.spc2wav}")
-        else:
-            self.spc2wav = None
-            logging.info("Vocoder is not used because vocoder_conf is not sufficient")
 
     @torch.no_grad()
     def __call__(
         self,
         text: torch.Tensor,
-        durations: Union[torch.Tensor, np.ndarray],
         score: Optional[torch.Tensor],
+        durations: Union[torch.Tensor, np.ndarray] = None,
         singing: torch.Tensor = None,
         pitch: Optional[torch.Tensor] = None,
         tempo: Optional[torch.Tensor] = None,
@@ -276,29 +112,42 @@ class SingingGenerate:
         spembs: Union[torch.Tensor, np.ndarray] = None,
         sids: Optional[torch.Tensor] = None,
         lids: Optional[torch.Tensor] = None,
-        speed_control_alpha: Optional[float] = None,
+        decode_conf: Optional[Dict[str, Any]] = None,
     ):
         assert check_argument_types()
 
+        # check inputs
+        if self.use_sids and sids is None:
+            raise RuntimeError("Missing required argument: 'sids'")
+        if self.use_lids and lids is None:
+            raise RuntimeError("Missing required argument: 'lids'")
+        if self.use_spembs and spembs is None:
+            raise RuntimeError("Missing required argument: 'spembs'")
+
         batch = dict(
             text=text,
-            durations=durations,
             score=score,
-            singing=singing,
-            pitch=pitch,
-            tempo=tempo,
-            energy=energy,
-            spembs=spembs,
-            sids=sids,
-            lids=lids,
         )
+        if durations is not None:
+            batch.update(durations=durations)
+        if pitch is not None:
+            batch.update(pitch=pitch)
+        if tempo is not None:
+            batch.update(tempo=tempo)
+        if energy is not None:
+            batch.update(energy=energy)
+        if spembs is not None:
+            batch.update(spembs=spembs)
+        if sids is not None:
+            batch.update(sids=sids)
+        if lids is not None:
+            batch.update(lids=lids)
+        batch = to_device(batch, self.device)
 
         cfg = self.decode_config
-        # if speed_control_alpha is not None and isinstance(
-        #     self.svs, (FastSpeech, FastSpeech2)
-        # ):
-        #     cfg = self.decode_config.copy()
-        #     cfg.update({"alpha": speed_control_alpha})
+        if decode_conf is not None:
+            cfg = self.decode_conf.copy()
+            cfg.update(decode_conf)
 
         batch = to_device(batch, self.device)
         outs, outs_denorm, probs, att_ws = self.model.inference(**batch, **cfg)
@@ -307,30 +156,48 @@ class SingingGenerate:
             duration, focus_rate = self.duration_calculator(att_ws)
         else:
             duration, focus_rate = None, None
-
-        logging.info(f"outs.shape: {outs.shape}")
-
+        
         assert outs.shape[0] == 1
         outs = outs.squeeze(0)
         outs_denorm = outs_denorm.squeeze(0)
 
-        if self.spc2wav is not None:
-            if self.vocoder_type == "Grriffin-Lim":
-                wav = torch.tensor(self.spc2wav(outs_denorm.cpu().numpy()))
-            elif self.vocoder_type == "HIFI-GAN":
-                ### HiFi-GAN Vocoder
-                wav = (
-                    self.spc2wav.inference(
-                        outs_denorm.cpu().numpy(), normalize_before=True
-                    )
-                    .view(-1)
-                    .cpu()
-                )
-        else:
-            wav = None
+        if self.vocoder is not None:
+            if self.vocoder.normalize_before:
+                wav = self.vocoder(outs_denorm)
+            else:
+                wav = self.vocoder(outs)
 
         return wav, outs, outs_denorm, probs, att_ws, duration, focus_rate
 
+    @property
+    def fs(self) -> Optional[int]:
+        """Return sampling rate."""
+        if hasattr(self.vocoder, "fs"):
+            return self.vocoder.fs
+        elif hasattr(self.svs, "fs"):
+            return self.svs.fs
+        else:
+            return None
+
+    @property
+    def use_speech(self) -> bool:
+        """Return speech is needed or not in the inference."""
+        return self.use_teacher_forcing or getattr(self.svs, "use_gst", False)
+
+    @property
+    def use_sids(self) -> bool:
+        """Return sid is needed or not in the inference."""
+        return self.svs.spks is not None
+
+    @property
+    def use_lids(self) -> bool:
+        """Return sid is needed or not in the inference."""
+        return self.svs.langs is not None
+
+    @property
+    def use_spembs(self) -> bool:
+        """Return spemb is needed or not in the inference."""
+        return self.svs.spk_embed_dim is not None
 
 def inference(
     output_dir: str,
@@ -344,33 +211,10 @@ def inference(
     key_file: Optional[str],
     train_config: Optional[str],
     model_file: Optional[str],
-    threshold: float,
-    minlenratio: float,
-    maxlenratio: float,
     use_teacher_forcing: bool,
-    use_att_constraint: bool,
-    backward_window: int,
-    forward_window: int,
-    speed_control_alpha: float,
     allow_variable_data_keys: bool,
-    vocoder_conf: dict,
-    vocoder_config: str,
+    vocoder_config: Optional[str],
     vocoder_checkpoint: str,
-    # Extraction Methods
-    feats_extract,
-    feats_extract_conf,
-    score_feats_extract,
-    score_feats_extract_conf,
-    pitch_extract,
-    pitch_extract_conf,
-    energy_extract,
-    energy_extract_conf,
-    normalize,
-    normalize_conf,
-    pitch_normalize,
-    pitch_normalize_conf,
-    energy_normalize,
-    energy_normalize_conf,
 ):
     """Perform SVS model decoding."""
     assert check_argument_types()
@@ -391,114 +235,18 @@ def inference(
     # 1. Set random-seed
     set_all_random_seed(seed)
 
-    # 2. feats_extract
-    feats_extract_class = feats_extractor_choices.get_class(feats_extract)
-    _feats_extract = feats_extract_class(**feats_extract_conf)
-
-    # 3. Normalization layer
-    if normalize is not None:
-        normalize_class = normalize_choices.get_class(normalize)
-        _normalize = normalize_class(**normalize_conf)
-    else:
-        _normalize = None
-
-    # 4. Extra components
-    _score_feats_extract = None
-    _pitch_extract = None
-    _energy_extract = None
-    _pitch_normalize = None
-    _energy_normalize = None
-    args = dict(
-        score_feats_extract=score_feats_extract,
-        pitch_extract=pitch_extract,
-        energy_extract=energy_extract,
-        pitch_normalize=pitch_normalize,
-        energy_normalize=energy_normalize,
-    )
-    logging.info(f"score_feats_extract: {score_feats_extract}")
-    if score_feats_extract is not None:
-        score_feats_extract_class = score_feats_extractor_choices.get_class(
-            score_feats_extract
-        )
-        logging.info(f"score_feats_extract_class: {score_feats_extract_class}")
-        _score_feats_extract = score_feats_extract_class(**score_feats_extract_conf)
-    if getattr(args, "pitch_extract", None) is not None:
-        pitch_extract_class = pitch_extractor_choices.get_class(args.pitch_extract)
-        if pitch_extract_conf.get("reduction_factor", None) is not None:
-            assert pitch_extract_conf.get(
-                "reduction_factor", None
-            ) == args.svs_conf.get("reduction_factor", 1)
-        else:
-            pitch_extract_conf["reduction_factor"] = svs_conf.get("reduction_factor", 1)
-        pitch_extract = pitch_extract_class(**pitch_extract_conf)
-    # logging.info(f'pitch_extract:{pitch_extract}')
-    if getattr(args, "energy_extract", None) is not None:
-        if args.energy_extract_conf.get("reduction_factor", None) is not None:
-            assert args.energy_extract_conf.get(
-                "reduction_factor", None
-            ) == args.svs_conf.get("reduction_factor", 1)
-        else:
-            args.energy_extract_conf["reduction_factor"] = args.svs_conf.get(
-                "reduction_factor", 1
-            )
-        energy_extract_class = energy_extractor_choices.get_class(args.energy_extract)
-        energy_extract = energy_extract_class(**args.energy_extract_conf)
-    if getattr(args, "pitch_normalize", None) is not None:
-        pitch_normalize_class = pitch_normalize_choices.get_class(args.pitch_normalize)
-        pitch_normalize = pitch_normalize_class(**args.pitch_normalize_conf)
-    if getattr(args, "energy_normalize", None) is not None:
-        energy_normalize_class = energy_normalize_choices.get_class(
-            args.energy_normalize
-        )
-        energy_normalize = energy_normalize_class(**args.energy_normalize_conf)
-
-    logging.info(f"_score_feats_extract:{_score_feats_extract}")
-    logging.info(f"_feats_extract:{_feats_extract}")
-    logging.info(f"_pitch_extract:{_pitch_extract}")
-    logging.info(f"_energy_extract:{_energy_extract}")
-    logging.info(f"_normalize:{_normalize}")
-    logging.info(f"_pitch_normalize:{_pitch_normalize}")
-    logging.info(f"_energy_normalize:{_energy_normalize}")
-
-    # 5. Build model
+    # 2. Build model
     singingGenerate = SingingGenerate(
         train_config=train_config,
-        # Extraction Methods
-        text_extract=_score_feats_extract,
-        feats_extract=_feats_extract,
-        score_feats_extract=_score_feats_extract,
-        durations_extract=_score_feats_extract,
-        pitch_extract=_pitch_extract,
-        tempo_extract=_score_feats_extract,
-        energy_extract=_energy_extract,
-        normalize=_normalize,
-        pitch_normalize=_pitch_normalize,
-        energy_normalize=_energy_normalize,
-        # Emd of Extraction Methods
         model_file=model_file,
-        threshold=threshold,
-        maxlenratio=maxlenratio,
-        minlenratio=minlenratio,
         use_teacher_forcing=use_teacher_forcing,
-        use_att_constraint=use_att_constraint,
-        backward_window=backward_window,
-        forward_window=forward_window,
-        speed_control_alpha=speed_control_alpha,
-        vocoder_conf=vocoder_conf,
         vocoder_config=vocoder_config,
         vocoder_checkpoint=vocoder_checkpoint,
         dtype=dtype,
         device=device,
     )
 
-    # 6. Build data-iterator
-    # if not singingGenerate.use_speech:
-    #     data_path_and_name_and_type = list(
-    #         filter(lambda x: x[1] != "speech", data_path_and_name_and_type)
-    #     )
-
-    logging.info(f"data_path_and_name_and_type: {data_path_and_name_and_type}")
-
+    # 3. Build data-iterator
     loader = SVSTask.build_streaming_iterator(
         data_path_and_name_and_type,
         dtype=dtype,
@@ -511,7 +259,7 @@ def inference(
         inference=True,
     )
 
-    # 7. Start for-loop
+    # 4. Start for-loop
     output_dir = Path(output_dir)
     (output_dir / "norm").mkdir(parents=True, exist_ok=True)
     (output_dir / "denorm").mkdir(parents=True, exist_ok=True)
@@ -549,31 +297,8 @@ def inference(
             # because inference() requires 1-seq, not mini-batch.
             batch = {k: v[0] for k, v in batch.items() if not k.endswith("_lengths")}
 
-            filename_list = keys
-            speaker_lst = ["oniku", "ofuton", "kiritan", "natsume"]     # NOTE: Fix me into args
-            # add spk-id to **batch
-            if 'svs.sid_emb.weight' in singingGenerate.model.state_dict().keys():
-                sids = []
-                for filename in filename_list:
-                    if "kiritan" in filename.split("_")[0]:
-                        filename = "kiritan"
-                    elif "natsume" in filename.split("_")[0]:
-                        filename = "natsume"
-                    else:
-                        filename = filename.split("_")[0]
-                    sids.append(speaker_lst.index(filename))
-                sids = torch.tensor(sids).to(batch['score'].device)
-                batch['sids'] = sids
-
             logging.info(f"batch: {batch}")
             logging.info(f"keys: {keys}")
-
-            logging.info(f"batch['pitch_aug']: {batch['pitch_aug'].item()}")
-            logging.info(f"batch['time_aug']: {batch['time_aug'].item()}")
-
-            assert batch["pitch_aug"].item() == 0
-            assert batch["time_aug"].item() == 1
-
             del batch["pitch_aug"]
             del batch["time_aug"]
 
@@ -597,8 +322,6 @@ def inference(
                 )
             )
             logging.info(f"{key} (size:{insize}->{outs.size(0)})")
-            if outs.size(0) == insize * maxlenratio:
-                logging.warning(f"output length reaches maximum length ({key}).")
 
             norm_writer[key] = outs.cpu().numpy()
             shape_writer.write(f"{key} " + ",".join(map(str, outs.shape)) + "\n")
@@ -680,24 +403,6 @@ def inference(
 
 def get_parser():
     """Get argument parser."""
-
-    # Add variable objects configurations
-    class_choices_list = [
-        # --score_extractor and --score_extractor_conf
-        score_feats_extractor_choices,
-        # --feats_extractor and --feats_extractor_conf
-        feats_extractor_choices,
-        # --normalize and --normalize_conf
-        normalize_choices,
-        # --pitch_extract and --pitch_extract_conf
-        pitch_extractor_choices,
-        # --pitch_normalize and --pitch_normalize_conf
-        pitch_normalize_choices,
-        # --energy_extract and --energy_extract_conf
-        energy_extractor_choices,
-        # --energy_normalize and --energy_normalize_conf
-        energy_normalize_choices,
-    ]
 
     parser = config_argparse.ArgumentParser(
         description="SVS Decode",
@@ -782,66 +487,13 @@ def get_parser():
 
     group = parser.add_argument_group("Decoding related")
     group.add_argument(
-        "--maxlenratio",
-        type=float,
-        default=10.0,
-        help="Maximum length ratio in decoding",
-    )
-    group.add_argument(
-        "--minlenratio",
-        type=float,
-        default=0.0,
-        help="Minimum length ratio in decoding",
-    )
-    group.add_argument(
-        "--threshold",
-        type=float,
-        default=0.5,
-        help="Threshold value in decoding",
-    )
-    group.add_argument(
-        "--use_att_constraint",
-        type=str2bool,
-        default=False,
-        help="Whether to use attention constraint",
-    )
-    group.add_argument(
-        "--backward_window",
-        type=int,
-        default=1,
-        help="Backward window value in attention constraint",
-    )
-    group.add_argument(
-        "--forward_window",
-        type=int,
-        default=3,
-        help="Forward window value in attention constraint",
-    )
-    group.add_argument(
         "--use_teacher_forcing",
         type=str2bool,
         default=False,
         help="Whether to use teacher forcing",
     )
-    for class_choices in class_choices_list:
-        # Append --<name> and --<name>_conf.
-        # e.g. --encoder and --encoder_conf
-        class_choices.add_arguments(group)
 
-    parser.add_argument(
-        "--speed_control_alpha",
-        type=float,
-        default=1.0,
-        help="Alpha in FastSpeech to change the speed of generated speech",
-    )
-
-    group = parser.add_argument_group("Grriffin-Lim related")
-    group.add_argument(
-        "--vocoder_conf",
-        action=NestedDictAction,
-        default=get_default_kwargs(Spectrogram2Waveform),
-        help="The configuration for Grriffin-Lim",
-    )
+    group = parser.add_argument_group("Vocoder related")
     group.add_argument(
         "--vocoder_checkpoint",
         default="/data5/gs/vocoder_peter/hifigan-vocoder/exp/train_hifigan.v1_train_nodev_clean_libritts_hifigan-2.v1/checkpoint-50000steps.pkl",
@@ -850,8 +502,8 @@ def get_parser():
     )
     group.add_argument(
         "--vocoder_config",
-        default="",
-        type=str,
+        default=None,
+        type=str_or_none,
         help="yaml format configuration file. if not explicitly provided, "
         "it will be searched in the checkpoint directory. (default=None)",
     )

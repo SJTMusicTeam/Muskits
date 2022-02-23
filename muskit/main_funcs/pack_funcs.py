@@ -279,7 +279,7 @@ def pack(
     try:
         import torch
 
-        meta_objs.update(torch=torch.__version__)
+        meta_objs.update(torch=str(torch.__version__))
     except ImportError:
         pass
     try:
@@ -288,6 +288,7 @@ def pack(
         meta_objs.update(muskit=muskit.__version__)
     except ImportError:
         pass
+    print(meta_objs)
 
     Path(outpath).parent.mkdir(parents=True, exist_ok=True)
     with Archiver(outpath, mode="w") as archive:

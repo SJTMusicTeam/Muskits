@@ -29,7 +29,16 @@ def create_midi(notes, tempo, duration, sr):
 
 
 def process_utterance(
-    midi_scp_writer, wavscp, text, utt2spk, label, audio_dir, wav_dumpdir, segment, midi_mapping, tgt_sr=24000
+    midi_scp_writer,
+    wavscp,
+    text,
+    utt2spk,
+    label,
+    audio_dir,
+    wav_dumpdir,
+    segment,
+    midi_mapping,
+    tgt_sr=24000,
 ):
     uid, _, phns, notes, syb_dur, phn_dur, keep = segment.strip().split("|")
     phns = phns.split(" ")
@@ -53,16 +62,12 @@ def process_utterance(
     midi_scp_writer[uid] = midi_seq
     text.write("{} {}\n".format(uid, " ".join(phns)))
     utt2spk.write("{} {}\n".format(uid, "opencpop"))
-    
+
     # apply bit convert, there is a known issue in direct convert in format wavscp
     cmd = f"sox {os.path.join(audio_dir, uid)}.wav -c 1 -t wavpcm -b 16 -r {tgt_sr} {os.path.join(wav_dumpdir, uid)}_bits16.wav"
     os.system(cmd)
 
-    wavscp.write(
-        "{} {}_bits16.wav\n".format(
-            uid, os.path.join(wav_dumpdir, uid)
-        )
-    )
+    wavscp.write("{} {}_bits16.wav\n".format(uid, os.path.join(wav_dumpdir, uid)))
 
     running_dur = 0
     assert len(phn_dur) == len(phns)
@@ -72,7 +77,7 @@ def process_utterance(
         end = running_dur + phn_dur[i]
         label_entry.append("{:.3f} {:.3f} {}".format(start, end, phns[i]))
         running_dur += phn_dur[i]
-    
+
     label.write("{} {}\n".format(uid, " ".join(label_entry)))
 
 
@@ -88,7 +93,9 @@ def process_subset(args, set_name):
     )
     label = open(os.path.join(args.tgt_dir, set_name, "label"), "w", encoding="utf-8")
     text = open(os.path.join(args.tgt_dir, set_name, "text"), "w", encoding="utf-8")
-    utt2spk = open(os.path.join(args.tgt_dir, set_name, "utt2spk"), "w", encoding="utf-8")
+    utt2spk = open(
+        os.path.join(args.tgt_dir, set_name, "utt2spk"), "w", encoding="utf-8"
+    )
 
     midi_mapping = load_midi_note_scp(args.midi_note_scp)
 
@@ -109,7 +116,7 @@ def process_subset(args, set_name):
                 args.wav_dumpdir,
                 segment,
                 midi_mapping,
-                tgt_sr=args.sr
+                tgt_sr=args.sr,
             )
 
 
@@ -131,6 +138,6 @@ if __name__ == "__main__":
     )
     parser.add_argument("--sr", type=int, help="sampling rate (Hz)")
     args = parser.parse_args()
-    
+
     for name in ["train", "test"]:
         process_subset(args, name)

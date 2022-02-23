@@ -256,51 +256,14 @@ def seq_to_midi(
 if __name__ == "__main__":
     import os
 
-    # import miditoolkit
-    # path = "/data5/gs/Muskits/egs/kiritan/svs1/local/01_reconNew.midi"
-    # # path = "/data5/gs/dataset/kiritan_singing/midi_label/01.mid"
-    # midi_obj = miditoolkit.midi.parser.MidiFile(path)
+    import miditoolkit
 
-    # note_seq, tempo_seq = midi_to_seq(midi_obj, np.int16, np.int16(24000))
+    path = "/data5/gs/Muskits/egs/ofuton_p_utagoe_db/svs1/dump/raw/org/dev/data/format_midi.1/ofuton_00000000000000momiji_0000.midi"
+    midi_obj = miditoolkit.midi.parser.MidiFile(path)
 
-    # tick_to_time = midi_obj.get_tick_to_time_mapping()
-    # max_time = tick_to_time[-1]
-    # notes = midi_obj.instruments[0].notes
-    # notes.sort(key=lambda x: (x.start, x.pitch))
+    note_seq, tempo_seq = midi_to_seq(midi_obj, np.int16, np.int16(24000))
 
-    # tempos = midi_obj.tempo_changes
-    # tempos.sort(key=lambda x: (x.time, x.tempo))
-
-    # print(f"midi_obj: {midi_obj}")
-    # # print(f"notes: {notes}")
-    # print(f"tempos: {tempos}")
-    # # print(f"note_seq: {note_seq[10000]}, note_seq.shape: {note_seq.shape}")
-    # print(f"tempo_seq: {tempo_seq}, tempo_seq.shape: {tempo_seq.shape}")
-
-    # # midi_obj = seq_to_midi(note_seq, tempo_seq, np.int16(24000))
-    # # midi_obj.dump("/data5/gs/Muskits/egs/kiritan/svs1/local/01_reconNew.midi")
-
-    # path = "/data5/gs/dataset/Natsume_Singing_DB/midi"
-    # for p in os.listdir(path):
-    #     midi_obj = miditoolkit.midi.parser.MidiFile(os.path.join(path,p))
-    #     tempos = midi_obj.tempo_changes
-    #     tempos.sort(key=lambda x: (x.time, x.tempo))
-    #     assert len(tempos) == 1
-    
-    # dataset_rootPath = "/data5/gs/dataset/ONIKU_KURUMI_UTAGOE_DB"
-    # for song_folder in os.listdir(dataset_rootPath):
-    #         song_folder = os.path.join(dataset_rootPath, song_folder)
-    #         if os.path.isdir( song_folder ):
-    #             for song in os.listdir(song_folder):
-    #                 if song.endswith(".mid") or song.endswith(".midi"):
-    #                     song_path = os.path.join(song_folder, song)
-    #                     print(song_path)
-                        
-    #                     midi_obj = miditoolkit.midi.parser.MidiFile(song_path)
-    #                     tempos = midi_obj.tempo_changes
-    #                     tempos.sort(key=lambda x: (x.time, x.tempo))
-    #                     assert len(tempos) == 1
-
+    print(f"note_seq: {note_seq[10000]}, note_seq.shape: {note_seq.shape}")
 
     note_list = []
     rootpath = "/data5/gs/Muskits/egs/kiritan/svs1/dump/raw/org/tr_no_dev/data"
@@ -311,10 +274,10 @@ if __name__ == "__main__":
         for filename in os.listdir(folderPath):
             if filename.endswith(".midi"):
                 midiPath = os.path.join(folderPath, filename)
-                
+
                 midi_obj = miditoolkit.midi.parser.MidiFile(midiPath)
                 note_seq, tempo_seq = midi_to_seq(midi_obj, np.int16, np.int16(24000))
-                
+
                 note_list.append(note_seq)
                 # print(np.mean(note_seq))
     res = np.hstack(note_list)

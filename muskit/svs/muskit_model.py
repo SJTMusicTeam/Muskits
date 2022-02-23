@@ -479,40 +479,17 @@ class MuskitSVSModel(AbsMuskitModel):
         Returns:
             Dict[str, Tensor]: Dict of outputs.
         """
-        singing_lengths = torch.tensor([len(singing)])
         durations_lengths = torch.tensor([len(durations)])
         score_lengths = torch.tensor([len(score)])
         tempo_lengths = torch.tensor([len(tempo)])
 
         assert durations_lengths == score_lengths and durations_lengths == tempo_lengths
-        length = torch.min(singing_lengths, durations_lengths)
-        singing_lengths = length
-        durations_lengths, score_lengths, tempo_lengths = length, length, length
 
         # unsqueeze of singing must be here, or it'll cause error in the return dim of STFT
-        singing = singing[:length].unsqueeze(0)
         text = text.unsqueeze(0)  # for data-parallel
-        durations = durations[:length].unsqueeze(0)  # for data-parallel
-        score = score[:length].unsqueeze(0)  # for data-parallel
-        tempo = tempo[:length].unsqueeze(0)  # for data-parallel
-
-        logging.info(f"singing.shape: {singing.shape}")
-        logging.info(f"singing_lengths: {singing_lengths}")
-        logging.info(f"text.shape: {text.shape}")
-        logging.info(f"durations.shape: {durations.shape}")
-        logging.info(f"score.shape: {score.shape}")
-        logging.info(f"tempo.shape: {tempo.shape}")
-
-        # Extract features
-        if self.feats_extract is not None:
-            feats, feats_lengths = self.feats_extract(
-                singing, singing_lengths
-            )  # singing to spec feature (frame level)
-        else:
-            # Use precalculated feats (feats_type != raw case)
-            feats, feats_lengths = singing, singing_lengths
-        logging.info(f"feats.shape: {feats.shape}")
-        logging.info(f"feats_lengths: {feats_lengths}")
+        durations = durations.unsqueeze(0)  # for data-parallel
+        score = score.unsqueeze(0)  # for data-parallel
+        tempo = tempo.unsqueeze(0)  # for data-parallel
 
         # Extract auxiliary features
         # score : 128 midi pitch
@@ -677,29 +654,8 @@ class MuskitSVSModel(AbsMuskitModel):
                 ds.append(torch.tensor(ds_tmp))
             ds = pad_list(ds, pad_value=0).to(label.device)
 
-        if self.pitch_extract is not None and pitch is None:
-            pitch, pitch_lengths = self.pitch_extract(
-                input=singing,
-                input_lengths=singing_lengths,
-                feats_lengths=feats_lengths,
-            )
-
-        if self.energy_extract is not None and energy is None:
-            energy, energy_lengths = self.energy_extract(
-                singing,
-                singing_lengths,
-                feats_lengths=feats_lengths,
-                durations=durations,
-                durations_lengths=durations_lengths,
-            )
-
-        logging.info(f"feats.shape: {feats.shape}")
-        logging.info(f"score.shape: {score.shape}")
-
         input_dict = dict(text=text)
 
-        if feats is not None:
-            input_dict["feats"] = feats
         if score is not None and pitch is None:
             score = score.to(dtype=torch.long)
             input_dict["midi"] = score

@@ -243,12 +243,12 @@ class NaiveRNN(AbsSVS):
         self.spks = None
         if spks is not None and spks > 1:
             self.spks = spks
-            self.sid_emb = torch.nn.Embedding(spks, eunits)
+            self.sid_emb = torch.nn.Embedding(spks, eunits * dim_direction)
         self.langs = None
         if langs is not None and langs > 1:
             # TODO (not encode yet)
             self.langs = langs
-            self.lid_emb = torch.nn.Embedding(langs, eunits)
+            self.lid_emb = torch.nn.Embedding(langs, eunits * dim_direction)
 
         # define projection layer
         self.spk_embed_dim = None
@@ -257,9 +257,9 @@ class NaiveRNN(AbsSVS):
             self.spk_embed_integration_type = spk_embed_integration_type
         if self.spk_embed_dim is not None:
             if self.spk_embed_integration_type == "add":
-                self.projection = torch.nn.Linear(self.spk_embed_dim, eunits)
+                self.projection = torch.nn.Linear(self.spk_embed_dim, eunits * dim_direction)
             else:
-                self.projection = torch.nn.Linear(eunits + self.spk_embed_dim, eunits)
+                self.projection = torch.nn.Linear(eunits * dim_direction + self.spk_embed_dim, eunits * dim_direction)
 
         # define final projection
         self.feat_out = torch.nn.Linear(eunits * dim_direction, odim * reduction_factor)
@@ -621,6 +621,7 @@ class NaiveRNN(AbsSVS):
         Returns:
             Tensor: Batch of integrated hidden state sequences (B, Tmax, adim).
         """
+        
         if self.spk_embed_integration_type == "add":
             # apply projection and then add to hidden states
             spembs = self.projection(F.normalize(spembs))

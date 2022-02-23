@@ -45,7 +45,10 @@ from muskit.torch_utils.nets_utils import pad_list
 import random
 from torch.distributions import Beta
 
-Beta_distribution = Beta(torch.tensor([0.5]), torch.tensor([0.5]))      # NOTE(Shuai) Fix Me! Add to args
+Beta_distribution = Beta(
+    torch.tensor([0.5]), torch.tensor([0.5])
+)  # NOTE(Shuai) Fix Me! Add to args
+
 
 class XiaoiceSing(AbsSVS):
     """XiaoiceSing module for Singing Voice Synthesis.
@@ -431,10 +434,10 @@ class XiaoiceSing(AbsSVS):
     def inference(
         self,
         text: torch.Tensor,
-        feats: torch.Tensor,
         label: torch.Tensor,
         midi: torch.Tensor,
         ds: torch.Tensor,
+        feats: torch.Tensor = None,
         tempo: Optional[torch.Tensor] = None,
         spembs: Optional[torch.Tensor] = None,
         sids: Optional[torch.Tensor] = None,
@@ -1140,11 +1143,25 @@ class XiaoiceSing_noDP(AbsSVS):
             batch_size_origin = args_mixup['batch_size_origin']
             batch_size = args_mixup['batch_size']
 
-            # mix-up augmentation
-            midi_embed_mixup = torch.zeros((batch_size_mixup, midi_emb.shape[1], midi_emb.shape[2]), dtype=midi_emb.dtype, layout=midi_emb.layout, device=midi_emb.device)
-            midi_lengths_mixup = torch.zeros(batch_size_mixup, dtype=midi_lengths.dtype, layout=midi_lengths.layout, device=midi_lengths.device)
+            midi_embed_mixup = torch.zeros(
+                (batch_size_mixup, midi_emb.shape[1], midi_emb.shape[2]),
+                dtype=midi_emb.dtype,
+                layout=midi_emb.layout,
+                device=midi_emb.device,
+            )
+            midi_lengths_mixup = torch.zeros(
+                batch_size_mixup,
+                dtype=midi_lengths.dtype,
+                layout=midi_lengths.layout,
+                device=midi_lengths.device,
+            )
 
-            hs_mixup = torch.zeros((batch_size_mixup, hs.shape[1], hs.shape[2]), dtype=hs.dtype, layout=hs.layout, device=hs.device)
+            hs_mixup = torch.zeros(
+                (batch_size_mixup, hs.shape[1], hs.shape[2]),
+                dtype=hs.dtype,
+                layout=hs.layout,
+                device=hs.device,
+            )
 
             for i in range(batch_size_mixup):
                 index1 = args_mixup['lst'][2*i]
@@ -1207,8 +1224,12 @@ class XiaoiceSing_noDP(AbsSVS):
                 feats[batch_size_origin : batch_size, : _olens.max()], 
                 feats_lengths[batch_size_origin : batch_size]
             )
-            l1_loss = (1 - self.loss_mixup_wight) * l1_loss_origin + self.loss_mixup_wight * l1_loss_mixup
-            l2_loss = (1 - self.loss_mixup_wight) * l2_loss_origin + self.loss_mixup_wight * l2_loss_mixup
+            l1_loss = (
+                1 - self.loss_mixup_wight
+            ) * l1_loss_origin + self.loss_mixup_wight * l1_loss_mixup
+            l2_loss = (
+                1 - self.loss_mixup_wight
+            ) * l2_loss_origin + self.loss_mixup_wight * l2_loss_mixup
         else:
             l1_loss, l2_loss = self.criterion(
                 after_outs[:, : olens.max()], before_outs[:, : olens.max()], ys, olens
@@ -1221,10 +1242,10 @@ class XiaoiceSing_noDP(AbsSVS):
     def inference(
         self,
         text: torch.Tensor,
-        feats: torch.Tensor,
         label: torch.Tensor,
         midi: torch.Tensor,
         ds: torch.Tensor,
+        feats: torch.Tensor = None,
         tempo: Optional[torch.Tensor] = None,
         spembs: Optional[torch.Tensor] = None,
         sids: Optional[torch.Tensor] = None,

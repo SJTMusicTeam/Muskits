@@ -5,9 +5,6 @@ set -e
 set -u
 set -o pipefail
 
-. ./path.sh || exit 1
-. ./cmd.sh || exit 1
-
 # spectrogram-related arguments
 fs=24000
 fmin=80
@@ -62,7 +59,7 @@ cleaner=none
     --train_set "${train_set}" \
     --valid_set "${valid_set}" \
     --test_sets "${test_sets}" \
-    # --score_feats_extract "${score_feats_extract}" \
+    --score_feats_extract "${score_feats_extract}" \
     --srctexts "data/${train_set}/text" \
     --svs_exp ${expdir} \
     --ngpu 1 \
