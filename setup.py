@@ -146,7 +146,7 @@ setup(
     long_description=open(os.path.join(dirname, "README.md"), encoding="utf-8").read(),
     long_description_content_type="text/markdown",
     license="Apache Software License",
-    packages=find_packages(include=["music*"]),
+    packages=find_packages(include=["muskit*"]),
     package_data={"music": ["version.txt"]},
     install_requires=install_requires,
     setup_requires=setup_requires,
