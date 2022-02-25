@@ -147,7 +147,7 @@ setup(
     long_description_content_type="text/markdown",
     license="Apache Software License",
     packages=find_packages(include=["muskit*"]),
-    package_data={"music": ["version.txt"]},
+    package_data={"muskit": ["version.txt"]},
     install_requires=install_requires,
     setup_requires=setup_requires,
     tests_require=tests_require,
