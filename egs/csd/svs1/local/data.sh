@@ -16,6 +16,8 @@ log() {
 SECONDS=0
 stage=1
 stop_stage=100
+fs=24000
+wav_dumpdir=wav_dump
 lang=english # english or korean
 
 log "$0 $*"
@@ -42,8 +44,8 @@ fi
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     log "stage 1: Dataset split "
     # We use a pre-defined split (see details in local/dataset_split.py)"
-    python local/dataset_split.py ${CSD}/${lang} \
-        data/${train_set} data/${train_dev} data/${recog_set}
+    python local/dataset_split.py ${CSD}/CSD/${lang} \
+        data/${train_set} data/${train_dev} data/${recog_set} ${wav_dumpdir}
 fi
 
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
