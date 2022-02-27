@@ -17,14 +17,14 @@ Muskit is an open-source music processing toolkit. Currently we mostly focus on 
   - Xiaoice
   - Sequence-to-sequence Transformer (with GLU-based encoder)
   - MLP singer
-  - Bytesing (in progress)
+  - Tacotron-singing (in progress)
   - DiffSinger (to be published)
 - Multi-speaker & Multilingual extention
   - Speaker ID embedding
   - Language ID embedding
   - Global sytle token (GST) embedding
 - Various language support
-  - Jp / En / Kr / Zh (in progress)
+  - Jp / En / Kr / Zh
 - Integration with neural vocoders
   - the style matches the [PWG repo](https://github.com/kan-bayashi/ParallelWaveGAN) with supports of various of vocoders
 
