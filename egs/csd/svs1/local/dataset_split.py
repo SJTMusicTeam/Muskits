@@ -44,7 +44,7 @@ def process_text_info(text):
     label_info = []
     text_info = []
     for line in info.readlines():
-        line = line.strip().split()
+        line = line.strip().split(",")
         if line[0] == "start":
             continue
         label_info.append(
@@ -63,11 +63,11 @@ def process_subset(src_data, subset, check_func):
     text_scp = open(os.path.join(subset, "text"), "w", encoding="utf-8")
     label_scp = open(os.path.join(subset, "label"), "w", encoding="utf-8")
 
-    for csv in os.listdir(src_data, "csv"):
+    for csv in os.listdir(os.path.join(src_data, "csv")):
 
         if not os.path.isfile(os.path.join(src_data, "csv", csv)):
             continue
-        if not check_func(folder):
+        if not check_func(csv):
             continue
         song_name = csv[:-4]
         utt_id = "{}_{}".format(UTT_PREFIX, pack_zero(song_name))
