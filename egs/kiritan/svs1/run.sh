@@ -42,7 +42,11 @@ cleaner=none
 
 ./svs.sh \
     --lang jp \
+<<<<<<< HEAD
     --stage 0\
+=======
+    --stage 0 \
+>>>>>>> da3f65f780f37a6e461c1980fe64656b06ee9521
     --local_data_opts "--stage 0 $(pwd)" \
     --feats_type raw \
     --pitch_extract None \
