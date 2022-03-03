@@ -5,6 +5,9 @@ set -e
 set -u
 set -o pipefail
 
+. ./path.sh || exit 1
+. ./cmd.sh || exit 1
+
 fs=24000
 n_fft=2048
 n_shift=300
@@ -25,7 +28,7 @@ train_config=conf/train.yaml
 inference_config=conf/decode.yaml
 
 ./svs.sh \
-    --lang jp \
+    --lang en \
     --feats_type raw \
     --fs "${fs}" \
     --n_fft "${n_fft}" \

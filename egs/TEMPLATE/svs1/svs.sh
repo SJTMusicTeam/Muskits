@@ -89,14 +89,13 @@ inference_config="" # Config for decoding.
 inference_args=""   # Arguments for decoding, e.g., "--threshold 0.75".
                     # Note that it will overwrite args in inference config.
 inference_tag=""    # Suffix for decoding directory.
-inference_model=valid.loss.ave.pth # Model path for decoding.
+inference_model=valid.loss.best.pth # Model path for decoding.
                                    # e.g.
                                    # inference_model=train.loss.best.pth
                                    # inference_model=3epoch.pth
                                    # inference_model=valid.acc.best.pth
                                    # inference_model=valid.loss.ave.pth
 vocoder_file=none  # Vocoder parameter file, If set to none, Griffin-Lim will be used.
-griffin_lim_iters=4 # the number of iterations of Griffin-Lim.
 download_model=""   # Download a model from Model Zoo and use it for decoding.
 
 # [Task dependent] Set the datadir name created by local/data.sh
@@ -180,7 +179,6 @@ Options:
     --inference_model   # Model path for decoding (default=${inference_model}).
     --vocoder_file      # Vocoder paramemter file (default=${vocoder_file}).
                         # If set to none, Griffin-Lim vocoder will be used.
-    --griffin_lim_iters # The number of iterations of Griffin-Lim (default=${griffin_lim_iters}).
     --download_model    # Download a model from Model Zoo and use it for decoding (default="${download_model}").
     
     # [Task dependent] Set the datadir name created by local/data.sh.
@@ -205,13 +203,14 @@ log "$0 $*"
 run_args=$(pyscripts/utils/print_args.py $0 "$@")
 . utils/parse_options.sh
 
+
 if [ $# -ne 0 ]; then
     log "${help_message}"
     log "Error: No positional arguments are required."
     exit 2
 fi
 
-. ./path.sh
+. ./path.sh || exit 1
 . ./cmd.sh
 
 # Check feature type
@@ -292,6 +291,7 @@ if ! "${skip_data_prep}"; then
         # [Task dependent] Need to create data.sh for new corpus
         local/data.sh ${local_data_opts} --fs "${fs}"
     fi
+    
 
 
     if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
@@ -303,16 +303,16 @@ if ! "${skip_data_prep}"; then
         # and also it can also change the audio-format and sampling rate.
         # If nothing is need, then format_wav_scp.sh does nothing:
         # i.e. the input file format and rate is same as the output.
-
+        
         if [ "${feats_type}" = raw ]; then
             log "Stage 2: Format wav.scp: data/ -> ${data_feats}/"
-            for dset in "${train_set}" "${valid_set}" ${test_sets}; do
+            for dset in "${train_set}" "${valid_set}" ${test_sets} ; do
                 if [ "${dset}" = "${train_set}" ] || [ "${dset}" = "${valid_set}" ]; then
                     _suf="/org"
                 else
                     _suf=""
                 fi
-                scripts/utils/copy_data_dir.sh data/"${dset}" "${data_feats}${_suf}/${dset}"
+                scripts/utils/copy_data_dir.sh "data/${dset}" "${data_feats}${_suf}/${dset}"
                 rm -f ${data_feats}${_suf}/${dset}/{segments,wav.scp,reco2file_and_channel}
                 _opts=
                 if [ -e data/"${dset}"/segments ]; then
@@ -368,6 +368,31 @@ if ! "${skip_data_prep}"; then
 
                 # 5. Write feats_type
                 echo "${feats_type}" > "${data_feats}${_suf}/${dset}/feats_type"
+            done
+        fi
+    fi
+    if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
+        if "${use_sid}"; then
+            log "Stage 2+: sid extract: data/ -> ${data_feats}/"
+            for dset in "${train_set}" "${valid_set}" ${test_sets}; do
+                if [ "${dset}" = "${train_set}" ] || [ "${dset}" = "${valid_set}" ]; then
+                    _suf="/org"
+                else
+                    _suf=""
+                fi
+                # 1.Generate spk2sid
+
+                if [ "${dset}" = "${train_set}" ]; then
+                    # Make spk2sid
+                    # NOTE(kan-bayashi): 0 is reserved for unknown speakers
+                    echo "<unk> 0" > "${data_feats}${_suf}/${dset}/spk2sid"
+                    cut -f 2 -d " " "${data_feats}${_suf}/${dset}/utt2spk" | sort | uniq | \
+                        awk '{print $1 " " NR}' >> "${data_feats}${_suf}/${dset}/spk2sid"
+                fi
+                pyscripts/utils/utt2spk_to_utt2sid.py \
+                    "${data_feats}/org/${train_set}/spk2sid" \
+                    "${data_feats}${_suf}/${dset}/utt2spk" \
+                    > "${data_feats}${_suf}/${dset}/utt2sid"
             done
         fi
     fi
@@ -430,13 +455,6 @@ if ! "${skip_data_prep}"; then
             # fix_data_dir.sh leaves only utts which exist in all files
             scripts/utils/fix_data_dir.sh "${data_feats}/${dset}"
 
-#            # Filter x-vector
-#            if "${use_xvector}"; then
-#                cp "${dumpdir}/xvector/${dset}"/xvector.{scp,scp.bak}
-#                <"${dumpdir}/xvector/${dset}/xvector.scp.bak" \
-#                    utils/filter_scp.pl "${data_feats}/${dset}/wav.scp"  \
-#                    >"${dumpdir}/xvector/${dset}/xvector.scp"
-#            fi
         done
 
         # shellcheck disable=SC2002
@@ -892,51 +910,12 @@ if ! "${skip_eval}"; then
         # "sound" supports "wav", "flac", etc.
         _type=sound
         _fold_length="$((singing_fold_length * n_shift))"
-        _opts+="--score_feats_extract ${score_feats_extract} "
-        _opts+="--score_feats_extract_conf fs=${fs} "
-        _opts+="--score_feats_extract_conf n_fft=${n_fft} "
-        _opts+="--score_feats_extract_conf win_length=${win_length} "
-        _opts+="--score_feats_extract_conf hop_length=${n_shift} "
-        _opts+="--feats_extract ${feats_extract} "
-        _opts+="--feats_extract_conf n_fft=${n_fft} "
-        _opts+="--feats_extract_conf hop_length=${n_shift} "
-        _opts+="--feats_extract_conf win_length=${win_length} "
-        _opts+="--pitch_extract ${pitch_extract} "
-        if [ "${feats_extract}" = fbank ]; then
-            _opts+="--feats_extract_conf fs=${fs} "
-            _opts+="--feats_extract_conf fmin=${fmin} "
-            _opts+="--feats_extract_conf fmax=${fmax} "
-            _opts+="--feats_extract_conf n_mels=${n_mels} "
-        fi
-        if [ "${pitch_extract}" = dio ]; then
-            _opts+="--pitch_extract_conf fs=${fs} "
-            _opts+="--pitch_extract_conf n_fft=${n_fft} "
-            _opts+="--pitch_extract_conf hop_length=${n_shift} "
-            _opts+="--pitch_extract_conf f0max=${f0max} "
-            _opts+="--pitch_extract_conf f0min=${f0min} "
-        fi
-        if [ "${feats_normalize}" = "global_mvn" ]; then
-            _opts+="--normalize_conf stats_file=${svs_stats_dir}/train/feats_stats.npz "
-        fi
 
         if [[ "${audio_format}" == *ark* ]]; then
             _type=kaldi_ark
         else
             # "sound" supports "wav", "flac", etc.
             _type=sound
-        fi
-        if [ "${_feats_type}" = fbank ] || [ "${_feats_type}" = stft ]; then
-            _opts+="--vocoder_conf n_fft=${n_fft} "
-            _opts+="--vocoder_conf n_shift=${n_shift} "
-            _opts+="--vocoder_conf win_length=${win_length} "
-            _opts+="--vocoder_conf fs=${fs} "
-            _scp=feats.scp
-            _type=kaldi_ark
-        fi
-        if [ "${_feats_type}" = fbank ]; then
-            _opts+="--vocoder_conf n_mels=${n_mels} "
-            _opts+="--vocoder_conf fmin=${fmin} "
-            _opts+="--vocoder_conf fmax=${fmax} "
         fi
 
         log "Generate '${svs_exp}/${inference_tag}/run.sh'. You can resume the process from stage 7 using this script"
@@ -969,6 +948,17 @@ if ! "${skip_eval}"; then
                 _ex_opts+="--data_path_and_name_and_type ${_xvector_dir}/xvector.scp,spembs,kaldi_ark "
             fi
 
+            # Add spekaer ID to the inputs if needed
+            if "${use_sid}"; then
+                _ex_opts+="--data_path_and_name_and_type ${_data}/utt2sid,sids,text_int "
+            fi
+
+            # Add language ID to the inputs if needed
+            if "${use_lid}"; then
+                _ex_opts+="--data_path_and_name_and_type ${_data}/utt2lid,lids,text_int "
+            fi
+
+
             # 0. Copy feats_type
             cp "${_data}/feats_type" "${_dir}/feats_type"
 
@@ -996,7 +986,7 @@ if ! "${skip_eval}"; then
                     --model_file "${svs_exp}"/"${inference_model}" \
                     --train_config "${svs_exp}"/config.yaml \
                     --output_dir "${_logdir}"/output.JOB \
-                    --vocoder_conf griffin_lim_iters="${griffin_lim_iters}" \
+		    --vocoder_checkpoint "${vocoder_file}" \
                     ${_opts} ${_ex_opts} ${inference_args}
 
             # 4. Concatenates the output files from each jobs
@@ -1038,6 +1028,44 @@ if ! "${skip_eval}"; then
     fi
 else
     log "Skip the evaluation stages"
+fi
+
+packed_model="${svs_exp}/${svs_exp##*/}_${inference_model%.*}.zip"
+if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ]; then
+    log "Stage 8: Pack model: ${packed_model}"
+
+    _opts=""
+    if [ -e "${svs_stats_dir}/train/feats_stats.npz" ]; then
+        _opts+=" --option ${svs_stats_dir}/train/feats_stats.npz"
+    fi
+    if [ -e "${svs_stats_dir}/train/pitch_stats.npz" ]; then
+        _opts+=" --option ${svs_stats_dir}/train/pitch_stats.npz"
+    fi
+    if [ -e "${svs_stats_dir}/train/energy_stats.npz" ]; then
+        _opts+=" --option ${svs_stats_dir}/train/energy_stats.npz"
+    fi
+    if "${use_xvector}"; then
+        for dset in "${train_set}" ${test_sets}; do
+            _opts+=" --option ${dumpdir}/xvector/${dset}/spk_xvector.scp"
+            _opts+=" --option ${dumpdir}/xvector/${dset}/spk_xvector.ark"
+        done
+    fi
+    if "${use_sid}"; then
+        _opts+=" --option ${data_feats}/org/${train_set}/spk2sid"
+    fi
+    if "${use_lid}"; then
+        _opts+=" --option ${data_feats}/org/${train_set}/lang2lid"
+    fi
+    ${python} -m muskit.bin.pack svs \
+        --train_config "${svs_exp}"/config.yaml \
+        --model_file "${svs_exp}"/"${inference_model}" \
+        --option "${svs_exp}"/images  \
+        --outpath "${packed_model}" \
+        ${_opts}
+
+    # NOTE(kamo): If you'll use packed model to inference in this script, do as follows
+    #   % unzip ${packed_model}
+    #   % ./run.sh --stage 8 --svs_exp $(basename ${packed_model} .zip) --inference_model pretrain.pth
 fi
 
 ### TODO: other stages

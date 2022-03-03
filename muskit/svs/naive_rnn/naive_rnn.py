@@ -27,6 +27,7 @@ from torch.distributions import Beta
 
 Beta_distribution = Beta(torch.tensor([0.5]), torch.tensor([0.5]))
 
+
 class NaiveRNNLoss(torch.nn.Module):
     """Loss function module for Tacotron2."""
 
@@ -220,9 +221,13 @@ class NaiveRNN(AbsSVS):
 
         dim_direction = 2 if ebidirectional == True else 1
         if self.midi_embed_integration_type == "add":
-            self.midi_projection = torch.nn.Linear(eunits * dim_direction, eunits * dim_direction)
+            self.midi_projection = torch.nn.Linear(
+                eunits * dim_direction, eunits * dim_direction
+            )
         else:
-            self.midi_projection = torch.nn.linear(2 * eunits * dim_direction, eunits * dim_direction)
+            self.midi_projection = torch.nn.linear(
+                2 * eunits * dim_direction, eunits * dim_direction
+            )
 
         self.decoder = torch.nn.LSTM(
             input_size=eunits,
@@ -238,12 +243,12 @@ class NaiveRNN(AbsSVS):
         self.spks = None
         if spks is not None and spks > 1:
             self.spks = spks
-            self.sid_emb = torch.nn.Embedding(spks, eunits)
+            self.sid_emb = torch.nn.Embedding(spks, eunits * dim_direction)
         self.langs = None
         if langs is not None and langs > 1:
             # TODO (not encode yet)
             self.langs = langs
-            self.lid_emb = torch.nn.Embedding(langs, eunits)
+            self.lid_emb = torch.nn.Embedding(langs, eunits * dim_direction)
 
         # define projection layer
         self.spk_embed_dim = None
@@ -252,9 +257,9 @@ class NaiveRNN(AbsSVS):
             self.spk_embed_integration_type = spk_embed_integration_type
         if self.spk_embed_dim is not None:
             if self.spk_embed_integration_type == "add":
-                self.projection = torch.nn.Linear(self.spk_embed_dim, eunits)
+                self.projection = torch.nn.Linear(self.spk_embed_dim, eunits * dim_direction)
             else:
-                self.projection = torch.nn.Linear(eunits + self.spk_embed_dim, eunits)
+                self.projection = torch.nn.Linear(eunits * dim_direction + self.spk_embed_dim, eunits * dim_direction)
 
         # define final projection
         self.feat_out = torch.nn.Linear(eunits * dim_direction, odim * reduction_factor)
@@ -276,11 +281,14 @@ class NaiveRNN(AbsSVS):
 
         # define loss function
         self.criterion = NaiveRNNLoss(
-            use_masking=use_masking, use_weighted_masking=use_weighted_masking,
+            use_masking=use_masking,
+            use_weighted_masking=use_weighted_masking,
         )
 
         # initialize parameters
-        self._reset_parameters(init_type=init_type,)
+        self._reset_parameters(
+            init_type=init_type,
+        )
 
     def _reset_parameters(self, init_type):
         # initialize parameters
@@ -342,33 +350,71 @@ class NaiveRNN(AbsSVS):
             # random.shuffle(lst)
 
             batch_size_mixup = 2
-            lst = random.sample([i for i in range(batch_size)], batch_size_mixup * 2)   # mix-up per 2 samples
-            
-            # mix-up augmentation
-            feats_mixup = torch.zeros((batch_size_mixup, feats.shape[1], feats.shape[2]), dtype=feats.dtype, layout=feats.layout, device=feats.device)
-            feats_lengths_mixup = torch.zeros(batch_size_mixup, dtype=feats_lengths.dtype, layout=feats_lengths.layout, device=feats_lengths.device)
-            
-            midi_embed_mixup = torch.zeros((batch_size_mixup, midi_emb.shape[1], midi_emb.shape[2]), dtype=midi_emb.dtype, layout=midi_emb.layout, device=midi_emb.device)
-            midi_lengths_mixup = torch.zeros(batch_size_mixup, dtype=midi_lengths.dtype, layout=midi_lengths.layout, device=midi_lengths.device)
-            
-            label_embed_mixup = torch.zeros((batch_size_mixup, label_emb.shape[1], label_emb.shape[2]), dtype=label_emb.dtype, layout=label_emb.layout, device=label_emb.device)
-            label_lengths_mixup = torch.zeros(batch_size_mixup, dtype=label_lengths.dtype, layout=label_lengths.layout, device=label_lengths.device)
-            
-            for i in range(batch_size_mixup):
-                index1 = lst[2*i]
-                index2 = lst[2*i + 1]
+            lst = random.sample(
+                [i for i in range(batch_size)], batch_size_mixup * 2
+            )  # mix-up per 2 samples
 
-                w1 = Beta_distribution.sample().to(feats.device)             # !!! NOTE:  random.random()
+            # mix-up augmentation
+            feats_mixup = torch.zeros(
+                (batch_size_mixup, feats.shape[1], feats.shape[2]),
+                dtype=feats.dtype,
+                layout=feats.layout,
+                device=feats.device,
+            )
+            feats_lengths_mixup = torch.zeros(
+                batch_size_mixup,
+                dtype=feats_lengths.dtype,
+                layout=feats_lengths.layout,
+                device=feats_lengths.device,
+            )
+
+            midi_embed_mixup = torch.zeros(
+                (batch_size_mixup, midi_emb.shape[1], midi_emb.shape[2]),
+                dtype=midi_emb.dtype,
+                layout=midi_emb.layout,
+                device=midi_emb.device,
+            )
+            midi_lengths_mixup = torch.zeros(
+                batch_size_mixup,
+                dtype=midi_lengths.dtype,
+                layout=midi_lengths.layout,
+                device=midi_lengths.device,
+            )
+
+            label_embed_mixup = torch.zeros(
+                (batch_size_mixup, label_emb.shape[1], label_emb.shape[2]),
+                dtype=label_emb.dtype,
+                layout=label_emb.layout,
+                device=label_emb.device,
+            )
+            label_lengths_mixup = torch.zeros(
+                batch_size_mixup,
+                dtype=label_lengths.dtype,
+                layout=label_lengths.layout,
+                device=label_lengths.device,
+            )
+
+            for i in range(batch_size_mixup):
+                index1 = lst[2 * i]
+                index2 = lst[2 * i + 1]
+
+                w1 = Beta_distribution.sample().to(
+                    feats.device
+                )  # !!! NOTE:  random.random()
                 w2 = 1 - w1
 
                 feats_mixup[i] = w1 * feats[index1] + w2 * feats[index2]
-                feats_lengths_mixup[i] = max(feats_lengths[index1], feats_lengths[index2])
+                feats_lengths_mixup[i] = max(
+                    feats_lengths[index1], feats_lengths[index2]
+                )
 
                 midi_embed_mixup[i] = w1 * midi_emb[index1] + w2 * midi_emb[index2]
                 midi_lengths_mixup[i] = max(midi_lengths[index1], midi_lengths[index2])
 
                 label_embed_mixup[i] = w1 * label_emb[index1] + w2 * label_emb[index2]
-                label_lengths_mixup[i] = max(label_lengths[index1], label_lengths[index2])
+                label_lengths_mixup[i] = max(
+                    label_lengths[index1], label_lengths[index2]
+                )
 
             feats = torch.cat((feats, feats_mixup), 0)
             feats_lengths = torch.cat((feats_lengths, feats_lengths_mixup), 0)
@@ -396,7 +442,7 @@ class NaiveRNN(AbsSVS):
             hs = hs_label + hs_midi
             hs = F.leaky_relu(self.midi_projection(hs))
         else:
-            hs = torch.cat(hs_label, hs_midi, dim=-1)
+            hs = torch.cat((hs_label, hs_midi), dim=-1)
             hs = F.leaky_relu(self.midi_projection(hs))
         # integrate spk & lang embeddings
         if self.spks is not None:
@@ -409,7 +455,7 @@ class NaiveRNN(AbsSVS):
         # integrate speaker embedding
         if self.spk_embed_dim is not None:
             hs = self._integrate_with_spk_embed(hs, spembs)
-        
+
         # hs_emb = torch.nn.utils.rnn.pack_padded_sequence(
         #     hs, label_lengths.to("cpu"), batch_first=True, enforce_sorted=False
         # )
@@ -449,24 +495,28 @@ class NaiveRNN(AbsSVS):
         if self.use_mixup_training and flag_IsValid == False:
             olens = feats_lengths[:batch_size_origin]
             l1_loss_origin, l2_loss_origin = self.criterion(
-                after_outs[:batch_size_origin, : olens.max()], 
-                before_outs[:batch_size_origin, : olens.max()], 
-                feats[:batch_size_origin], 
-                feats_lengths[:batch_size_origin]
+                after_outs[:batch_size_origin, : olens.max()],
+                before_outs[:batch_size_origin, : olens.max()],
+                feats[:batch_size_origin],
+                feats_lengths[:batch_size_origin],
             )
-            olens = feats_lengths[batch_size_origin : batch_size]
+            olens = feats_lengths[batch_size_origin:batch_size]
             # logging.info(f"olens: {olens}, feats_lengths: {feats_lengths}")
             # logging.info(f"after_outs: {after_outs.shape}")
             # logging.info(f"feats: {feats.shape}")
             # logging.info(f"feats[batch_size_origin : batch_size]: {feats[batch_size_origin : batch_size].shape}")
             l1_loss_mixup, l2_loss_mixup = self.criterion(
-                after_outs[batch_size_origin : batch_size, : olens.max()], 
-                before_outs[batch_size_origin : batch_size, : olens.max()], 
-                feats[batch_size_origin : batch_size, : olens.max()], 
-                feats_lengths[batch_size_origin : batch_size]
+                after_outs[batch_size_origin:batch_size, : olens.max()],
+                before_outs[batch_size_origin:batch_size, : olens.max()],
+                feats[batch_size_origin:batch_size, : olens.max()],
+                feats_lengths[batch_size_origin:batch_size],
             )
-            l1_loss = (1 - self.loss_mixup_wight) * l1_loss_origin + self.loss_mixup_wight * l1_loss_mixup
-            l2_loss = (1 - self.loss_mixup_wight) * l2_loss_origin + self.loss_mixup_wight * l2_loss_mixup
+            l1_loss = (
+                1 - self.loss_mixup_wight
+            ) * l1_loss_origin + self.loss_mixup_wight * l1_loss_mixup
+            l2_loss = (
+                1 - self.loss_mixup_wight
+            ) * l2_loss_origin + self.loss_mixup_wight * l2_loss_mixup
         else:
             l1_loss, l2_loss = self.criterion(
                 after_outs[:, : olens.max()], before_outs[:, : olens.max()], ys, olens
@@ -534,7 +584,7 @@ class NaiveRNN(AbsSVS):
             hs = hs_label + hs_midi
             hs = F.leaky_relu(self.midi_projection(hs))
         else:
-            hs = torch.cat(hs_label, hs_midi, dim=-1)
+            hs = torch.cat((hs_label, hs_midi), dim=-1)
             hs = F.leaky_relu(self.midi_projection(hs))
         # integrate spk & lang embeddings
         if self.spks is not None:
@@ -559,7 +609,7 @@ class NaiveRNN(AbsSVS):
                 before_outs.transpose(1, 2)
             ).transpose(1, 2)
 
-        return after_outs, None, None   # outs, probs, att_ws
+        return after_outs, None, None  # outs, probs, att_ws
 
     def _integrate_with_spk_embed(
         self, hs: torch.Tensor, spembs: torch.Tensor
@@ -571,6 +621,7 @@ class NaiveRNN(AbsSVS):
         Returns:
             Tensor: Batch of integrated hidden state sequences (B, Tmax, adim).
         """
+        
         if self.spk_embed_integration_type == "add":
             # apply projection and then add to hidden states
             spembs = self.projection(F.normalize(spembs))

@@ -31,12 +31,16 @@ class MIDIScpReader(collections.abc.Mapping):
         dtype=np.int16,
         loader_type: str = "representation",
         rate: np.int32 = np.int32(16000),
+        mode: str = "format",
+        time_shift: float = 0.0125,
     ):
         assert check_argument_types()
         self.fname = fname
         self.dtype = dtype
         self.rep = loader_type
         self.rate = rate
+        self.mode = mode
+        self.time_shift = time_shift
         self.data = read_2column_text(fname)  # get key-value dict
 
     def __getitem__(self, key):
@@ -45,7 +49,11 @@ class MIDIScpReader(collections.abc.Mapping):
         midi_obj = miditoolkit.midi.parser.MidiFile(self.data[key])
 
         if self.rep == "representation":
-            note_seq, tempo_seq = midi_to_seq(midi_obj, self.dtype, self.rate, pitch_aug_factor, time_aug_factor)
+            note_seq, tempo_seq = midi_to_seq(
+                midi_obj, self.dtype, self.rate, pitch_aug_factor, time_aug_factor, self.mode, self.time_shift
+            )
+        else:
+            raise TypeError("Not supported loader type {}".format(self.rep))
         return note_seq, tempo_seq
 
     def get_path(self, key):
@@ -97,7 +105,8 @@ class MIDIScpWriter:
 
         self.data = {}
 
-    def __setitem__(self, key: str, value):
+    def __setitem__(self, key: str, value: tuple):
+        assert len(value) == 2, "The midi values should include  both note and tempo"
         note_seq, tempo_seq = value
         midi_path = self.dir / f"{key}.{self.format}"
         midi_path.parent.mkdir(parents=True, exist_ok=True)

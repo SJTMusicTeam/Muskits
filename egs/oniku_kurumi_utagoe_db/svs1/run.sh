@@ -3,7 +3,10 @@
 # -e 'error', -u 'undefined variable', -o ... 'error in pipeline', -x 'print commands',
 set -e
 set -u
-# set -o pipefail
+set -o pipefail
+
+. ./path.sh || exit 1
+. ./cmd.sh || exit 1
 
 # spectrogram-related arguments
 fs=24000
@@ -14,8 +17,9 @@ n_shift=300
 win_length=1200
 
 score_feats_extract=frame_score_feats   # frame_score_feats | syllable_score_feats
-expdir=exp/1-24-RNN-MixupW03_BetaWeightAdd_batchMix2
-# inference_model=196epoch.pth
+# expdir=exp/mlp_org
+expdir=exp/mlp_scheduler_200
+# inference_model=68epoch.pth
 
 opts=
 if [ "${fs}" -eq 48000 ]; then
@@ -32,7 +36,8 @@ test_sets="dev eval"
 # training and inference configuration
 # train_config=conf/tuning/train_xiaoice.yaml
 # train_config=conf/tuning/train_xiaoice_noDP.yaml
-train_config=conf/train.yaml
+train_config=conf/tuning/train_mlp.yaml
+# train_config=conf/train.yaml
 inference_config=conf/decode.yaml
 
 # text related processing arguments
@@ -41,7 +46,7 @@ cleaner=none
 
 ./svs.sh \
     --lang jp \
-    --stage 6 \
+    --stage 0 \
     --stop_stage 6 \
     --local_data_opts "--stage 0" \
     --feats_type raw \

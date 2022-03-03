@@ -51,7 +51,7 @@ class AdapterForSoundScpReader(collections.abc.Mapping):
     def __iter__(self):
         return iter(self.loader)
 
-    def __getitem__(self, key: (str,int)) -> np.ndarray:
+    def __getitem__(self, key: (str, int)) -> np.ndarray:
         key, pitch_aug_factor, time_aug_factor = key
         retval = self.loader[(key, pitch_aug_factor, time_aug_factor)]
 
@@ -128,7 +128,7 @@ class AdapterForMIDIScpReader(collections.abc.Mapping):
     def __iter__(self):
         return iter(self.loader)
 
-    def __getitem__(self, key: (str,int)) -> np.ndarray:
+    def __getitem__(self, key: (str, int)) -> np.ndarray:
         key, pitch_aug_factor, time_aug_factor = key
         retval = self.loader[(key, pitch_aug_factor, time_aug_factor)]
 
@@ -189,12 +189,12 @@ def sound_loader(path, float_dtype=None):
     return AdapterForSoundScpReader(loader, float_dtype)
 
 
-def midi_loader(path, float_dtype=None, rate=np.int32(24000)):
+def midi_loader(path, float_dtype=None, rate=np.int32(24000), mode="format", time_shift=0.0125):
     # The file is as follows:
     #   utterance_id_A /some/where/a.mid
     #   utterance_id_B /some/where/b.midi
 
-    loader = MIDIScpReader(fname=path, rate=rate)
+    loader = MIDIScpReader(fname=path, rate=rate, mode=mode, time_shift=time_shift)
 
     # MIDIScpReader.__getitem__() returns ndarray
     return AdapterForMIDIScpReader(loader)
@@ -238,7 +238,7 @@ DATA_TYPES = {
     # TODO(TaoQian)
     "midi": dict(
         func=midi_loader,
-        kwargs=["float_dtype"],
+        kwargs=["float_dtype", "mode", "time_shift"],
         help="MIDI format types which supported by sndfile mid, midi, etc."
         "\n\n"
         "   utterance_id_a a.mid\n"
@@ -391,10 +391,13 @@ class MuskitDataset(AbsDataset):
         int_dtype: str = "long",
         max_cache_size: Union[float, int, str] = 0.0,
         max_cache_fd: int = 0,
-        not_align: list = ["text"],  # TODO(Tao): add to args
+        not_align: list = ["text", "sids", "lids"],  # TODO(Tao): add to args
         mode: str = "valid",  # train, valid, plot_att, ...
+        midi_loader_mode: str = "format",   # format, xiaoice (tempo means index_nums)
+        time_shift: float = 0.0125,
         pitch_aug_min: int = 0,
         pitch_aug_max: int = 0,
+        pitch_mean: str = "None",
         time_aug_min: float = 1.0,
         time_aug_max: float = 1.0,
         random_crop: bool = False,
@@ -412,6 +415,8 @@ class MuskitDataset(AbsDataset):
         self.float_dtype = float_dtype
         self.int_dtype = int_dtype
         self.max_cache_fd = max_cache_fd
+        self.midi_loader_mode = midi_loader_mode
+        self.time_shift = time_shift
 
         self.loader_dict = {}
         self.debug_info = {}
@@ -435,10 +440,11 @@ class MuskitDataset(AbsDataset):
         else:
             self.cache = None
         self.not_align = not_align
-        self.mode = mode
+        self.mode = mode   
 
         self.pitch_aug_min = pitch_aug_min
         self.pitch_aug_max = pitch_aug_max
+        self.pitch_mean = pitch_mean
         self.time_aug_min = time_aug_min
         self.time_aug_max = time_aug_max
         self.random_crop = random_crop
@@ -446,6 +452,9 @@ class MuskitDataset(AbsDataset):
 
         assert self.pitch_aug_min <= self.pitch_aug_max
         assert self.time_aug_min <= self.time_aug_max
+        if self.pitch_mean != "None":
+            assert self.pitch_aug_min == 0
+            assert self.pitch_aug_max == 0
 
     def _build_loader(
         self, path: str, loader_type: str
@@ -470,6 +479,10 @@ class MuskitDataset(AbsDataset):
                         kwargs["int_dtype"] = self.int_dtype
                     elif key2 == "max_cache_fd":
                         kwargs["max_cache_fd"] = self.max_cache_fd
+                    elif key2 == "mode":
+                        kwargs["mode"] = self.midi_loader_mode
+                    elif key2 == "time_shift":
+                        kwargs["time_shift"] = self.time_shift
                     else:
                         raise RuntimeError(f"Not implemented keyword argument: {key2}")
 
@@ -517,9 +530,56 @@ class MuskitDataset(AbsDataset):
             return uid, data
 
         if self.mode == "train":
-            pitch_aug_factor = random.randint(self.pitch_aug_min, self.pitch_aug_max)
+            if self.pitch_mean != "None":
+                loader = self.loader_dict["midi"]
+                note_seq, tempo_seq = loader[
+                    (uid, 0, 1)
+                ]  # pitch_aug_factor = 0, global_time_aug_factor = 1
 
-            _time_list = [i/100 for i in range(int(self.time_aug_min*100),int(self.time_aug_max*100+1),1)]
+                sample_pitch_mean = np.mean(note_seq)
+
+                if isinstance(eval(self.pitch_mean), float):
+                    # single dataset w/o spk-id
+                    global_pitch_mean = float(self.pitch_mean)
+                elif isinstance(eval(self.pitch_mean), list):
+                    # multi datasets with spk-ids
+                    speaker_lst = [
+                        "oniku",
+                        "ofuton",
+                        "kiritan",
+                        "natsume",
+                    ]  # NOTE: Fix me into args
+                    _find_num = 0
+                    _find_index = 0
+                    for index in range(len(speaker_lst)):
+                        if speaker_lst[index] in uid:
+                            _find_num += 1
+                            _find_index = index
+                    assert _find_num == 1
+                    global_pitch_mean = eval(self.pitch_mean)[_find_index]
+                else:
+                    ValueError("Not Support Type for pitch_mean: %s" % self.pitch_mean)
+
+                gap = int((global_pitch_mean - sample_pitch_mean))
+                if gap == 0:
+                    lst = [0]
+                elif gap < 0:
+                    lst = [i for i in range(gap, 1)]
+                else:
+                    lst = [i for i in range(0, gap + 1)]
+                # logging.info(f"type: {type(note_seq)}, mean: {np.mean(note_seq)}, lst: {lst}, gap: {gap}")
+                pitch_aug_factor = random.sample(lst, 1)[0]
+            else:
+                pitch_aug_factor = random.randint(
+                    self.pitch_aug_min, self.pitch_aug_max
+                )
+
+            _time_list = [
+                i / 100
+                for i in range(
+                    int(self.time_aug_min * 100), int(self.time_aug_max * 100 + 1), 1
+                )
+            ]
             # _time_list = [1, 1.06, 1.12, 1.18, 1.24]
             # for _ in range(8):
             #     _time_list.append(1.0)
@@ -538,10 +598,6 @@ class MuskitDataset(AbsDataset):
                     value = loader[(uid, pitch_aug_factor, global_time_aug_factor)]
                 else:
                     value = loader[uid]
-                # if name == "text" or name == "label":
-                #     logging.info(f"name: {name}, loader: {loader}")
-                #     logging.info(f"uid: {uid}, value: {value}")
-                #     quit()
                 if isinstance(value, list):
                     value = np.array(value)
                 if not isinstance(
@@ -595,15 +651,15 @@ class MuskitDataset(AbsDataset):
             # logging.info(f"key: {key}, data[key].shape: {data[key].shape}")
             data[key] = data[key][:length]
             if self.mode == "train" and self.mask_aug:
-                data[key][mask_index_begin : mask_index_end] = 0
+                data[key][mask_index_begin:mask_index_end] = 0
             if self.mode == "train" and self.random_crop:
-                data[key] = data[key][crop_index_begin : crop_index_end]
-        
+                data[key] = data[key][crop_index_begin:crop_index_end]
+
         # phone-level time augmentation
 
         # quit()
-        data['pitch_aug'] = np.array([pitch_aug_factor])
-        data['time_aug'] = np.array([time_aug_factor])
+        data["pitch_aug"] = np.array([pitch_aug_factor])
+        data["time_aug"] = np.array([time_aug_factor])
 
         # 3. Force data-precision
         for name in data:

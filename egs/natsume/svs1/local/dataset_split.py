@@ -6,6 +6,21 @@ import random
 import shutil
 from shutil import copyfile
 
+UTT_PREFIX = "natsume"
+DEV_LIST = ["9", "22", "38", "43", "44"]
+TEST_LIST = ["2", "13", "24", "25", "27"]
+
+
+def train_check(song):
+    return (song not in DEV_LIST) and (song not in TEST_LIST)
+
+
+def dev_check(song):
+    return song in DEV_LIST
+
+
+def test_check(song):
+    return song in TEST_LIST
 
 def get_parser():
     parser = argparse.ArgumentParser(
@@ -71,9 +86,9 @@ if __name__ == "__main__":
         exit()
     random.shuffle(dataset)
     # copyfile(source_file, destination_file)
-    train_set = dataset[:train]
-    validation_set = dataset[train : train + dev]
-    test_set = dataset[train + dev :]
+    train_set = [data for data in dataset if train_check(data[:-4])]
+    validation_set = [data for data in dataset if dev_check(data[:-4])]
+    test_set = [data for data in dataset if test_check(data[:-4])]
 
 
 def transition(dataset, des_url):
