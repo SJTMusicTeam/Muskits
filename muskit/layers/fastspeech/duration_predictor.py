@@ -64,7 +64,7 @@ class DurationPredictor(torch.nn.Module):
         xs = xs.transpose(1, -1)  # (B, idim, Tmax)
         for f in self.conv:
             xs = f(xs)  # (B, C, Tmax)
-        
+
         # NOTE: calculate in log domain
         xs = self.linear(xs.transpose(1, -1)).squeeze(-1)  # (B, Tmax)
 

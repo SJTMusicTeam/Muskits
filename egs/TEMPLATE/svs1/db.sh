@@ -2,9 +2,13 @@
 # "downloads" means the corpus can be downloaded by the recipe automatically
 
 KIRITAN=/root/data/hku_kg_cuda/NanHUO_HKU/Muskits_3/Muskits/egs/kiritan/download/
-ONIKU=
 OFUTON=/root/data/hku_kg_cuda/NanHUO_HKU/Muskits_3/Muskits/egs/ofuton_p_utagoe_db/download/OFUTON_P_UTAGOE_DB
 Natsume=/root/data/hku_kg_cuda/NanHUO_HKU/Muskits_3/Muskits/egs/natsume/download/
+ONIKU=/home/exx/jiatong/projects/svs/data/ONIKU_KURUMI_UTAGOE_DB
+OFUTON=/home/exx/jiatong/projects/svs/data/OFUTON_P_UTAGOE_DB
+OPENCPOP=/home/exx/jiatong/projects/svs/data/Opencpop
+COMBINE=
+CSD=downloads
 
 # For only JHU environment
 if [[ "$(hostname -d)" == clsp.jhu.edu ]]; then
@@ -19,7 +23,8 @@ if [[ `hostname` == venus_qt_2241 ]]; then
     KIRITAN=/data3/qt/
     ONIKU=/data3/qt/OFUTON_P_UTAGOE_DB/
     OFUTON=/data3/qt/ONIKU_KURUMI_UTAGOE_DB/
-    NATSUME=/data3/qt/
+    NATSUME=/data3/qt
+    COMBINE=/data3/qt/Muskits/egs/combine_data/svs1/
 fi
 
 # For only uranus environment
@@ -36,4 +41,5 @@ if [[ `hostname` == capri_gs_2345 ]]; then
     ONIKU=/data5/gs/dataset/ONIKU_KURUMI_UTAGOE_DB
     OFUTON=/data5/gs/dataset/OFUTON_P_UTAGOE_DB
     NATSUME=/data5/gs/dataset/
+    COMBINE=/data5/gs/Muskits/egs/combine_data/svs1/
 fi

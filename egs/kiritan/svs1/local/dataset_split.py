@@ -32,7 +32,7 @@ def get_parser():
     parser.add_argument("db_root", type=str, help="source dataset midi folder path")
     parser.add_argument("save_dir", type=str, help="path of dataset split for save")
     parser.add_argument("dev", type=float, help="absolute size of dev dataset")
-    parser.add_argument("eval1", type=float, help="absolute size of dev dataset")
+    parser.add_argument("eval1", type=float, help="absolute size of test dataset")
     return parser
 
 
@@ -70,9 +70,9 @@ if __name__ == "__main__":
     source_root_url = args.db_root
 
     data_root_url = args.save_dir
-    data_train_url = data_root_url + "train_raw"
+    data_train_url = data_root_url + "tr_no_dev_raw"
     data_vaild_url = data_root_url + "dev_raw"
-    data_test_url = data_root_url + "eval1_raw"
+    data_test_url = data_root_url + "eval_raw"
     makedir(data_root_url)
     makedir(data_train_url)
     makedir(data_vaild_url)
@@ -86,15 +86,11 @@ if __name__ == "__main__":
     if train <= 0:
         print("Error, train set is empty.")
         exit()
-    # print(dataset)
+        
     random.shuffle(dataset)
-    # copyfile(source_file, destination_file)
     train_set = [data for data in dataset if train_check(data[:-4])]
     validation_set = [data for data in dataset if dev_check(data[:-4])]
     test_set = [data for data in dataset if test_check(data[:-4])]
-    # train_set = dataset[:train]
-    # validation_set = dataset[train : train + dev]
-    # test_set = dataset[train + dev :]
 
 
 def transition(dataset, des_url):

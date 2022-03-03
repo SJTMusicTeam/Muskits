@@ -26,10 +26,10 @@ class AbsPreprocessor(ABC):
 
     @abstractmethod
     def __call__(
-        self, 
-        uid: str, 
+        self,
+        uid: str,
         data: Dict[str, Union[str, np.ndarray]],
-        phone_time_aug_factor: float
+        phone_time_aug_factor: float,
     ) -> Dict[str, np.ndarray]:
         raise NotImplementedError
 
@@ -110,7 +110,7 @@ def detect_non_silence(
     )
     framed_w *= scipy.signal.get_window(window, frame_length).astype(framed_w.dtype)
     # power: (C, T)
-    power = (framed_w ** 2).mean(axis=-1)
+    power = (framed_w**2).mean(axis=-1)
     # mean_power: (C,)
     mean_power = power.mean(axis=-1)
     if np.all(mean_power == 0):
@@ -181,7 +181,8 @@ class CommonPreprocessor(AbsPreprocessor):
                 g2p_type=g2p_type,
             )
             self.token_id_converter = TokenIDConverter(
-                token_list=token_list, unk_symbol=unk_symbol,
+                token_list=token_list,
+                unk_symbol=unk_symbol,
             )
         else:
             self.text_cleaner = None
@@ -222,10 +223,13 @@ class CommonPreprocessor(AbsPreprocessor):
             self.noises = None
 
     def __call__(
-        self, uid: str, data: Dict[str, Union[str, np.ndarray, tuple]], phone_time_aug_factor: float
+        self,
+        uid: str,
+        data: Dict[str, Union[str, np.ndarray, tuple]],
+        phone_time_aug_factor: float = 1.0,
     ) -> Dict[str, np.ndarray]:
         assert check_argument_types()
-        assert phone_time_aug_factor >= 1   # support longer only
+        assert phone_time_aug_factor >= 1  # support longer only
 
         if self.midi_name in data and self.tokenizer is not None:
             pitchseq, temposeq = data[self.midi_name]
@@ -249,7 +253,7 @@ class CommonPreprocessor(AbsPreprocessor):
             vowel_ints = self.token_id_converter.tokens2ids(vowel_tokens)
 
             data.pop(self.label_name)
-            # [Shuai]: length of label - phone_id seq is the same of midi, 
+            # [Shuai]: length of label - phone_id seq is the same of midi,
             # global_time_aug_factor has already been applied on midi length in dataset.py, step1. Load data from each loaders
             # so the global_time_aug_factor won`t be applied here when init.
             labelseq = np.zeros((nsamples))
@@ -261,11 +265,11 @@ class CommonPreprocessor(AbsPreprocessor):
                 if end > nsamples:
                     end = nsamples - 1
                 labelseq[start:end] = text_ints[i]
-                
+
                 # phone-level augmentation for vowels
                 if text_ints[i] in vowel_ints and phone_time_aug_factor != 1.0:
                     if random.random() < 0.5:
-                        anchor_pairs.append( (start, end, text_ints[i]) )
+                        anchor_pairs.append((start, end, text_ints[i]))
             # logging.info(f"anchor_pairs: {anchor_pairs}， uid: {uid}, phone_time_aug_factor: {phone_time_aug_factor}")
 
             # phone-level augmentation
@@ -286,13 +290,23 @@ class CommonPreprocessor(AbsPreprocessor):
                     insert_values_label += [_label for _ in range(insert_num)]
 
                     # logging.info(f"end: {end}, nsamples: {nsamples}")
-                    insert_values_score += [data['score'][end] for _ in range(insert_num)]
-                    insert_values_tempo += [data['tempo'][end] for _ in range(insert_num)]
+                    insert_values_score += [
+                        data["score"][end] for _ in range(insert_num)
+                    ]
+                    insert_values_tempo += [
+                        data["tempo"][end] for _ in range(insert_num)
+                    ]
 
-                labelseq = np.insert(labelseq, insert_indexes_label, insert_values_label)
+                labelseq = np.insert(
+                    labelseq, insert_indexes_label, insert_values_label
+                )
 
-                data["score"] = np.insert(data["score"], insert_indexes_label, insert_values_score)
-                data["tempo"] = np.insert(data["tempo"], insert_indexes_label, insert_values_tempo)
+                data["score"] = np.insert(
+                    data["score"], insert_indexes_label, insert_values_score
+                )
+                data["tempo"] = np.insert(
+                    data["tempo"], insert_indexes_label, insert_values_tempo
+                )
             labelseq.astype(np.int64)
             data["durations"] = labelseq
 
@@ -305,7 +319,7 @@ class CommonPreprocessor(AbsPreprocessor):
                 if len(anchor_pairs) != 0:
                     singing = data[self.singing_name]
                     nsamples = len(singing)
-                    s_ap = [[0],[0]]
+                    s_ap = [[0], [0]]
                     for i in range(len(anchor_pairs)):
                         start, end, _ = anchor_pairs[i]
                         if start != 0:
@@ -396,7 +410,7 @@ class CommonPreprocessor(AbsPreprocessor):
                         # noise: (Nmic, Time)
                         noise = noise.T
 
-                        noise_power = (noise ** 2).mean()
+                        noise_power = (noise**2).mean()
                         scale = (
                             10 ** (-noise_db / 20)
                             * np.sqrt(power)
@@ -414,7 +428,7 @@ class CommonPreprocessor(AbsPreprocessor):
                 singing = data[self.singing_name]
                 ma = np.max(np.abs(singing))
                 data[self.singing_name] = singing * self.singing_volume_normalize / ma
-        
+
         if self.text_name in data and self.tokenizer is not None:
             text = data[self.text_name]
             # logging.info(f"uid: {uid}, text: {text}")
@@ -467,7 +481,8 @@ class CommonPreprocessor_multi(AbsPreprocessor):
                 g2p_type=g2p_type,
             )
             self.token_id_converter = TokenIDConverter(
-                token_list=token_list, unk_symbol=unk_symbol,
+                token_list=token_list,
+                unk_symbol=unk_symbol,
             )
         else:
             self.text_cleaner = None

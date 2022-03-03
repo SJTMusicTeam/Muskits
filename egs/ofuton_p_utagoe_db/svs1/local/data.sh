@@ -16,6 +16,7 @@ log() {
 SECONDS=0
 stage=1
 stop_stage=100
+fs=None
 
 log "$0 $*"
 
@@ -43,7 +44,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     log "stage 1: Dataset split "
     # We use a pre-defined split (see details in local/dataset_split.py)"
     python local/dataset_split.py ${OFUTON} \
-        data/${train_set} data/${train_dev} data/${recog_set}
+        data/${train_set} data/${train_dev} data/${recog_set} --fs ${fs}
 fi
 
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
@@ -54,7 +55,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
         mv ${src_data}/segments.tmp ${src_data}/segments
         mv ${src_data}/label.tmp ${src_data}/label
         mv ${src_data}/text.tmp ${src_data}/text
-        cat ${src_data}/segments | awk '{printf("%s oniku\n", $1);}' > ${src_data}/utt2spk
+        cat ${src_data}/segments | awk '{printf("%s ofuton\n", $1);}' > ${src_data}/utt2spk
         utils/utt2spk_to_spk2utt.pl < ${src_data}/utt2spk > ${src_data}/spk2utt
         utils/fix_data_dir.sh --utt_extra_files label ${src_data}
     done

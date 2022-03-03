@@ -104,7 +104,7 @@ class FrameScoreFeats(AbsFeatsExtract):
         # Step3: aggregate label
         # (bs, nframe, self.win_length, label_dim) => (bs, nframe)
         _tmp = output.sum(dim=-1, keepdim=False).float()
-        output = _tmp[:,:,self.win_length // 2]
+        output = _tmp[:, :, self.win_length // 2]
 
         # Step4: process lengths
         if input_lengths is not None:
@@ -233,7 +233,7 @@ class SyllableScoreFeats(AbsFeatsExtract):
         seg_tempo = []  # torch.zeros(lengths, dtype=torch.long)
         for i in range(lengths):
             l, r = seq[i], seq[i + 1]
-            
+
             # tmp_duartion, _ = durations[l:r].mode(dim=0)
             # tmp_score, _ = score[l:r].mode(dim=0)
             # tmp_tempo, _ = tempo[l:r].mode(dim=0)
@@ -305,8 +305,12 @@ class SyllableScoreFeats(AbsFeatsExtract):
             seg_tempo.append(seg[4])
             seg_tempo_lengths.append(seg[5])
 
-        seg_durations = torch.LongTensor(ListsToTensor(seg_durations)).to(durations.device)
-        seg_durations_lengths = torch.LongTensor(seg_durations_lengths).to(durations.device)
+        seg_durations = torch.LongTensor(ListsToTensor(seg_durations)).to(
+            durations.device
+        )
+        seg_durations_lengths = torch.LongTensor(seg_durations_lengths).to(
+            durations.device
+        )
         seg_score = torch.LongTensor(ListsToTensor(seg_score)).to(durations.device)
         seg_score_lengths = torch.LongTensor(seg_score_lengths).to(durations.device)
         seg_tempo = torch.LongTensor(ListsToTensor(seg_tempo)).to(durations.device)

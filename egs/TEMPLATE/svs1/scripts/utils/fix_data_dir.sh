@@ -53,7 +53,7 @@ function check_sorted {
   fi
 }
 
-for x in utt2spk spk2utt feats.scp text segments wav.scp cmvn.scp vad.scp \
+for x in utt2spk spk2utt utt2sid spk2sid feats.scp text segments wav.scp cmvn.scp vad.scp \
     reco2file_and_channel spk2gender utt2lang utt2uniq utt2dur reco2dur \
     utt2num_frames label midi.scp; do
   if [ -f $data/$x ]; then
@@ -126,7 +126,7 @@ function filter_speakers {
   filter_file $tmpdir/speakers $data/spk2utt
   utils/spk2utt_to_utt2spk.pl $data/spk2utt > $data/utt2spk
 
-  for s in cmvn.scp spk2gender $spk_extra_files; do
+  for s in cmvn.scp spk2gender spk2sid $spk_extra_files; do
     f=$data/$s
     if [ -f $f ]; then
       filter_file $tmpdir/speakers $f

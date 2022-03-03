@@ -36,7 +36,7 @@ from muskit.torch_utils.device_funcs import force_gatherable
 from muskit.svs.abs_svs import AbsSVS
 from muskit.svs.gst.style_encoder import StyleEncoder
 
-SCALE_WEIGHT = 0.5 ** 0.5
+SCALE_WEIGHT = 0.5**0.5
 
 
 def _get_activation_fn(activation):
@@ -89,10 +89,11 @@ class PostNet(torch.nn.Module):
 
         return output
 
+
 class Encoder_Postnet(torch.nn.Module):
     """Encoder Postnet."""
 
-    def __init__(self):  
+    def __init__(self):
         """init."""
         super(Encoder_Postnet, self).__init__()
 
@@ -130,8 +131,9 @@ class Encoder_Postnet(torch.nn.Module):
     def forward(self, encoder_out, align_phone, text_phone):
         """pitch/beats:[batch_size, frame_num]->[batch_size, frame_num, 1]."""
         aligner_out = self.aligner(encoder_out, align_phone, text_phone)
-        
+
         return aligner_out
+
 
 class Attention(torch.nn.Module):
     """Attention Network."""
@@ -151,7 +153,9 @@ class Attention(torch.nn.Module):
         self.value = torch.nn.Linear(num_hidden, num_hidden, bias=False)
         self.query = torch.nn.Linear(num_hidden, num_hidden, bias=False)
 
-        self.multihead = MultiHeadedAttention(self.h, self.num_hidden_per_attn, dropout_rate)
+        self.multihead = MultiHeadedAttention(
+            self.h, self.num_hidden_per_attn, dropout_rate
+        )
 
         self.local_gaussian = local_gaussian
         if local_gaussian:
@@ -256,7 +260,7 @@ class Attention(torch.nn.Module):
         # Layer normalization
         result = self.layer_norm_1(result)
 
-        return result#, attns
+        return result  # , attns
 
 
 class TransformerGLULayer(torch.nn.Module):
@@ -406,7 +410,7 @@ class TransformerEncoder(torch.nn.Module):
         if self.norm is not None:
             output = self.norm(output)
 
-        return output#, att_weight
+        return output  # , att_weight
 
 
 class GLUDecoder(torch.nn.Module):
@@ -439,19 +443,19 @@ class GLUDecoder(torch.nn.Module):
 
         self.hidden_size = hidden_size
 
-    def forward(self, src, pos):# pos: pad = False mask
+    def forward(self, src, pos):  # pos: pad = False mask
         """forward."""
         if self.training:
             query_mask = pos.ne(0).type(torch.float)
         else:
             query_mask = None
-        mask = pos.unsqueeze(1).repeat(1, src.size(1), 1)# pad=Fasle mask
+        mask = pos.unsqueeze(1).repeat(1, src.size(1), 1)  # pad=Fasle mask
 
         src = self.input_norm(src)
         # memory, att_weight = self.decoder(src, mask=mask, query_mask=query_mask)
         memory = self.decoder(src, mask=mask, query_mask=query_mask)
         output = self.output_fc(memory)
-        return output#, att_weight
+        return output  # , att_weight
 
 
 # /muskit/layers/transformer
@@ -545,7 +549,7 @@ class GLU_Transformer(AbsSVS):
         self.enc_postnet = Encoder_Postnet()  # , semitone_size, Hz2semitone)
         # define length regulator
         self.length_regulator = LengthRegulator()
-        
+
         self.fc_midi = torch.nn.Linear(embed_dim, embed_dim)
         self.fc_pos = torch.nn.Linear(embed_dim, embed_dim)
 
@@ -578,14 +582,17 @@ class GLU_Transformer(AbsSVS):
                 dropout_rate=postnet_dropout_rate,
             )
         )
-        
+
         # define loss function
         self.criterion = NaiveRNNLoss(
-            use_masking=use_masking, use_weighted_masking=use_weighted_masking,
+            use_masking=use_masking,
+            use_weighted_masking=use_weighted_masking,
         )
 
         # initialize parameters
-        self._reset_parameters(init_type=init_type,)
+        self._reset_parameters(
+            init_type=init_type,
+        )
 
         # define spk and lang embedding
         self.spks = None
@@ -663,7 +670,6 @@ class GLU_Transformer(AbsSVS):
 
         phone_emb, _ = self.phone_encoder(text)
         midi_emb = self.midi_encoder_input_layer(midi)
-        
 
         label_emb = self.length_regulator(phone_emb, ds)
         # label_emb = self.enc_postnet(
@@ -675,8 +681,8 @@ class GLU_Transformer(AbsSVS):
         if self.embed_integration_type == "add":
             hs = label_emb + midi_emb
         else:
-            hs = torch.cat(label_emb, midi_emb, dim=-1)
-        
+            hs = torch.cat((label_emb, midi_emb), dim=-1)
+
         # hs = F.leaky_relu(self.projection(hs))
 
         # integrate spk & lang embeddings
@@ -701,9 +707,9 @@ class GLU_Transformer(AbsSVS):
         # mel_output, att_weight = self.decoder(
         zs = self.decoder(
             hs, pos=(~make_pad_mask(midi_lengths)).to(device=hs.device)
-        )# True mask
+        )  # True mask
         # mel_output2 = self.double_mel(mel_output)
-        
+
         zs = zs[:, self.reduction_factor - 1 :: self.reduction_factor]
 
         before_outs = F.leaky_relu(self.feat_out(zs).view(zs.size(0), -1, self.odim))
@@ -713,7 +719,6 @@ class GLU_Transformer(AbsSVS):
         # zs = zs.transpose(1, 2)
 
         # (B, T_feats//r, odim * r) -> (B, T_feats//r * r, odim)
-        
 
         # postnet -> (B, T_feats//r * r, odim)
         if self.postnet is None:
@@ -751,7 +756,11 @@ class GLU_Transformer(AbsSVS):
         else:
             raise ValueError("unknown --loss-type " + self.loss_type)
 
-        stats = dict(loss=loss.item(), l1_loss=l1_loss.item(), l2_loss=l2_loss.item(),)
+        stats = dict(
+            loss=loss.item(),
+            l1_loss=l1_loss.item(),
+            l2_loss=l2_loss.item(),
+        )
 
         loss, stats, weight = force_gatherable((loss, stats, batch_size), loss.device)
 
@@ -822,7 +831,7 @@ class GLU_Transformer(AbsSVS):
             hs = hs_label + hs_midi
             hs = self.projection(hs)
         else:
-            hs = torch.cat(hs_label, hs_midi, dim=-1)
+            hs = torch.cat((hs_label, hs_midi), dim=-1)
             hs = self.projection(hs)
 
         # integrate spk & lang embeddings

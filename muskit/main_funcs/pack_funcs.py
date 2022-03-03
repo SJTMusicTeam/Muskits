@@ -183,7 +183,9 @@ def get_dict_from_cache(meta: Union[Path, str]) -> Optional[Dict[str, str]]:
 
 
 def unpack(
-    input_archive: Union[Path, str], outpath: Union[Path, str], use_cache: bool = True,
+    input_archive: Union[Path, str],
+    outpath: Union[Path, str],
+    use_cache: bool = True,
 ) -> Dict[str, str]:
     """Scan all files in the archive file and return as a dict of files.
 
@@ -277,7 +279,7 @@ def pack(
     try:
         import torch
 
-        meta_objs.update(torch=torch.__version__)
+        meta_objs.update(torch=str(torch.__version__))
     except ImportError:
         pass
     try:
@@ -286,6 +288,7 @@ def pack(
         meta_objs.update(muskit=muskit.__version__)
     except ImportError:
         pass
+    print(meta_objs)
 
     Path(outpath).parent.mkdir(parents=True, exist_ok=True)
     with Archiver(outpath, mode="w") as archive:

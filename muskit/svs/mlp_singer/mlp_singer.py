@@ -14,12 +14,14 @@ import torch.nn.functional as F
 import logging
 from typeguard import check_argument_types
 
+from math import ceil
 from muskit.torch_utils.nets_utils import make_non_pad_mask
 from muskit.layers.mlp.mlp import MLPMixer
 from muskit.layers.transformer.mask import subsequent_mask
 from muskit.torch_utils.device_funcs import force_gatherable
 from muskit.torch_utils.initialize import initialize
 from muskit.svs.abs_svs import AbsSVS
+from muskit.svs.bytesing.decoder import Postnet
 
 
 class NaiveRNNLoss(torch.nn.Module):
@@ -98,6 +100,7 @@ class MLPSinger(AbsSVS):
         odim: int,
         embed_dim: int = 256,
         eunits: int = 1024,
+        midi_embed_integration_type: str = "add",
         dlayers: int = 16,
         dunits: int = 256,
         chunk_size: int = 200,
@@ -105,6 +108,7 @@ class MLPSinger(AbsSVS):
         postnet_layers: int = 5,
         postnet_chans: int = 256,
         postnet_filts: int = 5,
+        postnet_dropout_rate: float = 0.1,
         use_batch_norm: bool = True,
         reduction_factor: int = 1,
         use_masking=True,
@@ -148,7 +152,9 @@ class MLPSinger(AbsSVS):
             num_embeddings=idim, embedding_dim=eunits, padding_idx=self.padding_idx
         )
         self.midi_encoder_input_layer = torch.nn.Embedding(
-            num_embeddings=midi_dim, embedding_dim=eunits, padding_idx=self.padding_idx,
+            num_embeddings=midi_dim,
+            embedding_dim=eunits,
+            padding_idx=self.padding_idx,
         )
 
         if self.midi_embed_integration_type == "add":
@@ -159,7 +165,7 @@ class MLPSinger(AbsSVS):
         self.decoder = MLPMixer(
             d_model=dunits,
             seq_len=chunk_size,
-            expansion_facotr=2,
+            expansion_factor=2,
             dropout=ddropout_rate,
             num_layers=dlayers,
         )
@@ -206,11 +212,14 @@ class MLPSinger(AbsSVS):
 
         # define loss function
         self.criterion = NaiveRNNLoss(
-            use_masking=use_masking, use_weighted_masking=use_weighted_masking,
+            use_masking=use_masking,
+            use_weighted_masking=use_weighted_masking,
         )
 
         # initialize parameters
-        self._reset_parameters(init_type=init_type,)
+        self._reset_parameters(
+            init_type=init_type,
+        )
 
     def _reset_parameters(self, init_type):
         # initialize parameters
@@ -227,6 +236,7 @@ class MLPSinger(AbsSVS):
         label_lengths: torch.Tensor,
         midi: torch.Tensor,
         midi_lengths: torch.Tensor,
+        ds: torch.Tensor,
         tempo: Optional[torch.Tensor] = None,
         tempo_lengths: Optional[torch.Tensor] = None,
         spembs: Optional[torch.Tensor] = None,
@@ -266,11 +276,9 @@ class MLPSinger(AbsSVS):
         midi_emb = self.midi_encoder_input_layer(midi)
 
         if self.midi_embed_integration_type == "add":
-            hs = hs_label + hs_midi
-            hs = F.leaky_relu(self.midi_projection(hs))
+            hs = label_emb + midi_emb
         else:
-            hs = torch.cat(hs_label, hs_midi, dim=-1)
-            hs = F.leaky_relu(self.midi_projection(hs))
+            hs = torch.cat((label_emb, midi_emb), dim=-1)
 
         hs = self.encoder(hs)
 
@@ -318,6 +326,7 @@ class MLPSinger(AbsSVS):
             ys = feats
             olens = feats_lengths
 
+        # logging.info("{} {} {}".format(after_outs.size(), before_outs.size(), ys.size()))
         # calculate loss values
         l1_loss, l2_loss = self.criterion(
             after_outs[:, : olens.max()], before_outs[:, : olens.max()], ys, olens
@@ -332,7 +341,11 @@ class MLPSinger(AbsSVS):
         else:
             raise ValueError("unknown --loss-type " + self.loss_type)
 
-        stats = dict(loss=loss.item(), l1_loss=l1_loss.item(), l2_loss=l2_loss.item(),)
+        stats = dict(
+            loss=loss.item(),
+            l1_loss=l1_loss.item(),
+            l2_loss=l2_loss.item(),
+        )
 
         loss, stats, weight = force_gatherable((loss, stats, batch_size), loss.device)
 
@@ -374,11 +387,9 @@ class MLPSinger(AbsSVS):
         midi_emb = self.midi_encoder_input_layer(midi)
 
         if self.midi_embed_integration_type == "add":
-            hs = hs_label + hs_midi
-            hs = self.midi_projection(hs)
+            hs = label_emb + midi_emb
         else:
-            hs = torch.cat(hs_label, hs_midi, dim=-1)
-            hs = self.midi_projection(hs)
+            hs = torch.cat((label_emb, midi_emb), dim=-1)
 
         hs = self.encoder(hs)
 
@@ -444,7 +455,7 @@ class MLPSinger(AbsSVS):
             Tuple[Int]: Pad infomration (0, 0, pad_left, pad_right)
             Tuple[Int]: Segmentd shape information (B, segment_len, Chunk_size, adim)
         """
-        batch_size, max_length, feature_dim = hs.size()
+        batch_size, max_length, feat_dim = hs.size()
 
         # padding interpretation
         # [overlap_size] valid_value [overlap_size]
@@ -453,22 +464,22 @@ class MLPSinger(AbsSVS):
         if max_length % valid_value == 0:
             pad_right = self.overlap_size
         else:
-            pad_right = max_length - max_length % valid_value + self.overlap_size
+            pad_right = valid_value - max_length % valid_value + self.overlap_size
         pad = (0, 0, self.overlap_size, pad_right)
-        segment_len = torch.ceil(fram_length / valid_value)
+        segment_len = ceil(max_length / valid_value)
         hs = torch.nn.functional.pad(hs, pad, "constant", 0)
 
-        segmentd_hs = hs.as_strided(
+        segmented_hs = hs.as_strided(
             (batch_size, segment_len, self.chunk_size, feat_dim),
-            (max_length * feature_dim, valid_value * feature_dim, feature_dim, 1),
+            (max_length * feat_dim, valid_value * feat_dim, feat_dim, 1),
         )
-        segmented_hs = segmentd_hs.view(
-            batch_size * segmnet_len, self.chunk_size, feat_dim
+        segmented_hs = segmented_hs.reshape(
+            batch_size * segment_len, self.chunk_size, feat_dim
         )
-        return segmentd_hs, pad, (batch_size, segment_len, self.chunk_size, feat_dim)
+        return segmented_hs, pad, (batch_size, segment_len, self.chunk_size, feat_dim)
 
     def _cat_chunks(
-        self, segmentd_hs: torch.Tensor, pad: Tuple[int], shape: Tuple[int]
+        self, segmented_hs: torch.Tensor, pad: Tuple[int], shape: Tuple[int]
     ) -> torch.Tensor:
         """Concatenate the segments into sequences
         Args:
@@ -484,8 +495,9 @@ class MLPSinger(AbsSVS):
         valid_dim = chunk_size - 2 * self.overlap_size
 
         # remove overlap size
-        segmented_hs = segmented_hs[:, :, overlap_size:-overlap_size]
+        segmented_hs = segmented_hs[:, :, self.overlap_size : -self.overlap_size]
 
         hs = segmented_hs.reshape(batch_size, segment_len * valid_dim, feature_dim)
-        hs = hs[:, pad_left:-pad_right, :]
+        if pad_right != self.overlap_size:
+            hs = hs[:, : -(pad_right - self.overlap_size), :]
         return hs

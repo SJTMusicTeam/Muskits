@@ -23,7 +23,11 @@ class SoundScpReader(collections.abc.Mapping):
     """
 
     def __init__(
-        self, fname, dtype=np.int16, always_2d: bool = False, normalize: bool = False,
+        self,
+        fname,
+        dtype=np.int16,
+        always_2d: bool = False,
+        normalize: bool = False,
     ):
         assert check_argument_types()
         self.fname = fname
@@ -42,13 +46,20 @@ class SoundScpReader(collections.abc.Mapping):
             array, rate = soundfile.read(
                 wav, dtype=self.dtype, always_2d=self.always_2d
             )
-        
+
         if pitch_aug_factor != 0:
             # Pitch augmentation
-            ratio = pow(2,1/12)
+            ratio = pow(2, 1 / 12)
             import pyworld as pw
-            f0_pw, sp, ap = pw.wav2world(array, rate)    # use default options
-            array = pw.synthesize(f0_pw * (ratio ** pitch_aug_factor), sp, ap, rate, pw.default_frame_period)
+
+            f0_pw, sp, ap = pw.wav2world(array, rate)  # use default options
+            array = pw.synthesize(
+                f0_pw * (ratio**pitch_aug_factor),
+                sp,
+                ap,
+                rate,
+                pw.default_frame_period,
+            )
 
         if time_aug_factor != 1:
             # Time augmentation

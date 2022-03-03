@@ -1,11 +1,15 @@
 import argparse
 import logging
+import yaml
+
+from pathlib import Path
 from typing import Callable
 from typing import Collection
 from typing import Dict
 from typing import List
 from typing import Optional
 from typing import Tuple
+from typing import Union
 
 import numpy as np
 import torch
@@ -35,6 +39,7 @@ from muskit.svs.mlp_singer.mlp_singer import MLPSinger
 from muskit.svs.glu_transformer.glu_transformer import GLU_Transformer
 from muskit.svs.xiaoice.XiaoiceSing import XiaoiceSing
 from muskit.svs.xiaoice.XiaoiceSing import XiaoiceSing_noDP
+from muskit.svs.utils import ParallelWaveGANPretrainedVocoder
 from muskit.utils.get_default_kwargs import get_default_kwargs
 from muskit.utils.nested_dict_action import NestedDictAction
 from muskit.utils.types import int_or_none
@@ -236,7 +241,7 @@ class SVSTask(AbsTask):
     ]:
         assert check_argument_types()
         return CommonCollateFn(
-            float_pad_value=0.0, int_pad_value=0, not_sequence=["spembs"]
+            float_pad_value=0.0, int_pad_value=0, not_sequence=["spembs", "sids", "lids"]
         )
 
     @classmethod
@@ -257,7 +262,8 @@ class SVSTask(AbsTask):
             )
         else:
             retval = None
-        assert check_return_type(retval)
+        # FIXME (jiatong): sometimes checking is not working here
+        # assert check_return_type(retval)
         return retval
 
     @classmethod
@@ -276,10 +282,10 @@ class SVSTask(AbsTask):
         cls, train: bool = True, inference: bool = False
     ) -> Tuple[str, ...]:
         if not inference:
-            retval = ("spembs", "durations", "pitch", "energy")
+            retval = ("spembs", "durations", "pitch", "energy", "sids")
         else:
             # Inference mode
-            retval = ("spembs", "singing", "durations")
+            retval = ("spembs", "singing", "durations", "sids")
         return retval
 
     @classmethod
@@ -392,4 +398,40 @@ class SVSTask(AbsTask):
         assert check_return_type(model)
         return model
 
-    # @classmethod
+    @classmethod
+    def build_vocoder_from_file(
+        cls,
+        vocoder_config_file: Union[Path, str] = None,
+        vocoder_file: Union[Path, str] = None,
+        model: Optional[MuskitSVSModel] = None,
+        device: str = "cpu",
+    ):
+        # Build vocoder
+        if vocoder_file is None:
+            # If vocoder file is not provided, use griffin-lim as a vocoder
+            vocoder_conf = {}
+            if vocoder_config_file is not None:
+                vocoder_config_file = Path(vocoder_config_file)
+                with vocoder_config_file.open("r", encoding="utf-8") as f:
+                    vocoder_conf = yaml.safe_load(f)
+            if model.feats_extract is not None:
+                vocoder_conf.update(model.feats_extract.get_parameters())
+            if (
+                "n_fft" in vocoder_conf
+                and "n_shift" in vocoder_conf
+                and "fs" in vocoder_conf
+            ):
+                return Spectrogram2Waveform(**vocoder_conf)
+            else:
+                logging.warning("Vocoder is not available. Skipped its building.")
+                return None
+
+        elif str(vocoder_file).endswith(".pkl"):
+            # If the extension is ".pkl", the model is trained with parallel_wavegan
+            vocoder = ParallelWaveGANPretrainedVocoder(
+                vocoder_file, vocoder_config_file
+            )
+            return vocoder.to(device)
+
+        else:
+            raise ValueError(f"{vocoder_file} is not supported format.")
