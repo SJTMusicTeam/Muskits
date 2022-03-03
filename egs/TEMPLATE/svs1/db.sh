@@ -20,8 +20,8 @@ fi
 # For only venus environment
 if [[ `hostname` == venus_qt_2241 ]]; then
     KIRITAN=/data3/qt/
-    ONIKU=/data3/qt/OFUTON_P_UTAGOE_DB/
-    OFUTON=/data3/qt/ONIKU_KURUMI_UTAGOE_DB/
+    ONIKU=/data3/qt/ONIKU_KURUMI_UTAGOE_DB/
+    OFUTON=/data3/qt/OFUTON_P_UTAGOE_DB/
     NATSUME=/data3/qt
     COMBINE=/data3/qt/Muskits/egs/combine_data/svs1/
 fi
