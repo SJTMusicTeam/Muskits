@@ -226,7 +226,7 @@ class CommonPreprocessor(AbsPreprocessor):
         self,
         uid: str,
         data: Dict[str, Union[str, np.ndarray, tuple]],
-        phone_time_aug_factor: float,
+        phone_time_aug_factor: float = 1.0,
     ) -> Dict[str, np.ndarray]:
         assert check_argument_types()
         assert phone_time_aug_factor >= 1  # support longer only

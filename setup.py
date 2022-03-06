@@ -19,15 +19,11 @@ requirements = {
         "matplotlib==3.1.0",
         "pillow>=6.1.0",
         "editdistance==0.5.2",
-        "ctc-segmentation<1.8,>=1.6.6",
         "wandb",
         "filelock",
         "pytsmod",
-        "kaldiio",
-        "kaldi-io",
+        "kaldiio>=2.17.0",
         # DNN related packages are installed by Makefile
-        # "chainer==6.0.0",
-        # 'cupy==6.0.0',
         "tensorboard>=1.14",  # For pytorch>=1.1.0
         "tensorboardX>=1.8",  # For pytorch<1.1.0
         # Signal processing related
@@ -44,6 +40,7 @@ requirements = {
         "kaldiio",
         # SVS related
         "pyworld>=0.2.10",
+        "torch>=1.3.0",
         "torch_complex",
         "g2p_en",
     ],
@@ -57,7 +54,7 @@ requirements = {
         "mir-eval>=0.6",
         "fastdtw",
     ],
-    "setup": ["numpy", "pytest-runner"],
+    "setup": ["numpy<=1.21.3", "pytest-runner"],
     "test": [
         "pytest>=3.3.0",
         "pytest-timeouts>=1.2.1",
@@ -143,14 +140,14 @@ setup(
     name="muskit",
     version="0.0.1",
     url="https://github.com/SJTMusicTeam/Muskit",
-    author="Shinji Watanabe",
-    author_email="shinjiw@ieee.org",
+    author="Jiatong Shi",
+    author_email="jiatongs@andrew.cmu.edu",
     description="Muskit: music processing toolkit",
     long_description=open(os.path.join(dirname, "README.md"), encoding="utf-8").read(),
     long_description_content_type="text/markdown",
     license="Apache Software License",
-    packages=find_packages(include=["music*"]),
-    package_data={"music": ["version.txt"]},
+    packages=find_packages(include=["muskit*"]),
+    package_data={"muskit": ["version.txt"]},
     install_requires=install_requires,
     setup_requires=setup_requires,
     tests_require=tests_require,

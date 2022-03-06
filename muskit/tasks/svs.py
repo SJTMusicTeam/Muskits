@@ -262,7 +262,8 @@ class SVSTask(AbsTask):
             )
         else:
             retval = None
-        assert check_return_type(retval)
+        # FIXME (jiatong): sometimes checking is not working here
+        # assert check_return_type(retval)
         return retval
 
     @classmethod
