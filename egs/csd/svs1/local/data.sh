@@ -31,9 +31,9 @@ fi
 
 mkdir -p ${CSD}
 
-train_set=tr_no_dev
-train_dev=dev
-recog_set=eval
+train_set=tr_no_dev_${lang}
+train_dev=dev_${lang}
+recog_set=eval_${lang}
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     log "stage 0: Data Download"
