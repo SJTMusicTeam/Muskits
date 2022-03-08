@@ -109,7 +109,9 @@ fi
 if [ -f $srcdir/utt2num_frames ]; then
   utils/apply_map.pl -f 1 $destdir/utt_map <$srcdir/utt2num_frames >$destdir/utt2num_frames
 fi
-
+if [ -f $srcdir/utt2lang ]; then
+  utils/apply_map.pl -f 1 $destdir/utt_map <$srcdir/utt2lang >$destdir/utt2lang
+fi
 if [ -f $srcdir/spk2gender ]; then
   utils/apply_map.pl -f 1 $destdir/spk_map <$srcdir/spk2gender >$destdir/spk2gender
 fi
