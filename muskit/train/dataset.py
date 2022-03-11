@@ -543,20 +543,7 @@ class MuskitDataset(AbsDataset):
                     global_pitch_mean = float(self.pitch_mean)
                 elif isinstance(eval(self.pitch_mean), list):
                     # multi datasets with spk-ids
-                    speaker_lst = [
-                        "oniku",
-                        "ofuton",
-                        "kiritan",
-                        "natsume",
-                    ]  # NOTE: Fix me into args
-                    _find_num = 0
-                    _find_index = 0
-                    for index in range(len(speaker_lst)):
-                        if speaker_lst[index] in uid:
-                            _find_num += 1
-                            _find_index = index
-                    assert _find_num == 1
-                    global_pitch_mean = eval(self.pitch_mean)[_find_index]
+                    raise ValueError("Not Supported multi-singer cases")
                 else:
                     ValueError("Not Support Type for pitch_mean: %s" % self.pitch_mean)
 
