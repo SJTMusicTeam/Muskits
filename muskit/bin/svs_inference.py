@@ -166,6 +166,8 @@ class SingingGenerate:
                 wav = self.vocoder(outs_denorm)
             else:
                 wav = self.vocoder(outs)
+        else:
+            wav = None
 
         return wav, outs, outs_denorm, probs, att_ws, duration, focus_rate
 
@@ -213,8 +215,8 @@ def inference(
     model_file: Optional[str],
     use_teacher_forcing: bool,
     allow_variable_data_keys: bool,
-    vocoder_config: Optional[str],
-    vocoder_checkpoint: str,
+    vocoder_config: Optional[str] = None,
+    vocoder_checkpoint: Optional[str] = None,
 ):
     """Perform SVS model decoding."""
     assert check_argument_types()
@@ -497,7 +499,7 @@ def get_parser():
     group.add_argument(
         "--vocoder_checkpoint",
         default="/data5/gs/vocoder_peter/hifigan-vocoder/exp/train_hifigan.v1_train_nodev_clean_libritts_hifigan-2.v1/checkpoint-50000steps.pkl",
-        type=str,
+        type=str_or_none,
         help="checkpoint file to be loaded.",
     )
     group.add_argument(
