@@ -73,15 +73,6 @@ cat $srcdir/utt2spk | utils/apply_map.pl -f 1 $destdir/utt_map  | \
 utils/utt2spk_to_spk2utt.pl <$destdir/utt2spk >$destdir/spk2utt
 
 
-if [ -f $srcdir/spk2sid ]; then
-  cp $srcdir/spk2sid $destdir
-fi
-
-if [ -f $srcdir/utt2sid ]; then
-  cp $srcdir/utt2sid $destdir
-fi
-
-
 if [ -f $srcdir/segments ]; then
   utils/apply_map.pl -f 1 $destdir/utt_map <$srcdir/segments >$destdir/segments
   cp $srcdir/wav.scp $destdir
@@ -94,6 +85,22 @@ fi
 if [ -f $srcdir/midi.scp ]; then
   # TODO(jiatong)
   cp $srcdir/midi.scp $destdir
+fi
+
+if [ -f $srcdir/lang2lid ]; then
+  cp $srcdir/lang2lid $destdir
+fi
+
+if [ -f $srcdir/utt2lid ]; then
+  utils/apply_map.pl -f 1 $destdir/utt_map < $srcdir/utt2lid >$destdir/utt2lid
+fi
+
+if [ -f $srcdir/spk2sid ]; then
+  cp $srcdir/spk2sid $destdir/spk2sid
+fi
+
+if [ -f $srcdir/utt2sid ]; then
+  utils/apply_map.pl -f 1 $destdir/utt_map < $srcdir/utt2sid >$destdir/utt2sid
 fi
 
 if [ -f $srcdir/label ]; then
