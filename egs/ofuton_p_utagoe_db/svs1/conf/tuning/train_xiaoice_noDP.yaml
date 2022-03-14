@@ -20,13 +20,13 @@ svs_conf:                        # keyword arguments for the selected model
     postnet_dropout_rate: 0.5    # postnet dropout_rate
     use_batch_norm: true         # whether to use batch normalization in postnet
     reduction_factor: 1          # reduction factor
-    init_type: pytorch           # parameter initialization
+    init_type: xavier_uniform    # parameter initialization
     use_masking: true            # whether to apply masking for padded part in loss calculation
     loss_type: L1
-    use_mixup_training: True    # Default: False
+    use_mixup_training: False    # Default: False
     loss_mixup_wight: 0.2          # Default: 0
-    use_cycle_process: True      # Default: False
-    cycle_type: bi-direct           # Default: single, bi-direct
+    use_cycle_process: False      # Default: False
+    cycle_type: single            # Default: single, bi-direct
     w_svs: 0.7                     # Default: 1
     w_predictor: 0.2               # Default: 1
     w_cycle: 0.1                   # Default: 1
@@ -39,9 +39,14 @@ svs_conf:                        # keyword arguments for the selected model
 ##########################################################
 optim: adam           # optimizer type
 optim_conf:           # keyword arguments for selected optimizer
-    lr: 1.0e-03       # learning rate
-    eps: 1.0e-06      # epsilon
+    lr: 1       # learning rate
+    eps: 1.0e-09      # epsilon
     weight_decay: 0.0 # weight decay coefficient
+
+scheduler: noamlr
+scheduler_conf:
+    model_size: 384
+    warmup_steps: 4000
 
 ##########################################################
 #                OTHER TRAINING SETTING                  #
@@ -83,5 +88,5 @@ best_model_criterion:
     - loss
     - min
 
+vocoder_checkpoint: /home/exx/jiatong/projects/svs/ParallelWaveGAN/egs/multilingual/voc1/exp/train_nodev_multilingual_hifigan.v1/checkpoint-600000steps.pkl
 gpu_id: 0
-vocoder_checkpoint: /data5/gs/ParallelWaveGAN/egs/ofuton_p_utagoe_db/voc1/exp/train_nodev_ofuton_hifigan.v1/checkpoint-300000steps.pkl

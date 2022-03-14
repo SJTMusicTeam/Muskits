@@ -59,7 +59,7 @@ def process_utterance(
 
     midi_seq = create_midi(notes, tempo, phn_dur, tgt_sr)
 
-    midi_scp_writer[uid] = midi_seq
+    midi_scp_writer["opencpop_{}".format(uid)] = midi_seq
     text.write("opencpop_{} {}\n".format(uid, " ".join(phns)))
     utt2spk.write("opencpop_{} {}\n".format(uid, "opencpop"))
 

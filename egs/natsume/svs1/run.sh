@@ -5,9 +5,6 @@ set -e
 set -u
 set -o pipefail
 
-. ./path.sh || exit 1
-. ./cmd.sh || exit 1
-
 # spectrogram-related arguments
 fs=24000
 fmin=80
@@ -17,8 +14,7 @@ n_shift=300
 win_length=1200
 
 score_feats_extract=frame_score_feats   # frame_score_feats | syllable_score_feats
-expdir=exp/1-28-RNN-batch16
-# inference_model=68epoch.pth
+expdir=exp/rnn
 
 opts=
 if [ "${fs}" -eq 48000 ]; then

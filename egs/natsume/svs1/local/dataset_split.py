@@ -105,13 +105,6 @@ def transition(dataset, des_url):
         des_lab = path[1] + item.replace(".wav", ".lab")
         des_midi = path[2] + item.replace(".wav", ".mid")
 
-        # print(wav_path)
-        # print(des_wav)
-        # print(lab_path)
-        # print(des_lab)
-        # print(midi_path)
-        # print(des_midi)
-        # break
         if wav_path[-3:] != "wav":
             print("Error Path: ", wav_path)
             continue

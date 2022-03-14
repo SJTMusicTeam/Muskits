@@ -144,13 +144,15 @@ def main():
                 note = smooth_note(note, args.smooth_context, args.filter_seg_len)
                 note = np.repeat(note, period_time) # expand to sample level
 
-                # tempo estimation
+                # # tempo estimation
                 onset_env = librosa.onset.onset_strength(y=wave, sr=rate)
-                # beats often need longer hop_length for estimation
-                tempo = librosa.beat.tempo(onset_envelope=onset_env, sr=rate, aggregate=None)
-                tempo = np.round(tempo, 0)
-                tempo = np.repeat(tempo, 512) # magic number (as defined in librosa)
-                tempo = tempo[:len(note)]
+                # # beats often need longer hop_length for estimation
+                # tempo = librosa.beat.tempo(onset_envelope=onset_env, sr=rate, aggregate=None)
+                # tempo = np.round(tempo, 0)
+                # tempo = np.repeat(tempo, 512) # magic number (as defined in librosa)
+                # tempo = tempo[:len(note)]
+                tempo = librosa.beat.tempo(onset_envelope=onset_env, sr=rate)
+                tempo = np.ones_like(note) * tempo
 
                 writer[uttid] = note, tempo.astype(np.int32)
 
