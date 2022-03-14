@@ -26,8 +26,8 @@ The usage of recipes is **almost the same** as that of ESPnet2.
     ```bash
     # Doesn't work
     cd egs/kiritan/
-    ./asr1/run.sh
-    ./asr1/scripts/<some-script>.sh
+    ./svs1/run.sh
+    ./svs1/scripts/<some-script>.sh
     
     # Doesn't work
     cd egs/kiritan//svs1/local/
