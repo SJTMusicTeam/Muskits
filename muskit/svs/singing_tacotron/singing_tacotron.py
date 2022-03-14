@@ -281,11 +281,11 @@ class singing_tacotron(AbsSVS):
     """singing_tacotron module for end-to-end text-to-speech.
 
     This is a module of Spectrogram prediction network in singing_tacotron described
-    in `Natural TTS Synthesis by Conditioning WaveNet on Mel Spectrogram Predictions`_,
+    in `SINGING-TACOTRON: GLOBAL DURATION CONTROL ATTENTION AND DYNAMIC FILTER FOR END-TO-END SINGING VOICE SYNTHESIS`_,
     which converts the sequence of characters into the sequence of Mel-filterbanks.
 
-    .. _`Natural TTS Synthesis by Conditioning WaveNet on Mel Spectrogram Predictions`:
-       https://arxiv.org/abs/1712.05884
+    .. _`SINGING-TACOTRON: GLOBAL DURATION CONTROL ATTENTION AND DYNAMIC FILTER FOR END-TO-END SINGING VOICE SYNTHESIS`:
+       https://arxiv.org/abs/2202.07907
 
     Args:
         idim (int): Dimension of the inputs.
@@ -421,7 +421,7 @@ class singing_tacotron(AbsSVS):
         self.padding_idx = padding_idx
 
         # define network modules
-        self.enc = Encoder(
+        self.enc_content = Content_Encoder(
             idim=idim,
             embed_dim=embed_dim,
             elayers=elayers,
@@ -431,6 +431,13 @@ class singing_tacotron(AbsSVS):
             econv_filts=econv_filts,
             use_batch_norm=use_batch_norm,
             use_residual=use_residual,
+            dropout_rate=dropout_rate,
+            padding_idx=padding_idx,
+        )
+
+        self.enc_duration = Duration_Encoder(
+            idim=idim,
+            embed_dim=embed_dim,
             dropout_rate=dropout_rate,
             padding_idx=padding_idx,
         )
@@ -461,6 +468,8 @@ class singing_tacotron(AbsSVS):
 
         if atype == "location":
             att = AttLoc(dec_idim, dunits, adim, aconv_chans, aconv_filts)
+        elif atype == "GDCA_location":
+            att = GDCAttLoc(dec_idim, dunits, adim, aconv_chans, aconv_filts)
         elif atype == "forward":
             att = AttForward(dec_idim, dunits, adim, aconv_chans, aconv_filts)
             if self.cumulate_att_w:
@@ -477,8 +486,6 @@ class singing_tacotron(AbsSVS):
                     "in forward attention."
                 )
                 self.cumulate_att_w = False
-        elif atype == "GDCA":
-            att = AttGDCA(dec_idim, dunits, adim, aconv_chans, aconv_filts)
         else:
             raise NotImplementedError("Support only location or forward")
         self.dec = Decoder(
@@ -604,18 +611,20 @@ class singing_tacotron(AbsSVS):
     def _forward(
         self,
         xs: torch.Tensor,
+        duration_tempo: torch.Tensor,
         ilens: torch.Tensor,
         ys: torch.Tensor,
         olens: torch.Tensor,
         spembs: torch.Tensor,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        hs, hlens = self.enc(xs, ilens)
+        hs, hlens = self.enc_content(xs, ilens)
+        trans_token = self.enc_duration(duration_tempo)
         if self.use_gst:
             style_embs = self.gst(ys)
             hs = hs + style_embs.unsqueeze(1)
         if self.spk_embed_dim is not None:
             hs = self._integrate_with_spk_embed(hs, spembs)
-        return self.dec(hs, hlens, ys)
+        return self.dec(hs, hlens, trans_token, ys)
 
     def inference(
         self,
@@ -670,7 +679,8 @@ class singing_tacotron(AbsSVS):
             return outs[0], None, att_ws[0]
 
         # inference
-        h = self.enc.inference(x)
+        h = self.enc_content.inference(x)
+        trans_token = self.enc_duration.inference(duration_tempo)
         if self.use_gst:
             style_emb = self.gst(y.unsqueeze(0))
             h = h + style_emb
@@ -679,6 +689,7 @@ class singing_tacotron(AbsSVS):
             h = self._integrate_with_spk_embed(hs, spembs)[0]
         outs, probs, att_ws = self.dec.inference(
             h,
+            trans_token,
             threshold=threshold,
             minlenratio=minlenratio,
             maxlenratio=maxlenratio,

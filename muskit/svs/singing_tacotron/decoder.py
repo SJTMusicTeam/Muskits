@@ -389,12 +389,13 @@ class Decoder(torch.nn.Module):
         init_hs = hs.new_zeros(hs.size(0), self.lstm[0].hidden_size)
         return init_hs
 
-    def forward(self, hs, hlens, ys):
+    def forward(self, hs, hlens, trans_token, ys):
         """Calculate forward propagation.
 
         Args:
             hs (Tensor): Batch of the sequences of padded hidden states (B, Tmax, idim).
             hlens (LongTensor): Batch of lengths of each input batch (B,).
+            trans_token (Tensor): Global transition token for duration (B x Tmax x 1)
             ys (Tensor):
                 Batch of the sequences of padded target features (B, Lmax, odim).
 
@@ -425,15 +426,16 @@ class Decoder(torch.nn.Module):
 
         # initialize attention
         prev_att_w = None
+        prev_att_pt = None
         self.att.reset()
 
         # loop for an output sequence
         outs, logits, att_ws = [], [], []
         for y in ys.transpose(0, 1):
             if self.use_att_extra_inputs:
-                att_c, att_w = self.att(hs, hlens, z_list[0], prev_att_w, prev_out)
+                att_c, att_w, att_pt = self.att(hs, hlens, z_list[0], trans_token, prev_att_pt, prev_att_w, prev_out)
             else:
-                att_c, att_w = self.att(hs, hlens, z_list[0], prev_att_w)
+                att_c, att_w, att_pt = self.att(hs, hlens, z_list[0], trans_token, prev_att_pt, prev_att_w)
             prenet_out = self.prenet(prev_out) if self.prenet is not None else prev_out
             xs = torch.cat([att_c, prenet_out], dim=1)
             z_list[0], c_list[0] = self.lstm[0](xs, (z_list[0], c_list[0]))
@@ -450,6 +452,7 @@ class Decoder(torch.nn.Module):
             logits += [self.prob_out(zcs)]
             att_ws += [att_w]
             prev_out = y  # teacher forcing
+            prev_att_pt = att_pt
             if self.cumulate_att_w and prev_att_w is not None:
                 prev_att_w = prev_att_w + att_w  # Note: error when use +=
             else:
@@ -482,6 +485,7 @@ class Decoder(torch.nn.Module):
     def inference(
         self,
         h,
+        trans_token,
         threshold=0.5,
         minlenratio=0.0,
         maxlenratio=10.0,
@@ -493,6 +497,7 @@ class Decoder(torch.nn.Module):
 
         Args:
             h (Tensor): Input sequence of encoder hidden states (T, C).
+            trans_token (Tensor): Global transition token for duration.
             threshold (float, optional): Threshold to stop generation.
             minlenratio (float, optional): Minimum length ratio.
                 If set to 1.0 and the length of input is 10,
@@ -533,6 +538,7 @@ class Decoder(torch.nn.Module):
 
         # initialize attention
         prev_att_w = None
+        prev_att_pt = None
         self.att.reset()
 
         # setup for attention constraint
@@ -553,6 +559,8 @@ class Decoder(torch.nn.Module):
                 att_c, att_w = self.att(
                     hs,
                     ilens,
+                    trans_token,
+                    prev_att_pt,
                     z_list[0],
                     prev_att_w,
                     prev_out,
@@ -564,6 +572,8 @@ class Decoder(torch.nn.Module):
                 att_c, att_w = self.att(
                     hs,
                     ilens,
+                    trans_token,
+                    prev_att_pt,
                     z_list[0],
                     prev_att_w,
                     last_attended_idx=last_attended_idx,
@@ -590,6 +600,7 @@ class Decoder(torch.nn.Module):
                 prev_out = self.output_activation_fn(outs[-1][:, :, -1])  # (1, odim)
             else:
                 prev_out = outs[-1][:, :, -1]  # (1, odim)
+            prev_att_pt = att_pt
             if self.cumulate_att_w and prev_att_w is not None:
                 prev_att_w = prev_att_w + att_w  # Note: error when use +=
             else:
@@ -615,12 +626,13 @@ class Decoder(torch.nn.Module):
 
         return outs, probs, att_ws
 
-    def calculate_all_attentions(self, hs, hlens, ys):
+    def calculate_all_attentions(self, hs, hlens, trans_token, ys):
         """Calculate all of the attention weights.
 
         Args:
             hs (Tensor): Batch of the sequences of padded hidden states (B, Tmax, idim).
             hlens (LongTensor): Batch of lengths of each input batch (B,).
+            trans_token (Tensor): Global transition token for duration (B x Tmax x 1)
             ys (Tensor):
                 Batch of the sequences of padded target features (B, Lmax, odim).
 
@@ -648,15 +660,16 @@ class Decoder(torch.nn.Module):
 
         # initialize attention
         prev_att_w = None
+        prev_att_pt = None
         self.att.reset()
 
         # loop for an output sequence
         att_ws = []
         for y in ys.transpose(0, 1):
             if self.use_att_extra_inputs:
-                att_c, att_w = self.att(hs, hlens, z_list[0], prev_att_w, prev_out)
+                att_c, att_w = self.att(hs, hlens, trans_token, prev_att_pt, z_list[0], prev_att_w, prev_out)
             else:
-                att_c, att_w = self.att(hs, hlens, z_list[0], prev_att_w)
+                att_c, att_w = self.att(hs, hlens, trans_token, prev_att_pt, z_list[0], prev_att_w)
             att_ws += [att_w]
             prenet_out = self.prenet(prev_out) if self.prenet is not None else prev_out
             xs = torch.cat([att_c, prenet_out], dim=1)
@@ -666,6 +679,7 @@ class Decoder(torch.nn.Module):
                     z_list[i - 1], (z_list[i], c_list[i])
                 )
             prev_out = y  # teacher forcing
+            prev_att_pt = att_pt
             if self.cumulate_att_w and prev_att_w is not None:
                 prev_att_w = prev_att_w + att_w  # Note: error when use +=
             else:

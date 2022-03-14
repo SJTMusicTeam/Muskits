@@ -177,15 +177,14 @@ class Content_Encoder(torch.nn.Module):
 
 
 class Duration_Encoder(torch.nn.Module):
-    """Content_Encoder module of Spectrogram prediction network.
+    """Duration_Encoder module of Spectrogram prediction network.
 
-    This is a module of encoder of Spectrogram prediction network in Tacotron2,
-    which described in `Natural TTS Synthesis by Conditioning WaveNet on Mel
-    Spectrogram Predictions`_. This is the encoder which converts either a sequence
-    of characters or acoustic features into the sequence of hidden states.
+    This is a module of encoder of Spectrogram prediction network in Singing-Tacotron, 
+    This is the encoder which converts the sequence
+    of durations and tempo features into a transition token.
 
-    .. _`Natural TTS Synthesis by Conditioning WaveNet on Mel Spectrogram Predictions`:
-       https://arxiv.org/abs/1712.05884
+    .. _`SINGING-TACOTRON: GLOBAL DURATION CONTROL ATTENTION AND DYNAMIC FILTER FOR END-TO-END SINGING VOICE SYNTHESIS`:
+       https://arxiv.org/abs/2202.07907
 
     """
 
@@ -196,19 +195,11 @@ class Duration_Encoder(torch.nn.Module):
         dropout_rate=0.5,
         padding_idx=0,
     ):
-        """Initialize Tacotron2 encoder module.
+        """Initialize Singing-Tacotron encoder module.
 
         Args:
             idim (int) Dimension of the inputs.
-            input_layer (str): Input layer type.
             embed_dim (int, optional) Dimension of character embedding.
-            elayers (int, optional) The number of encoder blstm layers.
-            eunits (int, optional) The number of encoder blstm units.
-            econv_layers (int, optional) The number of encoder conv layers.
-            econv_filts (int, optional) The number of encoder conv filter size.
-            econv_chans (int, optional) The number of encoder conv filter channels.
-            use_batch_norm (bool, optional) Whether to use batch normalization.
-            use_residual (bool, optional) Whether to use residual connection.
             dropout_rate (float, optional) Dropout rate.
 
         """
@@ -239,6 +230,7 @@ class Duration_Encoder(torch.nn.Module):
                         ),
                         torch.nn.ReLU(),
                     )
+        self.nntanh = torch.nn.tanh()
         self.output_layer = torch.nn.Linear(idim, 1)
 
 
@@ -249,13 +241,10 @@ class Duration_Encoder(torch.nn.Module):
         """Calculate forward propagation.
 
         Args:
-            xs (Tensor): Batch of the padded sequence. Either character ids (B, Tmax)
-                or acoustic feature (B, Tmax, idim * encoder_reduction_factor). Padded
-                value should be 0.
-            ilens (LongTensor): Batch of lengths of each input batch (B,).
+            xs (Tensor): Batch of the duration & tampo sequence.(B, Tmax, feature_len)
 
         Returns:
-            Tensor: Batch of the sequences of encoder states(B, Tmax, eunits).
+            Tensor: Batch of the sequences of transition token (B, Tmax, 1).
             LongTensor: Batch of lengths of each sequence (B,)
 
         """
@@ -263,7 +252,7 @@ class Duration_Encoder(torch.nn.Module):
         xs = self.embed(xs).transpose(1, 2)
         xs = self.convs(xs).transpose(1, 2)
         xs = self.output_layer(xs)
-        xs = nntanh(xs)
+        xs = self.nntanh(xs)
 
         xs = (xs + 1) / 2
 
