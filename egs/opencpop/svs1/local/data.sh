@@ -23,7 +23,7 @@ log "$0 $*"
 . utils/parse_options.sh || exit 1;
 
 if [ -z "${OPENCPOP}" ]; then
-    log "Fill the value of 'OFUTON' of db.sh"
+    log "Fill the value of 'OPENCPOP' of db.sh"
     exit 1
 fi
 
