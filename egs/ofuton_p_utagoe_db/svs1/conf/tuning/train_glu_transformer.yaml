@@ -37,7 +37,6 @@ svs_conf:                        # keyword arguments for the selected model
     use_masking: true            # whether to apply masking for padded part in loss calculation
     embed_integration_type: add
     use_duration: true          # whether to use duration model
-    spks: 5
     loss_type: L1
 
 ##########################################################
@@ -83,5 +82,5 @@ best_model_criterion:
     - min
 
 gpu_id: 1
-# vocoder_checkpoint: /data3/qt/train_nodev_kiritan_ofuton_oniku_natsume/checkpoint-310000steps.pkl
-vocoder_checkpoint: /data3/qt/train_nodev_kiritan_ofuton_oniku_natsume/checkpoint-310000steps.pkl
+# vocoder_checkpoint: /data3/qt/ParallelWaveGAN/checkpoint-500000steps.pkl
+vocoder_checkpoint: /data3/qt/train_nodev_ofuton_hifigan.v1/checkpoint-300000steps.pkl

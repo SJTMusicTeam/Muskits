@@ -22,7 +22,7 @@ combine_path+=" $(realpath ../../natsume/svs1/dump/raw/)"
 
 
 score_feats_extract=frame_score_feats   # frame_score_feats | syllable_score_feats
-expdir=exp/rnn
+expdir=exp/3-4-glu
 
 opts=
 if [ "${fs}" -eq 48000 ]; then
@@ -38,7 +38,8 @@ test_sets=eval
 
 # training and inference configuration
 # train_config=conf/train.yaml
-train_config=conf/tuning/train_naive_rnn.yaml
+train_config=conf/tuning/train_glu_transformer.yaml
+# train_config=conf/tuning/train_naive_rnn.yaml
 inference_config=conf/decode.yaml
 
 # text related processing arguments
@@ -47,7 +48,7 @@ cleaner=none
 
 ./svs.sh \
     --lang jp \
-    --stage 0 \
+    --stage 7 \
     --stop_stage 7 \
     --local_data_opts "${combine_path}" \
     --feats_type raw \
@@ -69,5 +70,6 @@ cleaner=none
     --score_feats_extract "${score_feats_extract}" \
     --srctexts "data/${train_set}/text" \
     --svs_exp ${expdir} \
+    --vocoder_file "/data3/qt/train_nodev_kiritan_ofuton_oniku_natsume/checkpoint-310000steps.pkl" \
     --ngpu 1 \
     ${opts} "$@"
