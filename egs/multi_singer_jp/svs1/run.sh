@@ -20,7 +20,6 @@ combine_path+=" $(realpath ../../ofuton_p_utagoe_db/svs1/dump/raw/)"
 combine_path+=" $(realpath ../../kiritan/svs1/dump/raw/)"
 combine_path+=" $(realpath ../../natsume/svs1/dump/raw/)"
 
-
 score_feats_extract=syllable_score_feats # frame_score_feats | syllable_score_feats
 expdir=exp/3-14-glu
 
@@ -40,7 +39,6 @@ test_sets=eval
 # train_config=conf/train.yaml
 train_config=conf/tuning/train_glu_transformer.yaml
 # train_config=conf/tuning/train_naive_rnn.yaml
-inference_config=conf/decode.yaml
 
 # text related processing arguments
 g2p=none
@@ -69,7 +67,11 @@ cleaner=none
     --test_sets "${test_sets}" \
     --score_feats_extract "${score_feats_extract}" \
     --srctexts "data/${train_set}/text" \
+<<<<<<< HEAD
     --svs_exp ${expdir} \
     --vocoder_file "/data3/qt/train_nodev_kiritan_ofuton_oniku_natsume/checkpoint-310000steps.pkl" \
+=======
+>>>>>>> b9260848a2b56e115a748b2bf2878a6ef27ed402
     --ngpu 1 \
+    --vocoder_file /home/exx/jiatong/projects/svs/ParallelWaveGAN/egs/multi_singer/voc1/exp/train_nodev_natsume_hifigan.v1/checkpoint-310000steps.pkl \
     ${opts} "$@"

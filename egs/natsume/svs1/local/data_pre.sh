@@ -3,6 +3,9 @@
 db=$1
 data_dir=$2
 fs=$3
+dump=wav_dump
+
+./utils/parse_options.sh || exit 1
 
 # check arguments
 if [ $# != 3 ]; then
@@ -32,6 +35,8 @@ label_scp=${data_dir}/label
 utt_prefix=natsume
 NOWPATH=`pwd`
 
+mkdir -p ${dump}
+
 # make wav.scp
 find "${db}" -name "*.wav" | sort | while read -r filename; do
     id=$(basename ${filename} | sed -e "s/\.[^\.]*$//g")
@@ -41,12 +46,12 @@ find "${db}" -name "*.wav" | sort | while read -r filename; do
     else
         rootp=$(dirname ${filename})
         fname=$(basename ${filename} .wav)
-        fname_16bits="${rootp}/${fname}_bits16.wav"
+        fname_16bits="${dump}/${fname}_bits16.wav"
         sox ${NOWPATH}/${filename} -c 1 -t wavpcm -b 16 -r ${fs} ${NOWPATH}/${fname_16bits}
         echo "${utt_prefix}${id} ${NOWPATH}/${fname_16bits}" >> "${wav_scp}"
     fi
 
-    echo "${utt_prefix}${id} ${utt_prefix}" >> "${utt2spk}"
+	    echo "${utt_prefix}${id} ${utt_prefix}" >> "${utt2spk}"
     
 done
 echo "finished making wav.scp."
@@ -71,6 +76,7 @@ find "${db}" -name "*.lab" | sort | while read -r filename; do
     done
     echo "" >> "${text_scp}"
     echo "" >> "${label_scp}"
+    echo "process"
 done
 echo "finished making text and label.scp"
 

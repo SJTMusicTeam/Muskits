@@ -31,7 +31,13 @@ def get_tick_to_time_mapping(ticks_per_beat, tempo_changes, max_tick=np.int32(1e
 
 
 def midi_to_seq(
-    midi_obj, dtype=np.int16, rate=22050, pitch_aug_factor=0, time_aug_factor=1, mode="format", time_shift=0.0125
+    midi_obj,
+    dtype=np.int16,
+    rate=22050,
+    pitch_aug_factor=0,
+    time_aug_factor=1,
+    mode="format",
+    time_shift=0.0125,
 ):
     """method for midi_obj.
     Input:
@@ -48,7 +54,9 @@ def midi_to_seq(
     tempos = midi_obj.tempo_changes
     tempos.sort(key=lambda x: (x.time, x.tempo))
 
-    assert len(tempos) == 1     # NOTE(Shuai): the len(tempos) will be 1 if dataset are prepared successfully (kiritan, natsume, oniku, ofuton)
+    assert (
+        len(tempos) == 1
+    )  # NOTE(Shuai): the len(tempos) will be 1 if dataset are prepared successfully (kiritan, natsume, oniku, ofuton)
 
     if mode == "xiaoice":
         if len(tempos) == 1:
@@ -146,7 +154,9 @@ def midi_to_seq(
                     else (notes_res[i]["pitch"] + pitch_aug_factor)
                 )
 
-                tempo_BPM = notes_res[i]["tempo"]  # global information, beats per minute
+                tempo_BPM = notes_res[i][
+                    "tempo"
+                ]  # global information, beats per minute
                 tempo_BPS = tempo_BPM / 60.0  # global information, beats per second
                 st_time = tick_to_time[notes_res[i]["start"]] * time_aug_factor
                 ed_time = tick_to_time[notes_res[i]["end"]] * time_aug_factor
@@ -283,7 +293,6 @@ if __name__ == "__main__":
     res = np.hstack(note_list)
 
     print(f"shape: {res.shape}, mean: {np.mean(res)}")
-
 
     # speaker_lst = ["oniku", "ofuton", "kiritan", "natsume"]
     # mean of F0 = [66.02, 53.15, 55.20, 53.83]
