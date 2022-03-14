@@ -737,6 +737,8 @@ class GLU_Transformer(AbsSVS):
         # logging.info(f'text.size():{text.size()}')
         # logging.info(f'midi.size():{midi.size()}')
         # logging.info(f'label.size():{label.size()}')
+        # logging.info(f'feats_lengths:{feats_lengths}')
+        # logging.info(f'feats_lengths.size():{feats_lengths.size()}')
 
         phone_emb, _ = self.phone_encoder(label)
         midi_emb = self.midi_encoder_input_layer(midi)
@@ -781,9 +783,10 @@ class GLU_Transformer(AbsSVS):
         # logging.info(f'ds.size():{ds.size()}')
         # logging.info(f'ds.sum(-1):{ds.sum(-1)}')
         # logging.info(f'ds.sum(-1).size():{ds.sum(-1).size()}')
+        # logging.info(f'midi_lengths.size():{midi_lengths.size()}')
         # decoder
         zs = self.decoder(
-            hs, pos=(~make_pad_mask(ds.sum(-1))).to(device=hs.device)
+            hs, pos=(~make_pad_mask(feats_lengths)).to(device=hs.device)
         )  # True mask
 
         zs = zs[:, self.reduction_factor - 1 :: self.reduction_factor]
