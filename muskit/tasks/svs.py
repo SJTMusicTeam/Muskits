@@ -328,6 +328,7 @@ class SVSTask(AbsTask):
         else:
             normalize = None
 
+        # logging.info(f'args.conf:{args.svs_conf}')
         # 3. SVS
         svs_class = svs_choices.get_class(args.svs)
         svs = svs_class(idim=vocab_size, odim=odim, **args.svs_conf)

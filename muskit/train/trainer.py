@@ -761,7 +761,7 @@ class Trainer:
                 )
                 spec_gt_denorm, _ = model.normalize.inverse(spec_gt.clone())
 
-                cls.log_figure(
+                cls.log_figure( # FIX ME
                     model,
                     model_vocoder,
                     index[0],
@@ -801,7 +801,7 @@ class Trainer:
         ngpu = options.ngpu
         no_forward_run = options.no_forward_run
 
-        matplotlib.use("Agg")
+        # matplotlib.use("Agg")
         import matplotlib.pyplot as plt
         from matplotlib.ticker import MaxNLocator
 
@@ -856,7 +856,7 @@ class Trainer:
                     if output_dir is not None:
                         p = output_dir / id_ / f"{k}.{reporter.get_epoch()}ep.png"
                         p.parent.mkdir(parents=True, exist_ok=True)
-                        fig.savefig(p)
+                        fig.savefig(p) #FIX ME
 
                     if summary_writer is not None:
                         summary_writer.add_figure(
