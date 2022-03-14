@@ -22,7 +22,6 @@ combine_path+=" $(realpath ../../natsume/svs1/dump/raw/)"
 
 
 score_feats_extract=frame_score_feats   # frame_score_feats | syllable_score_feats
-expdir=exp/rnn
 
 opts=
 if [ "${fs}" -eq 48000 ]; then
@@ -38,7 +37,8 @@ test_sets=eval
 
 # training and inference configuration
 # train_config=conf/train.yaml
-train_config=conf/tuning/train_naive_rnn.yaml
+# train_config=conf/tuning/train_naive_rnn.yaml
+train_config=conf/tuning/train_xiaoice_noDP.yaml
 inference_config=conf/decode.yaml
 
 # text related processing arguments
@@ -47,7 +47,7 @@ cleaner=none
 
 ./svs.sh \
     --lang jp \
-    --stage 0 \
+    --stage 7 \
     --stop_stage 7 \
     --local_data_opts "${combine_path}" \
     --feats_type raw \
@@ -68,6 +68,6 @@ cleaner=none
     --test_sets "${test_sets}" \
     --score_feats_extract "${score_feats_extract}" \
     --srctexts "data/${train_set}/text" \
-    --svs_exp ${expdir} \
     --ngpu 1 \
+    --vocoder_file /home/exx/jiatong/projects/svs/ParallelWaveGAN/egs/multi_singer/voc1/exp/train_nodev_natsume_hifigan.v1/checkpoint-310000steps.pkl \
     ${opts} "$@"

@@ -69,14 +69,20 @@ def collect_stats(
                         )
 
                 # 2. Extract feats
-                del_keys = ["pitch_aug", "pitch_aug_lengths", "time_aug", "time_aug_lengths", "sids_lengths", "lids_lengths"]
+                del_keys = [
+                    "pitch_aug",
+                    "pitch_aug_lengths",
+                    "time_aug",
+                    "time_aug_lengths",
+                    "sids_lengths",
+                    "lids_lengths",
+                ]
                 for key in del_keys:
                     if key in batch.keys():
                         del batch[key]
-                
+
                 # logging.info(f'batch.keys={batch.keys()}')
                 # logging.info(f'batch.values={batch.values()}')
-                
 
                 if ngpu <= 1:
                     data = model.collect_feats(**batch)
@@ -88,7 +94,7 @@ def collect_stats(
                         range(ngpu),
                         module_kwargs=batch,
                     )
-                
+
                 # logging.info(f'data={data}')
 
                 # 3. Calculate sum and square sum

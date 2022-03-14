@@ -5,6 +5,7 @@
 ##########################################################
 svs: naive_rnn                   # model architecture
 svs_conf:                        # keyword arguments for the selected model
+    spks: 5                      # number of spks (addition one for unknown speaker)
     midi_dim: 129                # midi dimension (note number + silence)
     embed_dim: 512               # char or phn embedding dimension
     eprenet_conv_layers: 0       # prenet (from bytesing) conv layers
@@ -29,6 +30,8 @@ svs_conf:                        # keyword arguments for the selected model
     init_type: pytorch           # parameter initialization
     use_masking: true            # whether to apply masking for padded part in loss calculation
     loss_type: L1
+    use_mixup_training: False    # Default: False
+    loss_mixup_wight: 0          # Default: 0
 
 
 ##########################################################
@@ -54,11 +57,18 @@ accum_grad: 1               # gradient accumulation
 # batch_type: numel           # how to make batch
 
 batch_type: sorted
-batch_size: 10
+batch_size: 16
+
+pitch_aug_min: 0            # Default: 0, [-1,-2,-3]
+pitch_aug_max: 0            # Default: 0, [1,2,3]
+time_aug_min: 1             # Default: 1, [0.99]
+time_aug_max: 1             # Default: 1, [1.01]
+random_crop: False          # Default: False, crop length [0.9 * length, length]
+mask_aug: False             # Default: False, random mask length 1500 samples
 
 sort_in_batch: descending   # how to sort data in making batch
 sort_batch: descending      # how to sort created batches
-num_workers: 6              # number of workers of data loader
+num_workers: 8              # number of workers of data loader
 train_dtype: float32        # dtype in training
 log_interval: null          # log interval in iterations
 keep_nbest_models: 2        # number of models to keep
@@ -72,5 +82,7 @@ best_model_criterion:
     - loss
     - min
 
-gpu_id: 1
-vocoder_checkpoint: /data3/qt/ParallelWaveGAN/checkpoint-50000steps.pkl
+gpu_id: 0
+vocoder_checkpoint: /home/exx/jiatong/projects/svs/ParallelWaveGAN/egs/multi_singer/voc1/exp/train_nodev_natsume_hifigan.v1/checkpoint-310000steps.pkl
+# vocoder_checkpoint: pre_trained_vocoder/checkpoint-300000steps.pkl
+# vocoder_checkpoint: /data5/gs/vocoder_peter/hifigan-vocoder/exp/train_hifigan.v1_train_nodev_clean_libritts_hifigan-2.v1/checkpoint-50000steps.pkl

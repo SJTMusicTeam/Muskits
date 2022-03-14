@@ -88,7 +88,7 @@ class IterableMuskitDataset(IterableDataset):
         int_dtype: str = "long",
         key_file: str = None,
     ):
-        assert check_argument_types()
+        # assert check_argument_types()
         if len(path_name_type_list) == 0:
             raise ValueError(
                 '1 or more elements are required for "path_name_type_list"'
@@ -188,7 +188,7 @@ class IterableMuskitDataset(IterableDataset):
                     key, value = sps
                     keys.append(key)
                     values.append(value)
-                
+
                 for k_idx, k in enumerate(keys):
                     if k != keys[0]:
                         raise RuntimeError(

@@ -83,6 +83,8 @@ num_splits=1       # Number of splitting for svs corpus.
 teacher_dumpdir="" # Directory of teacher outpus
 write_collected_feats=false # Whether to dump features in stats collection.
 svs_task=svs                # SVS task (svs or gan_svs, now only support svs)
+pretrained_model=              # Pretrained model to load
+ignore_init_mismatch=false      # Ignore initial mismatch
 
 # Decoding related
 inference_config="" # Config for decoding.
@@ -169,7 +171,9 @@ Options:
     --teacher_dumpdir       # Direcotry of teacher outputs
     --write_collected_feats # Whether to dump features in statistics collection (default="${write_collected_feats}").
     --svs_task              # SVS task (svs or gan_svs, now only support svs)
-    
+    --pretrained_model=          # Pretrained model to load (default="${pretrained_model}").
+    --ignore_init_mismatch=      # Ignore mismatch parameter init with pretrained model (default="${ignore_init_mismatch}").
+
     # Decoding related
     --inference_config  # Config for decoding (default="${inference_config}").
     --inference_args    # Arguments for decoding, (default="${inference_args}").
@@ -234,6 +238,9 @@ fi
 if [ "${token_type}" = phn ]; then
     token_listdir+="_${g2p}"
 fi
+if [ "${lang}" != noinfo ]; then
+    token_listdir+="_${lang}"
+fi
 token_list="${token_listdir}/tokens.txt"
 
 # Set tag for naming of model directory
@@ -252,6 +259,10 @@ if [ -z "${tag}" ]; then
     # Add overwritten arg's info
     if [ -n "${train_args}" ]; then
         tag+="$(echo "${train_args}" | sed -e "s/--/\_/g" -e "s/[ |=]//g")"
+    fi
+
+    if [ "${lang}" != noinfo ]; then
+        tag+="_${lang}"
     fi
 fi
 if [ -z "${inference_tag}" ]; then
@@ -275,6 +286,9 @@ if [ -z "${svs_stats_dir}" ]; then
     fi
     if [ "${token_type}" = phn ]; then
         svs_stats_dir+="_${g2p}"
+    fi
+    if [ "${lang}" != noinfo ]; then
+        svs_stats_dir+="_${lang}"
     fi
 fi
 # The directory used for training commands
@@ -397,6 +411,32 @@ if ! "${skip_data_prep}"; then
         fi
     fi
 
+
+    if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
+        if "${use_lid}"; then
+            log "Stage 2+: lid extract: data/ -> ${data_feats}/"
+            for dset in "${train_set}" "${valid_set}" ${test_sets}; do
+                if [ "${dset}" = "${train_set}" ] || [ "${dset}" = "${valid_set}" ]; then
+                    _suf="/org"
+                else
+                    _suf=""
+                fi
+                # 1.Generate spk2sid
+
+                if [ "${dset}" = "${train_set}" ]; then
+                    # Make spk2sid
+                    # NOTE(kan-bayashi): 0 is reserved for unknown speakers
+                    echo "<unk> 0" > "${data_feats}${_suf}/${dset}/lang2lid"
+                    cut -f 2 -d " " "${data_feats}${_suf}/${dset}/utt2lang" | sort | uniq | \
+                        awk '{print $1 " " NR}' >> "${data_feats}${_suf}/${dset}/lang2lid"
+                fi
+                pyscripts/utils/utt2spk_to_utt2sid.py \
+                    "${data_feats}/org/${train_set}/lang2lid" \
+                    "${data_feats}${_suf}/${dset}/utt2lang" \
+                    > "${data_feats}${_suf}/${dset}/utt2lid"
+            done
+        fi
+    fi
 
     if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
         log "Stage 3: Remove long/short data: ${data_feats}/org -> ${data_feats}"
@@ -866,6 +906,8 @@ if ! "${skip_train}"; then
                 --g2p "${g2p}" \
                 --normalize "${feats_normalize}" \
                 --resume true \
+		--init_param ${pretrained_model} \
+                --ignore_init_mismatch ${ignore_init_mismatch} \
                 --fold_length "${text_fold_length}" \
                 --fold_length "${_fold_length}" \
                 --output_dir "${svs_exp}" \
