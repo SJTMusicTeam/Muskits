@@ -50,7 +50,13 @@ class MIDIScpReader(collections.abc.Mapping):
 
         if self.rep == "representation":
             note_seq, tempo_seq = midi_to_seq(
-                midi_obj, self.dtype, self.rate, pitch_aug_factor, time_aug_factor, self.mode, self.time_shift
+                midi_obj,
+                self.dtype,
+                self.rate,
+                pitch_aug_factor,
+                time_aug_factor,
+                self.mode,
+                self.time_shift,
             )
         else:
             raise TypeError("Not supported loader type {}".format(self.rep))
@@ -112,6 +118,7 @@ class MIDIScpWriter:
         midi_path.parent.mkdir(parents=True, exist_ok=True)
         midi_obj = seq_to_midi(note_seq, tempo_seq, self.rate)
         notes = midi_obj.instruments[0].notes
+
         if len(notes) > 0:
             midi_obj.dump(midi_path)
             self.fscp.write(f"{key} {midi_path}\n")

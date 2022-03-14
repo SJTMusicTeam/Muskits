@@ -188,7 +188,7 @@ class IterableMuskitDataset(IterableDataset):
                     key, value = sps
                     keys.append(key)
                     values.append(value)
-                
+
                 for k_idx, k in enumerate(keys):
                     if k != keys[0]:
                         raise RuntimeError(

@@ -41,7 +41,6 @@ from muskit.utils.types import str2triple_str
 from muskit.utils.types import str_or_none
 
 
-
 class SingingGenerate:
     """SingingGenerate class
 
@@ -89,7 +88,7 @@ class SingingGenerate:
             if isinstance(vocoder, torch.nn.Module):
                 vocoder.to(dtype=getattr(torch, dtype)).eval()
             self.vocoder = vocoder
-        
+
         logging.info(f"Extractor:\n{self.feats_extract}")
         logging.info(f"Normalizer:\n{self.normalize}")
         logging.info(f"SVS:\n{self.svs}")
@@ -156,7 +155,7 @@ class SingingGenerate:
             duration, focus_rate = self.duration_calculator(att_ws)
         else:
             duration, focus_rate = None, None
-        
+
         assert outs.shape[0] == 1
         outs = outs.squeeze(0)
         outs_denorm = outs_denorm.squeeze(0)
@@ -200,6 +199,7 @@ class SingingGenerate:
     def use_spembs(self) -> bool:
         """Return spemb is needed or not in the inference."""
         return self.svs.spk_embed_dim is not None
+
 
 def inference(
     output_dir: str,
