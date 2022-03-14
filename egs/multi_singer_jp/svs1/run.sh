@@ -21,8 +21,8 @@ combine_path+=" $(realpath ../../kiritan/svs1/dump/raw/)"
 combine_path+=" $(realpath ../../natsume/svs1/dump/raw/)"
 
 
-score_feats_extract=frame_score_feats   # frame_score_feats | syllable_score_feats
-expdir=exp/3-4-glu
+score_feats_extract=syllable_score_feats # frame_score_feats | syllable_score_feats
+expdir=exp/3-14-glu
 
 opts=
 if [ "${fs}" -eq 48000 ]; then
@@ -48,7 +48,7 @@ cleaner=none
 
 ./svs.sh \
     --lang jp \
-    --stage 7 \
+    --stage 6 \
     --stop_stage 7 \
     --local_data_opts "${combine_path}" \
     --feats_type raw \

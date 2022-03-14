@@ -16,8 +16,9 @@ n_fft=2048
 n_shift=300
 win_length=1200
 
-score_feats_extract=frame_score_feats   # frame_score_feats | syllable_score_feats
-expdir=exp/3-3-glu
+# score_feats_extract=frame_score_feats   # frame_score_feats | syllable_score_feats
+score_feats_extract=syllable_score_feats
+expdir=exp/3-14-glu
 # expdir=exp/3-3-glu_noDP
 # inference_model=196epoch.pth
 
@@ -45,7 +46,7 @@ cleaner=none
 
 ./svs.sh \
     --lang jp \
-    --stage 7 \
+    --stage 6 \
     --stop_stage 7 \
     --local_data_opts "--stage 0" \
     --feats_type raw \

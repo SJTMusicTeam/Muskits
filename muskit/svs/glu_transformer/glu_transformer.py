@@ -734,10 +734,17 @@ class GLU_Transformer(AbsSVS):
         # tempo = label[:, : tempo_lengths.max()]  # for data-parallel
         batch_size = text.size(0)
 
-        phone_emb, _ = self.phone_encoder(text)
-        midi_emb = self.midi_encoder_input_layer(midi)
+        # logging.info(f'text.size():{text.size()}')
+        # logging.info(f'midi.size():{midi.size()}')
+        # logging.info(f'label.size():{label.size()}')
 
+        phone_emb, _ = self.phone_encoder(label)
+        midi_emb = self.midi_encoder_input_layer(midi)
+        # logging.info(f'phone_emb.size():{phone_emb.size()}')
+        # logging.info(f'midi_emb.size():{midi_emb.size()}')
+        # logging.info(f'ds.size():{ds.size()}')
         label_emb = self.length_regulator(phone_emb, ds)
+        midi_emb = self.length_regulator(midi_emb, ds)
         # label_emb = self.enc_postnet(
         #     phone_emb, label, text
         # )
@@ -769,10 +776,14 @@ class GLU_Transformer(AbsSVS):
         pos_out = F.leaky_relu(self.fc_pos(pos_emb))
 
         hs = hs + pos_out
-
+        
+        # logging.info(f'ds:{ds}')
+        # logging.info(f'ds.size():{ds.size()}')
+        # logging.info(f'ds.sum(-1):{ds.sum(-1)}')
+        # logging.info(f'ds.sum(-1).size():{ds.sum(-1).size()}')
         # decoder
         zs = self.decoder(
-            hs, pos=(~make_pad_mask(midi_lengths)).to(device=hs.device)
+            hs, pos=(~make_pad_mask(ds.sum(-1))).to(device=hs.device)
         )  # True mask
 
         zs = zs[:, self.reduction_factor - 1 :: self.reduction_factor]
@@ -856,7 +867,7 @@ class GLU_Transformer(AbsSVS):
             Dict[str, Tensor]: Output dict including the following items:
                 * feat_gen (Tensor): Output sequence of features (T_feats, odim).
         """
-        phone_emb, _ = self.phone_encoder(text)
+        phone_emb, _ = self.phone_encoder(label)
         midi_emb = self.midi_encoder_input_layer(midi)
 
         # if self.use_duration:
@@ -865,6 +876,8 @@ class GLU_Transformer(AbsSVS):
         label_emb = self.length_regulator(phone_emb, ds)
 
         midi_emb = F.leaky_relu(self.fc_midi(midi_emb))
+        
+        midi_emb = self.length_regulator(midi_emb, ds)
 
         if self.embed_integration_type == "add":
             # logging.info(f'label_emb.size():{label_emb.size()[1]}')
@@ -904,7 +917,8 @@ class GLU_Transformer(AbsSVS):
         # logging.info(f'midi.size():{torch.LongTensor([midi.size()[1]], device=hs.device)}')
         # torch.LongTensor([midi.size()[1]], device=hs.device)
         zs = self.decoder(
-            hs, pos=(~make_pad_mask(torch.LongTensor([hs.size()[1]], device=hs.device))).to(device=hs.device)
+            hs, pos=(~make_pad_mask(ds.sum(-1))).to(device=hs.device)
+            # hs, pos=(~make_pad_mask(torch.LongTensor([hs.size()[1]], device=hs.device))).to(device=hs.device)
         )  # True mask
 
         zs = zs[:, self.reduction_factor - 1 :: self.reduction_factor]
