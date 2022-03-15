@@ -873,9 +873,11 @@ class GLU_Transformer(AbsSVS):
         phone_emb, _ = self.phone_encoder(label)
         midi_emb = self.midi_encoder_input_layer(midi)
 
-        # if self.use_duration:
-        #     ds = self.durationmodel(text, None)
+        if self.use_duration:
+            ds = self.durationmodel(label, None)
         
+        # logging.info(f'ds.size():{ds.size()[1]}')
+        # logging.info(f'midi_emb.size():{midi_emb.size()[1]}')
         label_emb = self.length_regulator(phone_emb, ds)
 
         midi_emb = F.leaky_relu(self.fc_midi(midi_emb))
