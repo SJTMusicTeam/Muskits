@@ -602,7 +602,7 @@ class MuskitSVSModel(AbsMuskitModel):
                 for index in range(frame_length):
                     if _phoneFrame[index] == 0 and _midiFrame[index] == 0:
                         frame_length -= 1
-                        feats_lengths[i] -= 1
+                        # feats_lengths[i] -= 1
 
                 syllable_length = label_lengths[i]
                 _phoneSyllable = label[i, :syllable_length]
@@ -646,10 +646,10 @@ class MuskitSVSModel(AbsMuskitModel):
                                 # logging.info("Finish")
                                 break
 
-                logging.info(
-                    f"ds_tmp: {ds_tmp}, sum(ds_tmp): {sum(ds_tmp)}, frame_length: {frame_length}, feats_lengths[i]: {feats_lengths[i]}"
-                )
-                assert sum(ds_tmp) == frame_length and sum(ds_tmp) == feats_lengths[i]
+                # logging.info(
+                #     f"ds_tmp: {ds_tmp}, sum(ds_tmp): {sum(ds_tmp)}, frame_length: {frame_length}, feats_lengths[i]: {feats_lengths[i]}"
+                # )
+                # assert sum(ds_tmp) == frame_length and sum(ds_tmp) == feats_lengths[i]
 
                 ds.append(torch.tensor(ds_tmp))
             ds = pad_list(ds, pad_value=0).to(label.device)
