@@ -113,7 +113,7 @@ def transition(dataset, des_url):
         # print(des_midi)
         # break
         if wav_path[-3:] != "wav":
-            print("!!! files not in wav format: ", wav_path)
+            print("Files not in wav format: ", wav_path)
             continue
         copyfile(wav_path, des_wav)
         copyfile(lab_path, des_lab)
