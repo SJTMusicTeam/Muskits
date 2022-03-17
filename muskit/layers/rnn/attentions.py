@@ -247,6 +247,162 @@ class AttAdd(torch.nn.Module):
         return c, w
 
 
+class GDCAttLoc(torch.nn.Module):
+    """Global duration control attention module.
+
+    Reference: SINGING-TACOTRON: GLOBAL DURATION CONTROL ATTENTION AND DYNAMIC
+    FILTER FOR END-TO-END SINGING VOICE SYNTHESIS
+    (https://arxiv.org/abs/2202.07907)
+
+    :param int eprojs: # projection-units of encoder
+    :param int dunits: # units of decoder
+    :param int att_dim: attention dimension
+    :param int aconv_chans: # channels of attention convolution
+    :param int aconv_filts: filter size of attention convolution
+    :param bool han_mode: flag to swith on mode of hierarchical attention
+        and not store pre_compute_enc_h
+    """
+
+    def __init__(
+        self, eprojs, dunits, att_dim, aconv_chans, aconv_filts, han_mode=False
+    ):
+        super(AttLoc, self).__init__()
+        self.pt_zero_linear = nn.Linear(att_dim, 1)
+        self.mlp_enc = torch.nn.Linear(eprojs, att_dim)
+        self.mlp_dec = torch.nn.Linear(dunits, att_dim, bias=False)
+        self.mlp_att = torch.nn.Linear(aconv_chans, att_dim, bias=False)
+        self.loc_conv = torch.nn.Conv2d(
+            1,
+            aconv_chans,
+            (1, 2 * aconv_filts + 1),
+            padding=(0, aconv_filts),
+            bias=False,
+        )
+        self.gvec = torch.nn.Linear(att_dim, 1)
+
+        self.dunits = dunits
+        self.eprojs = eprojs
+        self.att_dim = att_dim
+        self.h_length = None
+        self.enc_h = None
+        self.pre_compute_enc_h = None
+        self.mask = None
+        self.han_mode = han_mode
+
+    def reset(self):
+        """reset states"""
+        self.h_length = None
+        self.enc_h = None
+        self.pre_compute_enc_h = None
+        self.mask = None
+
+    def forward(
+        self,
+        enc_hs_pad,
+        enc_hs_len,
+        trans_token,
+        att_pt_prev,
+        dec_z,
+        att_prev,
+        scaling=2.0,
+        last_attended_idx=None,
+        backward_window=1,
+        forward_window=3,
+    ):
+        """Calcualte AttLoc forward propagation.
+
+        :param torch.Tensor enc_hs_pad: padded encoder hidden state (B x T_max x D_enc)
+        :param list enc_hs_len: padded encoder hidden state length (B)
+        :param torch.Tensor trans_token: Global transition token for duration (B x T_max x 1)
+        :param torch.Tensor att_pt_prev: previous attention - pt weight (B x T_max)
+        :param torch.Tensor dec_z: decoder hidden state (B x D_dec)
+        :param torch.Tensor att_prev: previous attention weight (B x T_max)
+        :param float scaling: scaling parameter before applying softmax
+        :param torch.Tensor forward_window:
+            forward window size when constraining attention
+        :param int last_attended_idx: index of the inputs of the last attended
+        :param int backward_window: backward window size in attention constraint
+        :param int forward_window: forward window size in attetion constraint
+        :return: attention weighted encoder state (B, D_enc)
+        :rtype: torch.Tensor
+        :return: previous attention weights (B x T_max)
+        :rtype: torch.Tensor
+        """
+        batch = len(enc_hs_pad)
+        # pre-compute all h outside the decoder loop
+        if self.pre_compute_enc_h is None or self.han_mode:
+            self.enc_h = enc_hs_pad  # utt x frame x hdim
+            self.h_length = self.enc_h.size(1)
+            # utt x frame x att_dim
+            self.pre_compute_enc_h = self.mlp_enc(self.enc_h)
+
+        if dec_z is None:
+            dec_z = enc_hs_pad.new_zeros(batch, self.dunits)
+        else:
+            dec_z = dec_z.view(batch, self.dunits) 
+
+        # initialize attention weight with uniform dist.
+        if att_prev is None:
+            # if no bias, 0 0-pad goes 0
+            att_prev = 1.0 - make_pad_mask(enc_hs_len).to( 
+                device=dec_z.device, dtype=dec_z.dtype
+            )
+            att_prev = att_prev / att_prev.new(enc_hs_len).unsqueeze(-1)
+
+        if att_pt_prev in None:
+            # Use "hs" as the initial "pt_0" in the singing_tacotron paper  
+            att_pt_prev = pt_zero_linear(enc_hs_pad).squeeze(2)
+            att_pt_prev.requires_grad = True
+
+        # att_prev: utt x frame -> utt x 1 x 1 x frame
+        # -> utt x att_conv_chans x 1 x frame
+        att_conv = self.loc_conv(att_prev.view(batch, 1, 1, self.h_length))
+        # att_conv: utt x att_conv_chans x 1 x frame -> utt x frame x att_conv_chans
+        att_conv = att_conv.squeeze(2).transpose(1, 2)
+        # att_conv: utt x frame x att_conv_chans -> utt x frame x att_dim
+        att_conv = self.mlp_att(att_conv)
+
+        # dec_z_tiled: utt x frame x att_dim
+        dec_z_tiled = self.mlp_dec(dec_z).view(batch, 1, self.att_dim)
+
+        # dot with gvec
+        # utt x frame x att_dim -> utt x frame
+        e = self.gvec(
+            torch.tanh(att_conv + self.pre_compute_enc_h + dec_z_tiled)
+        ).squeeze(2) 
+
+        # NOTE: consider zero padding when compute w.
+        if self.mask is None:
+            self.mask = to_device(enc_hs_pad, make_pad_mask(enc_hs_len))
+        e.masked_fill_(self.mask, -float("inf"))
+
+        # apply monotonic attention constraint (mainly for SVS)
+        if last_attended_idx is not None:
+            e = _apply_attention_constraint(
+                e, last_attended_idx, backward_window, forward_window
+            )
+
+        w = F.softmax(scaling * e, dim=1)
+
+        att_dim = att_dim
+        pt_prev = None
+        pt = np.zeros(att_dim)
+        for i in range(att_dim):
+            if i == 0:
+                pt[i] = trans_token[i] * att_pt_prev[i]
+            else:
+                pt[i] = (1 - trans_token[i-1]) * att_pt_prev[i-1] + trans_token[i] * att_pt_prev[i]
+        pt = torch.from_numpy(pt)
+        pt = torch.mul(pt, w)
+        pt = F.normalize(pt, p=1, dim=1)
+
+        # weighted sum over flames
+        # utt x hdim
+        c = torch.sum(self.enc_h * pt.view(batch, self.h_length, 1), dim=1)
+
+        return c, w, pt
+
+
 class AttLoc(torch.nn.Module):
     """location-aware attention module.
 
