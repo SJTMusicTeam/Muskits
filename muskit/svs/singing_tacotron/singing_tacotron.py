@@ -439,10 +439,10 @@ class singing_tacotron(AbsSVS):
             embedding_dim=embed_dim,
             padding_idx=self.padding_idx,
         )
-        self.duration_encode_layer = torch.nn.linear(1, embed_dim)
+        self.duration_encode_layer = torch.nn.Linear(1, embed_dim)
 
         self.enc_content = Content_Encoder(
-            idim=idim,
+            idim=2*embed_dim,
             embed_dim=embed_dim,
             elayers=elayers,
             eunits=eunits,
@@ -452,14 +452,14 @@ class singing_tacotron(AbsSVS):
             use_batch_norm=use_batch_norm,
             use_residual=use_residual,
             dropout_rate=dropout_rate,
-            padding_idx=padding_idx,
+            padding_idx=self.padding_idx,
         )
 
         self.enc_duration = Duration_Encoder(
-            idim=idim,
+            idim=2*embed_dim,
             embed_dim=embed_dim,
             dropout_rate=dropout_rate,
-            padding_idx=padding_idx,
+            padding_idx=self.padding_idx,
         )
 
         # define network modules
@@ -478,14 +478,14 @@ class singing_tacotron(AbsSVS):
             )
 
         # define spk and lang embedding
-        self.spks = None
-        if spks is not None and spks > 1:
-            self.spks = spks
-            self.sid_emb = torch.nn.Embedding(spks, adim)
-        self.langs = None
-        if langs is not None and langs > 1:
-            self.langs = langs
-            self.lid_emb = torch.nn.Embedding(langs, adim)
+#         self.spks = None
+#         if spks is not None and spks > 1:
+#             self.spks = spks
+#             self.sid_emb = torch.nn.Embedding(spks, adim)
+#         self.langs = None
+#         if langs is not None and langs > 1:
+#             self.langs = langs
+#             self.lid_emb = torch.nn.Embedding(langs, adim)
 
         # define additional projection for speaker embedding
         if spk_embed_dim is None:
@@ -522,16 +522,13 @@ class singing_tacotron(AbsSVS):
             raise NotImplementedError("Support only location or forward")
 
         # define duration predictor
-        self.duration_predictor = DurationPredictor(
-            idim=adim,
-            n_layers=duration_predictor_layers,
-            n_chans=duration_predictor_chans,
-            kernel_size=duration_predictor_kernel_size,
-            dropout_rate=duration_predictor_dropout_rate,
-        )
-
-        # define length regulator
-        self.length_regulator = LengthRegulator()
+#         self.duration_predictor = DurationPredictor(
+#             idim=adim,
+#             n_layers=duration_predictor_layers,
+#             n_chans=duration_predictor_chans,
+#             kernel_size=duration_predictor_kernel_size,
+#             dropout_rate=duration_predictor_dropout_rate,
+#         )
 
         # define decoder
         self.dec = Decoder(
@@ -565,18 +562,18 @@ class singing_tacotron(AbsSVS):
             )
 
         # initialize parameters
-        self._reset_parameters(
-            init_type=init_type,
-            init_enc_alpha=init_enc_alpha,
-            init_dec_alpha=init_dec_alpha,
-        )
+#         self._reset_parameters(
+#             init_type=init_type,
+#             init_enc_alpha=init_enc_alpha,
+#             init_dec_alpha=init_dec_alpha,
+#         )
 
     def forward(
         self,
         text: torch.Tensor,
         text_lengths: torch.Tensor,
-        speech: torch.Tensor,
-        speech_lengths: torch.Tensor,
+        feats: torch.Tensor,
+        feats_lengths: torch.Tensor,
         label: torch.Tensor,
         label_lengths: torch.Tensor,
         midi: torch.Tensor,
@@ -594,8 +591,8 @@ class singing_tacotron(AbsSVS):
         Args:
             text (LongTensor): Batch of padded character ids (B, Tmax).
             text_lengths (LongTensor): Batch of lengths of each input batch (B,).
-            speech (Tensor): Batch of padded target features (B, Lmax, odim).
-            speech_lengths (LongTensor): Batch of the lengths of each target (B,).
+            feats (Tensor): Batch of padded target features (B, Lmax, odim).
+            feats_lengths (LongTensor): Batch of the lengths of each target (B,).
             spembs (Tensor, optional): Batch of speaker embeddings (B, spk_embed_dim).
             ds: durations (LongTensor) Batch of padded durations (B, T_text + 1).
             // durations_lengths (LongTensor): Batch of duration lengths (B, T_text + 1).
@@ -610,7 +607,7 @@ class singing_tacotron(AbsSVS):
 
         """
         text = text[:, : text_lengths.max()]  # for data-parallel
-        speech = speech[:, : speech_lengths.max()]  # for data-parallel
+        feats = feats[:, : feats_lengths.max()]  # for data-parallel
         midi = midi[:, : midi_lengths.max()]  # for data-parallel
         label = label[:, : label_lengths.max()]  # for data-parallel
         tempo = tempo[:, : tempo_lengths.max()]  # for data-parallel
@@ -620,9 +617,9 @@ class singing_tacotron(AbsSVS):
         label_emb = self.phone_encode_layer(label)
         midi_emb = self.midi_encode_layer(midi)
         tempo_emb = self.tempo_encode_layer(tempo) # FIX ME (Nan): the tempo of singing tacotron is BPM, should change later.
-        ds_emb = self.duration_encode_layer(ds.unsqueeze(-1))
+        ds_tensor = torch.tensor(ds.unsqueeze(-1),dtype=torch.float32).cuda()
+        ds_emb = self.duration_encode_layer(ds_tensor)
         
-
         content_input = torch.cat([label_emb, midi_emb], dim=-1)
         duration_tempo = torch.cat([tempo_emb, ds_emb], dim=-1)
 
@@ -633,8 +630,8 @@ class singing_tacotron(AbsSVS):
         #     xs[i, l] = self.eos
         # ilens = text_lengths + 1
 
-        ys = speech
-        olens = speech_lengths
+        ys = feats
+        olens = feats_lengths
         ilens = label_lengths
 
         # make labels for stop prediction
@@ -714,10 +711,10 @@ class singing_tacotron(AbsSVS):
     def inference(
         self,
         text: torch.Tensor,
-        speech: torch.Tensor = None,
         label: torch.Tensor,
         midi: torch.Tensor,
         ds: torch.Tensor,
+        feats: torch.Tensor = None,
         threshold: float = 0.5,
         minlenratio: float = 0.0,
         maxlenratio: float = 10.0,
@@ -732,7 +729,7 @@ class singing_tacotron(AbsSVS):
 
         Args:
             text (LongTensor): Input sequence of characters (T,).
-            speech (Tensor, optional): Feature sequence to extract style (N, idim).
+            feats (Tensor, optional): Feature sequence to extract style (N, idim).
             ds: durations (Optional[LongTensor]) Groundtruth of duration (T_text + 1,).
             spembs (Optional[Tensor]): Speaker embedding (spk_embed_dim,).
             sids (Optional[Tensor]): Speaker ID (1,).
@@ -762,7 +759,7 @@ class singing_tacotron(AbsSVS):
         duration_tempo = torch.cat([tempo_emb, ds_emb], dim=-1)
 
         x = text
-        y = speech
+        y = feats
         spemb = spembs
 
         # TODO: (Nan)
@@ -771,7 +768,7 @@ class singing_tacotron(AbsSVS):
 
         # inference with teacher forcing
         if use_teacher_forcing:
-            assert speech is not None, "speech must be provided with teacher forcing."
+            assert feats is not None, "feats must be provided with teacher forcing."
 
             xs, ys = x.unsqueeze(0), y.unsqueeze(0)
             spembs = None if spemb is None else spemb.unsqueeze(0)
@@ -830,7 +827,7 @@ class singing_tacotron(AbsSVS):
 
         return hs
 
-    def _reset_parameters(self, init_type: str):
-        # initialize parameters
-        if init_type != "pytorch":
-            initialize(self, init_type)
+#     def _reset_parameters(self, init_type: str):
+#         # initialize parameters
+#         if init_type != "pytorch":
+#             initialize(self, init_type)

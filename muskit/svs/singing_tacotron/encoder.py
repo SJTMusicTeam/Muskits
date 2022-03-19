@@ -36,7 +36,7 @@ class Content_Encoder(torch.nn.Module):
     def __init__(
         self,
         idim,
-        input_layer="embed",
+        input_layer="linear",
         embed_dim=512,
         elayers=1,
         eunits=512,
@@ -81,7 +81,7 @@ class Content_Encoder(torch.nn.Module):
             self.convs = torch.nn.ModuleList()
             for layer in six.moves.range(econv_layers):
                 ichans = (
-                    embed_dim if layer == 0 and input_layer == "embed" else econv_chans
+                    2*embed_dim if layer == 0 else econv_chans
                 )
                 if use_batch_norm:
                     self.convs += [
@@ -141,7 +141,8 @@ class Content_Encoder(torch.nn.Module):
             LongTensor: Batch of lengths of each sequence (B,)
 
         """
-        xs = self.embed(xs).transpose(1, 2)
+#         xs = self.embed(xs).transpose(1, 2)
+        xs = xs.transpose(1,2)
         if self.convs is not None:
             for i in six.moves.range(len(self.convs)):
                 if self.use_residual:
@@ -152,7 +153,7 @@ class Content_Encoder(torch.nn.Module):
             return xs.transpose(1, 2)
         if not isinstance(ilens, torch.Tensor):
             ilens = torch.tensor(ilens)
-        xs = pack_padded_sequence(xs.transpose(1, 2), ilens.cpu(), batch_first=True)
+        xs = pack_padded_sequence(xs.transpose(1, 2), ilens.cpu(), batch_first=True, enforce_sorted=False)
         self.blstm.flatten_parameters()
         xs, _ = self.blstm(xs)  # (B, Tmax, C)
         xs, hlens = pad_packed_sequence(xs, batch_first=True)
@@ -203,12 +204,12 @@ class Duration_Encoder(torch.nn.Module):
             dropout_rate (float, optional) Dropout rate.
 
         """
-        super(Content_Encoder, self).__init__()
+        super(Duration_Encoder, self).__init__()
         # store the hyperparameters
         self.idim = idim
 
         # define network layer modules
-        self.embed = torch.nn.Linear(idim, 24)
+        self.linear = torch.nn.Linear(idim, 24)
         self.convs = torch.nn.Sequential(
                         torch.nn.ReLU(),
                         torch.nn.Conv1d(
@@ -217,7 +218,7 @@ class Duration_Encoder(torch.nn.Module):
                             3,
                             stride=1,
                             bias=False,
-                            padding=0,
+                            padding=2 // 2,
                         ),
                         torch.nn.ReLU(),
                         torch.nn.Conv1d(
@@ -226,12 +227,12 @@ class Duration_Encoder(torch.nn.Module):
                             3,
                             stride=1,
                             bias=False,
-                            padding=0,
+                            padding=2 // 2,
                         ),
                         torch.nn.ReLU(),
                     )
-        self.nntanh = torch.nn.tanh()
-        self.output_layer = torch.nn.Linear(idim, 1)
+        self.nntanh = torch.nn.Tanh()
+        self.output_layer = torch.nn.Linear(32, 1)
 
 
         # initialize
@@ -248,8 +249,8 @@ class Duration_Encoder(torch.nn.Module):
             LongTensor: Batch of lengths of each sequence (B,)
 
         """
-        nntanh = torch.nn.tanh()
-        xs = self.embed(xs).transpose(1, 2)
+        
+        xs = self.linear(xs).transpose(1, 2)
         xs = self.convs(xs).transpose(1, 2)
         xs = self.output_layer(xs)
         xs = self.nntanh(xs)

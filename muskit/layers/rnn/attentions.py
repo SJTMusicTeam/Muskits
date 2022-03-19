@@ -1,5 +1,6 @@
 """Attention modules for RNN."""
 
+import numpy as np
 import math
 import six
 
@@ -266,8 +267,8 @@ class GDCAttLoc(torch.nn.Module):
     def __init__(
         self, eprojs, dunits, att_dim, aconv_chans, aconv_filts, han_mode=False
     ):
-        super(AttLoc, self).__init__()
-        self.pt_zero_linear = nn.Linear(att_dim, 1)
+        super(GDCAttLoc, self).__init__()
+        self.pt_zero_linear = torch.nn.Linear(att_dim, 1)
         self.mlp_enc = torch.nn.Linear(eprojs, att_dim)
         self.mlp_dec = torch.nn.Linear(dunits, att_dim, bias=False)
         self.mlp_att = torch.nn.Linear(aconv_chans, att_dim, bias=False)
@@ -349,10 +350,9 @@ class GDCAttLoc(torch.nn.Module):
             )
             att_prev = att_prev / att_prev.new(enc_hs_len).unsqueeze(-1)
 
-        if att_pt_prev in None:
+        if att_pt_prev is None:
             # Use "hs" as the initial "pt_0" in the singing_tacotron paper  
-            att_pt_prev = pt_zero_linear(enc_hs_pad).squeeze(2)
-            att_pt_prev.requires_grad = True
+            att_pt_prev = self.pt_zero_linear(enc_hs_pad).squeeze(2)
 
         # att_prev: utt x frame -> utt x 1 x 1 x frame
         # -> utt x att_conv_chans x 1 x frame
@@ -383,16 +383,14 @@ class GDCAttLoc(torch.nn.Module):
             )
 
         w = F.softmax(scaling * e, dim=1)
-
-        att_dim = att_dim
-        pt_prev = None
-        pt = np.zeros(att_dim)
-        for i in range(att_dim):
+        batch_size, seq_len = att_pt_prev.size()
+        pt = torch.zeros((batch_size, seq_len)).to(w.device)
+        for i in range(seq_len):
             if i == 0:
-                pt[i] = trans_token[i] * att_pt_prev[i]
+                pt[:,i] = att_pt_prev[:,i] * trans_token[:, i].squeeze(-1)
             else:
-                pt[i] = (1 - trans_token[i-1]) * att_pt_prev[i-1] + trans_token[i] * att_pt_prev[i]
-        pt = torch.from_numpy(pt)
+                pt[:,i] = (1 - trans_token[:, i-1].squeeze(-1)) * att_pt_prev[:, i-1] + trans_token[:, i].squeeze(-1) * att_pt_prev[:, i]
+
         pt = torch.mul(pt, w)
         pt = F.normalize(pt, p=1, dim=1)
 

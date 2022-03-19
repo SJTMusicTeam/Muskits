@@ -10,8 +10,7 @@ import six
 
 import torch
 import torch.nn.functional as F
-
-from espnet.nets.pytorch_backend.rnn.attentions import AttForwardTA
+from muskit.layers.rnn.attentions import AttForwardTA
 
 
 def decoder_init(m):
@@ -433,9 +432,9 @@ class Decoder(torch.nn.Module):
         outs, logits, att_ws = [], [], []
         for y in ys.transpose(0, 1):
             if self.use_att_extra_inputs:
-                att_c, att_w, att_pt = self.att(hs, hlens, z_list[0], trans_token, prev_att_pt, prev_att_w, prev_out)
+                att_c, att_w, att_pt = self.att(hs, hlens, trans_token, prev_att_pt, z_list[0], prev_att_w, prev_out)
             else:
-                att_c, att_w, att_pt = self.att(hs, hlens, z_list[0], trans_token, prev_att_pt, prev_att_w)
+                att_c, att_w, att_pt = self.att(hs, hlens, trans_token, prev_att_pt, z_list[0], prev_att_w)
             prenet_out = self.prenet(prev_out) if self.prenet is not None else prev_out
             xs = torch.cat([att_c, prenet_out], dim=1)
             z_list[0], c_list[0] = self.lstm[0](xs, (z_list[0], c_list[0]))

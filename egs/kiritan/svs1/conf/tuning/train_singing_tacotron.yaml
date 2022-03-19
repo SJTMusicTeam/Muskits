@@ -5,38 +5,52 @@
 ##########################################################
 svs: singing_tacotron            # model architecture
 svs_conf:                        # keyword arguments for the selected model
-    #idim: 68 #phone_size
     midi_dim: 129                # midi dimension (note number + silence)
-    tempo_dim: 300
-    # odim:  #output_dim
-    embed_dim: 256 # embed_size  # char or phn embedding dimension
-    # eprenet_conv_layers: 3       # prenet (from bytesing) conv layers
-    # eprenet_conv_chans: 256      # prenet (from bytesing) conv channels numbers
-    # eprenet_conv_filts: 3        # prenet (from bytesing) conv filters size
-    elayers: 3                   # number of glu_transformer layers in encoder
-    eunits: 256                  # number of glu_transformer units hidden_size
-    glu_num_layers: 3
-    glu_kernel: 3
-    edropout_rate: 0.1
-    ddropout_rate: 0.1
-    dlayers: 6
-    dhead: 4
-    postnet_layers: 5            # number of layers in postnet
-    postnet_chans: 256           # number of channels in postnet
-    postnet_filts: 5             # filter size of postnet layer    n_mels: -1
-    # double_mel_loss: true
-    local_gaussian: true
-    # semitone_size: 59
-    # Hz2semitone: false
-    use_batch_norm: true         # whether to use batch normalization in postnet
-    reduction_factor: 1          # reduction factor
-    edropout_rate: 0.1           # encoder dropout rate
-    ddropout_rate: 0.1           # decoder dropout rate
-    postnet_dropout_rate: 0.5    # postnet dropout_rate
-    init_type: pytorch           # parameter initialization
-    use_masking: true            # whether to apply masking for padded part in loss calculation
-    embed_integration_type: add
+    tempo_dim: 500
+    embed_dim: 512
+    elayers: 1
+    eunits: 512
+    econv_layers: 3
+    econv_chans: 512
+    econv_filts: 5
+    atype: GDCA_location
+    adim: 512
+    aconv_chans: 32
+    aconv_filts: 15
+    cumulate_att_w: True
+    dlayers: 2
+    dunits: 1024
+    prenet_layers: 2
+    prenet_units: 256
+    postnet_layers: 5
+    postnet_chans: 512
+    postnet_filts: 5
+#     output_activation: None
+    use_batch_norm: True
+    use_concate: True
+    use_residual: False
+    reduction_factor: 1
+#     spk_embed_dim: None
+#     spk_embed_integration_type: concat
+    use_gst: False
+    gst_tokens: 10
+    gst_heads: 4
+    gst_conv_layers: 6
+#     gst_conv_chans_list: (32, 32, 64, 64, 128, 128)
+    gst_conv_kernel_size: 3
+    gst_conv_stride: 2
+    gst_gru_layers: 1
+    gst_gru_units: 128
+    # training related
+    dropout_rate: 0.5
+    zoneout_rate: 0.1
+    use_masking: True
+    use_weighted_masking: False
+    bce_pos_weight: 5.0
     loss_type: L1
+    use_guided_attn_loss: True
+    guided_attn_loss_sigma: 0.4
+    guided_attn_loss_lambda: 1.0
 
 ##########################################################
 #                  OPTIMIZER SETTING                     #
@@ -60,15 +74,15 @@ grad_clip: 5.0              # gradient clipping norm
 grad_noise: false           # whether to use gradient noise injection
 accum_grad: 1               # gradient accumulation
 # batch_bins: 1000000       # batch bins (for feats_type=fbank)
-batch_bins: 1000000         # batch bins (for feats_type=raw, *= n_shift / n_mels)
-# batch_size: 5
-# batch_type: sorted           # how to make batch
-batch_type: numel           # how to make batch
+# batch_bins: 1000000         # batch bins (for feats_type=raw, *= n_shift / n_mels)
+batch_size: 8
+batch_type: sorted           # how to make batch
+# batch_type: numel           # how to make batch
 sort_in_batch: descending   # how to sort data in making batch
 sort_batch: descending      # how to sort created batches
 num_workers: 10              # number of workers of data loader
 train_dtype: float32        # dtype in training
-log_interval: null          # log interval in iterations
+log_interval: 1          # log interval in iterations
 keep_nbest_models: 5        # number of models to keep
 num_att_plot: 3             # number of attention figures to be saved in every check
 seed: 0                     # random seed number
@@ -80,5 +94,5 @@ best_model_criterion:
     - loss
     - min
 
-gpu_id: 1
+gpu_id: 5
 vocoder_checkpoint: /data3/qt/ParallelWaveGAN/checkpoint-50000steps.pkl

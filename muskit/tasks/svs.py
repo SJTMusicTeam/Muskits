@@ -39,6 +39,7 @@ from muskit.svs.mlp_singer.mlp_singer import MLPSinger
 from muskit.svs.glu_transformer.glu_transformer import GLU_Transformer
 from muskit.svs.xiaoice.XiaoiceSing import XiaoiceSing
 from muskit.svs.xiaoice.XiaoiceSing import XiaoiceSing_noDP
+from muskit.svs.singing_tacotron.singing_tacotron import singing_tacotron
 from muskit.svs.utils import ParallelWaveGANPretrainedVocoder
 from muskit.utils.get_default_kwargs import get_default_kwargs
 from muskit.utils.nested_dict_action import NestedDictAction
@@ -107,6 +108,7 @@ svs_choices = ClassChoices(
         mlp=MLPSinger,
         xiaoice=XiaoiceSing,
         xiaoice_noDP=XiaoiceSing_noDP,
+        singing_tacotron=singing_tacotron
     ),
     type_check=AbsSVS,
     default="transformer",
