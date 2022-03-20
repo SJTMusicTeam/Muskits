@@ -409,6 +409,7 @@ class singing_tacotron(AbsSVS):
         self.use_gst = use_gst
         self.use_guided_attn_loss = use_guided_attn_loss
         self.loss_type = loss_type
+        self.atype = atype
         if self.spk_embed_dim is not None:
             self.spk_embed_integration_type = spk_embed_integration_type
 
@@ -441,8 +442,13 @@ class singing_tacotron(AbsSVS):
         )
         self.duration_encode_layer = torch.nn.Linear(1, embed_dim)
 
+        if self.atype == "GDCA_location":
+            coeff = 2
+        else:
+            coeff = 4
+        
         self.enc_content = Content_Encoder(
-            idim=2*embed_dim,
+            idim=coeff*embed_dim,
             embed_dim=embed_dim,
             elayers=elayers,
             eunits=eunits,
@@ -620,8 +626,12 @@ class singing_tacotron(AbsSVS):
         ds_tensor = torch.tensor(ds.unsqueeze(-1),dtype=torch.float32).cuda()
         ds_emb = self.duration_encode_layer(ds_tensor)
         
-        content_input = torch.cat([label_emb, midi_emb], dim=-1)
+        content_input = torch.cat([label_emb, midi_emb], dim=-1) # cat this two or cat 4 into content_enc
         duration_tempo = torch.cat([tempo_emb, ds_emb], dim=-1)
+        
+        att_input = None
+        if self.atype != "GDCA_location":
+            att_input = torch.cat([content_input, duration_tempo], dim=-1)
 
         # TODO (Nan): add start & End token
         # # Add eos at the last of sequence
@@ -634,13 +644,14 @@ class singing_tacotron(AbsSVS):
         olens = feats_lengths
         ilens = label_lengths
 
-        # make labels for stop prediction
-        labels = make_pad_mask(olens - 1).to(ys.device, ys.dtype)
-        labels = F.pad(labels, [0, 1], "constant", 1.0)
+        # make labels for stop prediction  
+        # TODO: (Nan) change name
+        stop_labels = make_pad_mask(olens - 1).to(ys.device, ys.dtype)
+        stop_labels = F.pad(stop_labels, [0, 1], "constant", 1.0)
 
         # calculate tacotron2 outputs
         after_outs, before_outs, logits, att_ws = self._forward(
-            content_input, duration_tempo, ilens, ys, olens, spembs
+            content_input, att_input, duration_tempo, ilens, ys, olens, spembs
         )
 
         # modify mod part of groundtruth
@@ -648,15 +659,15 @@ class singing_tacotron(AbsSVS):
             olens = olens.new([olen - olen % self.reduction_factor for olen in olens])
             max_out = max(olens)
             ys = ys[:, :max_out]
-            labels = labels[:, :max_out]
-            labels[:, -1] = 1.0  # make sure at least one frame has 1
+            stop_labels = stop_labels[:, :max_out]
+            stop_labels[:, -1] = 1.0  # make sure at least one frame has 1
         else:
             ys = feats
             olens = feats_lengths
 
         # calculate taco2 loss
         l1_loss, mse_loss, bce_loss = self.taco2_loss(
-            after_outs, before_outs, logits, ys, labels, olens
+            after_outs, before_outs, logits, ys, stop_labels, olens
         )
         if self.loss_type == "L1+L2":
             loss = l1_loss + mse_loss + bce_loss
@@ -688,24 +699,36 @@ class singing_tacotron(AbsSVS):
         stats.update(loss=loss.item())
 
         loss, stats, weight = force_gatherable((loss, stats, batch_size), loss.device)
-        return loss, stats, weight
+        
+        if flag_IsValid == False:
+            # train stage
+            return loss, stats, weight
+        else:
+            # validation stage
+            return loss, stats, weight, after_outs[:, : olens.max()], ys, olens
 
     def _forward(
         self,
         xs: torch.Tensor,
+        att_input: torch.Tensor,
         duration_tempo: torch.Tensor,
         ilens: torch.Tensor,
         ys: torch.Tensor,
         olens: torch.Tensor,
         spembs: torch.Tensor,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        hs, hlens = self.enc_content(xs, ilens)
-        trans_token = self.enc_duration(duration_tempo)
+        if self.atype == "GDCA_location":
+            hs, hlens = self.enc_content(xs, ilens) # hs: (B, seq_len, emb_dim)
+            trans_token = self.enc_duration(duration_tempo) # (B, seq_len, 1)
+        else:
+            hs, hlens = self.enc_content(att_input, ilens) # hs: (B, seq_len, emb_dim)
+            trans_token = None
         if self.use_gst:
             style_embs = self.gst(ys)
             hs = hs + style_embs.unsqueeze(1)
         if self.spk_embed_dim is not None:
             hs = self._integrate_with_spk_embed(hs, spembs)
+        
         return self.dec(hs, hlens, trans_token, ys)
 
     def inference(

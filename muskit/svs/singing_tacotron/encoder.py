@@ -81,7 +81,7 @@ class Content_Encoder(torch.nn.Module):
             self.convs = torch.nn.ModuleList()
             for layer in six.moves.range(econv_layers):
                 ichans = (
-                    2*embed_dim if layer == 0 else econv_chans
+                    self.idim if layer == 0 else econv_chans
                 )
                 if use_batch_norm:
                     self.convs += [

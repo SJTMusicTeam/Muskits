@@ -431,10 +431,16 @@ class Decoder(torch.nn.Module):
         # loop for an output sequence
         outs, logits, att_ws = [], [], []
         for y in ys.transpose(0, 1):
-            if self.use_att_extra_inputs:
-                att_c, att_w, att_pt = self.att(hs, hlens, trans_token, prev_att_pt, z_list[0], prev_att_w, prev_out)
+            if trans_token is None:
+                if self.use_att_extra_inputs:
+                    att_c, att_w = self.att(hs, hlens, z_list[0], prev_att_w, prev_out)
+                else:
+                    att_c, att_w = self.att(hs, hlens, z_list[0], prev_att_w)
             else:
-                att_c, att_w, att_pt = self.att(hs, hlens, trans_token, prev_att_pt, z_list[0], prev_att_w)
+                if self.use_att_extra_inputs:
+                    att_c, att_w, att_pt = self.att(hs, hlens, trans_token, prev_att_pt, z_list[0], prev_att_w, prev_out)
+                else:
+                    att_c, att_w, att_pt = self.att(hs, hlens, trans_token, prev_att_pt, z_list[0], prev_att_w)
             prenet_out = self.prenet(prev_out) if self.prenet is not None else prev_out
             xs = torch.cat([att_c, prenet_out], dim=1)
             z_list[0], c_list[0] = self.lstm[0](xs, (z_list[0], c_list[0]))
@@ -451,7 +457,8 @@ class Decoder(torch.nn.Module):
             logits += [self.prob_out(zcs)]
             att_ws += [att_w]
             prev_out = y  # teacher forcing
-            prev_att_pt = att_pt
+            if trans_token is not None:
+                prev_att_pt = att_pt
             if self.cumulate_att_w and prev_att_w is not None:
                 prev_att_w = prev_att_w + att_w  # Note: error when use +=
             else:

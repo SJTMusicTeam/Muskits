@@ -13,7 +13,7 @@ svs_conf:                        # keyword arguments for the selected model
     econv_layers: 3
     econv_chans: 512
     econv_filts: 5
-    atype: GDCA_location
+    atype: location # GDCA_location
     adim: 512
     aconv_chans: 32
     aconv_filts: 15
@@ -94,5 +94,5 @@ best_model_criterion:
     - loss
     - min
 
-gpu_id: 5
-vocoder_checkpoint: /data3/qt/ParallelWaveGAN/checkpoint-50000steps.pkl
+gpu_id: 4
+# vocoder_checkpoint: /data3/qt/ParallelWaveGAN/checkpoint-50000steps.pkl
