@@ -51,6 +51,7 @@ svs_conf:                        # keyword arguments for the selected model
     use_guided_attn_loss: True
     guided_attn_loss_sigma: 0.4
     guided_attn_loss_lambda: 1.0
+#     spks: 5
 
 ##########################################################
 #                  OPTIMIZER SETTING                     #
@@ -94,5 +95,5 @@ best_model_criterion:
     - loss
     - min
 
-gpu_id: 4
-# vocoder_checkpoint: /data3/qt/ParallelWaveGAN/checkpoint-50000steps.pkl
+gpu_id: 5
+# vocoder_checkpoint: /root/data/hku_kg_cuda/NanHUO_HKU/Muskits_3/Muskits/egs/ofuton_p_utagoe_db/svs1/vocoder_checkpoint/checkpoint-300000steps.pkl

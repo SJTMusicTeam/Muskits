@@ -370,8 +370,6 @@ class singing_tacotron(AbsSVS):
         use_concate: bool = True,
         use_residual: bool = False,
         reduction_factor: int = 1,
-        spk_embed_dim: int = None,
-        spk_embed_integration_type: str = "concat",
         use_gst: bool = False,
         gst_tokens: int = 10,
         gst_heads: int = 4,
@@ -391,6 +389,11 @@ class singing_tacotron(AbsSVS):
         use_guided_attn_loss: bool = True,
         guided_attn_loss_sigma: float = 0.4,
         guided_attn_loss_lambda: float = 1.0,
+        # extra embedding related
+        spks: Optional[int] = None,
+        langs: Optional[int] = None,
+        spk_embed_dim: Optional[int] = None,
+        spk_embed_integration_type: str = "concat",
     ):
         """Initialize singing_tacotron module."""
         assert check_argument_types()
@@ -484,25 +487,31 @@ class singing_tacotron(AbsSVS):
             )
 
         # define spk and lang embedding
-#         self.spks = None
-#         if spks is not None and spks > 1:
-#             self.spks = spks
-#             self.sid_emb = torch.nn.Embedding(spks, adim)
-#         self.langs = None
-#         if langs is not None and langs > 1:
-#             self.langs = langs
-#             self.lid_emb = torch.nn.Embedding(langs, adim)
+        self.spks = None
+        if spks is not None and spks > 1:
+            self.spks = spks
+            self.sid_emb = torch.nn.Embedding(spks, adim)
+        self.langs = None
+        if langs is not None and langs > 1:
+            self.langs = langs
+            self.lid_emb = torch.nn.Embedding(langs, adim)
 
         # define additional projection for speaker embedding
-        if spk_embed_dim is None:
-            dec_idim = eunits
-        elif spk_embed_integration_type == "concat":
-            dec_idim = eunits + spk_embed_dim
-        elif spk_embed_integration_type == "add":
-            dec_idim = eunits
-            self.projection = torch.nn.Linear(self.spk_embed_dim, eunits)
+        self.spk_embed_dim = None
+        if spk_embed_dim is not None and spk_embed_dim > 0:
+            self.spk_embed_dim = spk_embed_dim
+            self.spk_embed_integration_type = spk_embed_integration_type
+        if self.spk_embed_dim is not None:
+            if self.spk_embed_integration_type == "add":
+                dec_idim = eunits
+                self.projection = torch.nn.Linear(self.spk_embed_dim, adim)
+            elif spk_embed_integration_type == "concat":
+                dec_idim = eunits + spk_embed_dim
+                self.projection = torch.nn.Linear(adim + self.spk_embed_dim, adim)
+            else:
+                raise ValueError(f"{spk_embed_integration_type} is not supported.")
         else:
-            raise ValueError(f"{spk_embed_integration_type} is not supported.")
+            dec_idim = eunits
 
         if atype == "location":
             att = AttLoc(dec_idim, dunits, adim, aconv_chans, aconv_filts)
@@ -774,12 +783,17 @@ class singing_tacotron(AbsSVS):
         """
         label_emb = self.phone_encode_layer(label)
         midi_emb = self.midi_encode_layer(midi)
-        tempo_emb = self.tempo_encode_layer(tempo) # FIX ME: the tempo of singing tacotron is BPM, should change later.
-        ds_emb = self.duration_encode_layer(ds)
+        tempo_emb = self.tempo_encode_layer(tempo) # FIX ME (Nan): the tempo of singing tacotron is BPM, should change later.
+        ds_tensor = torch.as_tensor(ds.unsqueeze(-1),dtype=torch.float32).to(midi.device)
+#         ds_tensor = ds.unsqueeze(-1).to(midi.device).to(dtype=torch.float32)
+        ds_emb = self.duration_encode_layer(ds_tensor)
         
-
-        content_input = torch.cat([label_emb, midi_emb], dim=-1)
+        content_input = torch.cat([label_emb, midi_emb], dim=-1) # cat this two or cat 4 into content_enc
         duration_tempo = torch.cat([tempo_emb, ds_emb], dim=-1)
+
+        att_input = None
+        if self.atype != "GDCA_location":
+            att_input = torch.cat([content_input, duration_tempo], dim=-1)
 
         x = text
         y = feats
@@ -802,8 +816,25 @@ class singing_tacotron(AbsSVS):
             return outs[0], None, att_ws[0]
 
         # inference
-        h = self.enc_content.inference(x)
-        trans_token = self.enc_duration.inference(duration_tempo)
+        if self.atype == "GDCA_location":
+            h = self.enc_content.inference(content_input) # h: (B, seq_len, emb_dim)
+            trans_token = self.enc_duration.inference(duration_tempo) # (B, seq_len, 1)
+        else:
+            h = self.enc_content.inference(att_input) # hs: (B, seq_len, emb_dim)
+            trans_token = None
+            
+        # integrate with SID and LID embeddings
+        if self.spks is not None:
+            sid_embs = self.sid_emb(sids.view(-1))
+            h = h + sid_embs.unsqueeze(1)
+        if self.langs is not None:
+            lid_embs = self.lid_emb(lids.view(-1))
+            h = h + lid_embs.unsqueeze(1)
+            
+        # integrate speaker embedding
+        if self.spk_embed_dim is not None:
+            h = self._integrate_with_spk_embed(h, spembs)
+            
         if self.use_gst:
             style_emb = self.gst(y.unsqueeze(0))
             h = h + style_emb
@@ -849,8 +880,3 @@ class singing_tacotron(AbsSVS):
             raise NotImplementedError("support only add or concat.")
 
         return hs
-
-#     def _reset_parameters(self, init_type: str):
-#         # initialize parameters
-#         if init_type != "pytorch":
-#             initialize(self, init_type)

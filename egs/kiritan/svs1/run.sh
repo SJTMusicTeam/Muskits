@@ -42,7 +42,7 @@ cleaner=none
 
 ./svs.sh \
     --lang jp \
-    --stage 6 \
+    --stage 7 \
     --local_data_opts "--stage 0 $(pwd)" \
     --feats_type raw \
     --pitch_extract None \
@@ -62,5 +62,6 @@ cleaner=none
     --score_feats_extract "${score_feats_extract}" \
     --srctexts "data/${train_set}/text" \
     --svs_exp ${expdir} \
+    --vocoder_file "/root/data/hku_kg_cuda/NanHUO_HKU/Muskits_3/Muskits/egs/ofuton_p_utagoe_db/svs1/vocoder_checkpoint/checkpoint-300000steps.pkl"
     --ngpu 1 \
     ${opts} "$@"

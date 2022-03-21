@@ -528,8 +528,9 @@ class Decoder(torch.nn.Module):
 
         """
         # setup
-        assert len(h.size()) == 2
-        hs = h.unsqueeze(0)
+#         assert len(h.size()) == 2
+#         hs = h.unsqueeze(0)
+        hs = h
         ilens = [h.size(0)]
         maxlen = int(h.size(0) * maxlenratio)
         minlen = int(h.size(0) * minlenratio)
@@ -565,8 +566,6 @@ class Decoder(torch.nn.Module):
                 att_c, att_w = self.att(
                     hs,
                     ilens,
-                    trans_token,
-                    prev_att_pt,
                     z_list[0],
                     prev_att_w,
                     prev_out,
@@ -578,8 +577,6 @@ class Decoder(torch.nn.Module):
                 att_c, att_w = self.att(
                     hs,
                     ilens,
-                    trans_token,
-                    prev_att_pt,
                     z_list[0],
                     prev_att_w,
                     last_attended_idx=last_attended_idx,
@@ -606,7 +603,6 @@ class Decoder(torch.nn.Module):
                 prev_out = self.output_activation_fn(outs[-1][:, :, -1])  # (1, odim)
             else:
                 prev_out = outs[-1][:, :, -1]  # (1, odim)
-            prev_att_pt = att_pt
             if self.cumulate_att_w and prev_att_w is not None:
                 prev_att_w = prev_att_w + att_w  # Note: error when use +=
             else:
@@ -622,7 +618,7 @@ class Decoder(torch.nn.Module):
                 outs = torch.cat(outs, dim=2)  # (1, odim, L)
                 if self.postnet is not None:
                     outs = outs + self.postnet(outs)  # (1, odim, L)
-                outs = outs.transpose(2, 1).squeeze(0)  # (L, odim)
+                outs = outs.transpose(2, 1)  # (L, odim)
                 probs = torch.cat(probs, dim=0)
                 att_ws = torch.cat(att_ws, dim=0)
                 break
@@ -632,7 +628,7 @@ class Decoder(torch.nn.Module):
 
         return outs, probs, att_ws
 
-    def calculate_all_attentions(self, hs, hlens, trans_token, ys):
+    def calculate_all_attentions(self, hs, hlens, ys):
         """Calculate all of the attention weights.
 
         Args:
@@ -666,16 +662,15 @@ class Decoder(torch.nn.Module):
 
         # initialize attention
         prev_att_w = None
-        prev_att_pt = None
         self.att.reset()
 
         # loop for an output sequence
         att_ws = []
         for y in ys.transpose(0, 1):
             if self.use_att_extra_inputs:
-                att_c, att_w = self.att(hs, hlens, trans_token, prev_att_pt, z_list[0], prev_att_w, prev_out)
+                att_c, att_w = self.att(hs, hlens, z_list[0], prev_att_w, prev_out)
             else:
-                att_c, att_w = self.att(hs, hlens, trans_token, prev_att_pt, z_list[0], prev_att_w)
+                att_c, att_w = self.att(hs, hlens, z_list[0], prev_att_w)
             att_ws += [att_w]
             prenet_out = self.prenet(prev_out) if self.prenet is not None else prev_out
             xs = torch.cat([att_c, prenet_out], dim=1)
@@ -685,7 +680,6 @@ class Decoder(torch.nn.Module):
                     z_list[i - 1], (z_list[i], c_list[i])
                 )
             prev_out = y  # teacher forcing
-            prev_att_pt = att_pt
             if self.cumulate_att_w and prev_att_w is not None:
                 prev_att_w = prev_att_w + att_w  # Note: error when use +=
             else:

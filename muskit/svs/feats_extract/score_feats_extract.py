@@ -111,8 +111,11 @@ class FrameScoreFeats(AbsFeatsExtract):
             if self.center:
                 pad = self.win_length // 2
                 input_lengths = input_lengths + 2 * pad
-
-            olens = (input_lengths - self.win_length) // self.hop_length + 1
+            
+            tmp_a = (input_lengths - self.win_length)
+            tmp_b = self.hop_length + 1
+#             olens =  // 
+            olens = torch.div(tmp_a, tmp_b, rounding_mode="trunc")
             output.masked_fill_(make_pad_mask(olens, output, 1), 0.0)
         else:
             olens = None

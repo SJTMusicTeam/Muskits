@@ -41,16 +41,13 @@ from muskit.utils.types import str2triple_str
 from muskit.utils.types import str_or_none
 
 
-
 class SingingGenerate:
     """SingingGenerate class
-
     Examples:
         >>> import soundfile
         >>> svs = SingingGenerate("config.yml", "model.pth")
         >>> wav = svs("Hello World")[0]
         >>> soundfile.write("out.wav", wav.numpy(), svs.fs, "PCM_16")
-
     """
 
     def __init__(
@@ -89,7 +86,7 @@ class SingingGenerate:
             if isinstance(vocoder, torch.nn.Module):
                 vocoder.to(dtype=getattr(torch, dtype)).eval()
             self.vocoder = vocoder
-        
+
         logging.info(f"Extractor:\n{self.feats_extract}")
         logging.info(f"Normalizer:\n{self.normalize}")
         logging.info(f"SVS:\n{self.svs}")
@@ -151,12 +148,13 @@ class SingingGenerate:
 
         batch = to_device(batch, self.device)
         outs, outs_denorm, probs, att_ws = self.model.inference(**batch, **cfg)
+#         print(outs.shape)
+#         print(att_ws)
+#         if att_ws is not None:
+#             duration, focus_rate = self.duration_calculator(att_ws)
+#         else:
+        duration, focus_rate = None, None
 
-        if att_ws is not None:
-            duration, focus_rate = self.duration_calculator(att_ws)
-        else:
-            duration, focus_rate = None, None
-        
         assert outs.shape[0] == 1
         outs = outs.squeeze(0)
         outs_denorm = outs_denorm.squeeze(0)
@@ -166,6 +164,8 @@ class SingingGenerate:
                 wav = self.vocoder(outs_denorm)
             else:
                 wav = self.vocoder(outs)
+        else:
+            wav = None
 
         return wav, outs, outs_denorm, probs, att_ws, duration, focus_rate
 
@@ -199,6 +199,7 @@ class SingingGenerate:
         """Return spemb is needed or not in the inference."""
         return self.svs.spk_embed_dim is not None
 
+
 def inference(
     output_dir: str,
     batch_size: int,
@@ -213,8 +214,8 @@ def inference(
     model_file: Optional[str],
     use_teacher_forcing: bool,
     allow_variable_data_keys: bool,
-    vocoder_config: Optional[str],
-    vocoder_checkpoint: str,
+    vocoder_config: Optional[str] = None,
+    vocoder_checkpoint: Optional[str] = None,
 ):
     """Perform SVS model decoding."""
     assert check_argument_types()
@@ -497,7 +498,7 @@ def get_parser():
     group.add_argument(
         "--vocoder_checkpoint",
         default="/data5/gs/vocoder_peter/hifigan-vocoder/exp/train_hifigan.v1_train_nodev_clean_libritts_hifigan-2.v1/checkpoint-50000steps.pkl",
-        type=str,
+        type=str_or_none,
         help="checkpoint file to be loaded.",
     )
     group.add_argument(

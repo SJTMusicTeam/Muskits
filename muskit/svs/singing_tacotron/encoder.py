@@ -171,10 +171,11 @@ class Content_Encoder(torch.nn.Module):
             Tensor: The sequences of encoder states(T, eunits).
 
         """
-        xs = x.unsqueeze(0)
+#         xs = x.unsqueeze(0)
+        xs = x
         ilens = torch.tensor([x.size(0)])
 
-        return self.forward(xs, ilens)[0][0]
+        return self.forward(xs, ilens)[0]
 
 
 class Duration_Encoder(torch.nn.Module):
