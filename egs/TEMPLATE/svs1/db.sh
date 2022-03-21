@@ -27,6 +27,14 @@ if [[ `hostname` == venus_qt_2241 ]]; then
     COMBINE=/data3/qt/Muskits/egs/combine_data/svs1/
 fi
 
+if [[ `hostname` == venus_wyn_2232 ]]; then
+    KIRITAN=/data3/qt/
+    ONIKU=/data3/qt/ONIKU_KURUMI_UTAGOE_DB/
+    OFUTON=/data3/qt/OFUTON_P_UTAGOE_DB/
+    NATSUME=/data3/qt
+    PJS=/data1/wyn/Mus_data/PJS_corpus_ver1.1/
+fi
+
 # For only uranus environment
 if [[ `hostname` == uranus_gs_2223 ]]; then
     KIRITAN=/data1/gs/Muskits/egs/kiritan/svs1/data/
