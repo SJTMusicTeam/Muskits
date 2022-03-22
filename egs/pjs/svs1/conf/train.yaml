@@ -77,6 +77,3 @@ best_model_criterion:
     - loss
     - min
 
-gpu_id: 0
-#vocoder_checkpoint: /data1/wyn/Mus_data/vocoder/train_nodev_ofuton_hifigan.v1/checkpoint-300000steps.pkl
-#vocoder_checkpoint: /data5/gs/vocoder_peter/hifigan-vocoder/exp/train_hifigan.v1_train_nodev_clean_libritts_hifigan-2.v1/checkpoint-50000steps.pkl
