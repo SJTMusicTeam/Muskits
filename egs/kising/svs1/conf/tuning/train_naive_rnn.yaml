@@ -50,10 +50,6 @@ max_epoch: 500              # number of epochs
 grad_clip: 1.0              # gradient clipping norm
 grad_noise: false           # whether to use gradient noise injection
 accum_grad: 1               # gradient accumulation
- 
-# batch_bins: 1000000       # batch bins (for feats_type=fbank)
-# batch_bins: 10000000         # batch bins (for feats_type=raw, *= n_shift / n_mels)
-# batch_type: numel           # how to make batch
 
 batch_type: sorted
 batch_size: 8
@@ -80,6 +76,3 @@ best_model_criterion:
 -   - train
     - loss
     - min
-
-gpu_id: 0
-vocoder_checkpoint: /home/exx/jiatong/projects/svs/ParallelWaveGAN/egs/opencpop/voc1/exp/tr_no_dev_opencpop_hifigan.v1/checkpoint-250000steps.pkl

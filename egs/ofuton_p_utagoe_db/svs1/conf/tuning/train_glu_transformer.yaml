@@ -80,7 +80,3 @@ best_model_criterion:
 -   - train
     - loss
     - min
-
-gpu_id: 1
-# vocoder_checkpoint: /data3/qt/ParallelWaveGAN/checkpoint-500000steps.pkl
-vocoder_checkpoint: /data3/qt/train_nodev_ofuton_hifigan.v1/checkpoint-300000steps.pkl

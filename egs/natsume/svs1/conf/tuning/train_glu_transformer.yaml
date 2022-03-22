@@ -74,6 +74,3 @@ best_model_criterion:
 -   - train
     - loss
     - min
-
-gpu_id: 1
-vocoder_checkpoint: /data3/qt/ParallelWaveGAN/checkpoint-50000steps.pkl

@@ -81,7 +81,3 @@ best_model_criterion:
 -   - train
     - loss
     - min
-
-gpu_id: 1
-# vocoder_checkpoint: /data3/qt/train_nodev_kiritan_ofuton_oniku_natsume/checkpoint-310000steps.pkl
-vocoder_checkpoint: /data3/qt/train_nodev_kiritan_ofuton_oniku_natsume/checkpoint-310000steps.pkl
