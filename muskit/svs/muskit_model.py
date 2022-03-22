@@ -587,6 +587,7 @@ class MuskitSVSModel(AbsMuskitModel):
 
             # calculate durations, represent syllable encoder outputs to feats mapping
             # Syllable Level duration info needs phone & midi
+
             ds = None
             # for i, _ in enumerate(labelFrame_lengths):
             #     assert labelFrame_lengths[i] == scoreFrame_lengths[i]

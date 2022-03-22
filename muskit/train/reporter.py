@@ -499,7 +499,7 @@ class Reporter:
 
         import matplotlib
 
-        matplotlib.use("agg")
+        matplotlib.use("agg") # FIX ME
         import matplotlib.pyplot as plt
         import matplotlib.ticker as ticker
 
