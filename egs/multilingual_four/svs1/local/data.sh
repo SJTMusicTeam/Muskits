@@ -41,7 +41,6 @@ for dataset in ${train_set} ${train_dev} ${test_set}; do
     echo "process for subset: ${dataset}"
     opts="data/${dataset}"
     while IFS= read -r -u3 dir; IFS= read -r -u4 lang; do
-    # for dir in ${combine_dir}; do
         echo "dir: ${dir}"
         if [ -d ${dir} ]; then
 	    org_workspace=$(realpath ${dir}/../../..)
