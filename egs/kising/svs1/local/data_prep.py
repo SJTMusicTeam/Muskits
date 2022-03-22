@@ -4,8 +4,8 @@ import librosa
 import numpy as np
 
 UTT_PREFIX = "kising"
-DEV_LIST = ["434_all.wav"]
-TEST_LIST = ["435_all.wav"]
+DEV_LIST = ["435_all.wav"]
+TEST_LIST = ["434_all.wav"]
 
 
 def pack_zero(string, size=20):

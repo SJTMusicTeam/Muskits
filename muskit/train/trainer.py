@@ -46,6 +46,8 @@ from muskit.utils.griffin_lim import logmel2linear
 from muskit.utils.griffin_lim import griffin_lim
 
 from librosa.display import specshow
+import matplotlib as mpl
+mpl.use('Agg')
 import matplotlib.pyplot as plt
 
 import os
