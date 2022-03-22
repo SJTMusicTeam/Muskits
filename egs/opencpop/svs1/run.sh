@@ -28,8 +28,8 @@ train_set=tr_no_dev
 valid_set=dev
 test_sets="dev eval"
 
-train_config=conf/tuning/train_xiaoice_noDP.yaml
-# train_config=conf/train.yaml
+# training and inference configuration
+train_config=conf/train.yaml
 inference_config=conf/decode.yaml
 
 # text related processing arguments
@@ -38,8 +38,6 @@ cleaner=none
 
 ./svs.sh \
     --lang zh \
-    --stage 2 \
-    --stop_stage 5 \
     --local_data_opts "--stage 0 $(pwd)" \
     --feats_type raw \
     --pitch_extract None \
@@ -58,6 +56,5 @@ cleaner=none
     --test_sets "${test_sets}" \
     --score_feats_extract "${score_feats_extract}" \
     --srctexts "data/${train_set}/text" \
-    --svs_exp ${expdir} \
     --ngpu 1 \
     ${opts} "$@"
