@@ -60,7 +60,5 @@ cleaner=none
     --test_sets "${test_sets}" \
     --score_feats_extract "${score_feats_extract}" \
     --srctexts "data/${train_set}/text" \
-    --svs_exp ${expdir} \
-    --vocoder_file "/data1/wyn/Mus_data/vocoder/train_nodev_PJS_hifigan.v1/checkpoint-300000steps.pkl"\
     --ngpu 1 \
     ${opts} "$@"
