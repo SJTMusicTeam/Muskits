@@ -294,9 +294,11 @@ class MLPSinger(AbsSVS):
         if self.spk_embed_dim is not None:
             hs = self._integrate_with_spk_embed(hs, spembs)
 
-        hs, pad, shape = self._chunking(hs)
-        zs = self.decoder(hs)
-        zs = self._cat_chunks(hs, pad, shape)
+        # hs, pad, shape = self._chunking(hs)
+        
+        # zs = self.decoder(hs)
+        # zs = self._cat_chunks(hs, pad, shape)
+        zs = self.testing_chunk(hs)
 
         zs = zs[:, self.reduction_factor - 1 :: self.reduction_factor]
 
@@ -444,6 +446,43 @@ class MLPSinger(AbsSVS):
 
         return hs
 
+    def testing_chunk(
+        self, hs: torch.Tensor
+    ):
+        batch_size, max_length, feat_dim = hs.size()
+
+        # padding interpretation
+        # [overlap_size] valid_value [overlap_size]
+        # ---------------- segments ---------------
+        # logging.info("input_hs: {}".format(hs.size()))
+        valid_value = self.chunk_size - 2 * self.overlap_size
+        if max_length % valid_value == 0:
+            pad_right = self.overlap_size
+        else:
+            pad_right = valid_value - max_length % valid_value + self.overlap_size
+        pad = (0, 0, self.overlap_size, pad_right)
+        segment_len = ceil(max_length / valid_value)
+        # logging.info("max_length, valid_value, seg_len: {}, {}, {}".format(max_length, valid_value, segment_len))
+        hs = torch.nn.functional.pad(hs, pad, "constant", 0)
+        # logging.info("hs: {}".format(hs.size()))
+
+        decoder_out = []
+        for i in range(segment_len):
+            chunk_start = valid_value * i
+            chunk_end = chunk_start + self.chunk_size
+            segment = hs[:, chunk_start: chunk_end]
+            
+            decoder_out.append(self.decoder(segment)[:, self.overlap_size:-self.overlap_size])
+        
+        zs = torch.cat(decoder_out, dim=1)
+        # logging.info("zs: {}".format(zs.size()))
+        # logging.info("pad:{}".format(pad))
+        # logging.info("pad_right, overlap_size: {}, {}".format(pad_right, self.overlap_size))
+        if pad_right != self.overlap_size:
+            zs = zs[:, :-pad_right+self.overlap_size]
+        # logging.info("zs: {}".format(zs.size()))
+        return zs
+
     def _chunking(
         self, hs: torch.Tensor
     ) -> Tuple[torch.Tensor, Tuple[int], Tuple[int]]:
@@ -468,14 +507,17 @@ class MLPSinger(AbsSVS):
         pad = (0, 0, self.overlap_size, pad_right)
         segment_len = ceil(max_length / valid_value)
         hs = torch.nn.functional.pad(hs, pad, "constant", 0)
+        logging.info("hs: {}".format(hs))
 
         segmented_hs = hs.as_strided(
             (batch_size, segment_len, self.chunk_size, feat_dim),
             (max_length * feat_dim, valid_value * feat_dim, feat_dim, 1),
         )
+        logging.info("segmented_hs:{}".format(segmented_hs))
         segmented_hs = segmented_hs.reshape(
             batch_size * segment_len, self.chunk_size, feat_dim
         )
+        logging.info("reshaped_segmented_hs:{}".format(segmented_hs))
         return segmented_hs, pad, (batch_size, segment_len, self.chunk_size, feat_dim)
 
     def _cat_chunks(
