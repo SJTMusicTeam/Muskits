@@ -41,9 +41,9 @@ valid_set=dev
 test_sets=eval
 
 # training and inference configuration
-# train_config=conf/train.yaml
+train_config=conf/train.yaml
 # train_config=conf/tuning/train_naive_rnn.yaml
-train_config=conf/tuning/train_xiaoice_noDP.yaml
+# train_config=conf/tuning/train_xiaoice_noDP.yaml
 inference_config=conf/decode.yaml
 
 # text related processing arguments
@@ -54,8 +54,6 @@ cleaner=none
 
 ./svs.sh \
     --lang multi \
-    --stage 7 \
-    --stop_stage 7 \
     --local_data_opts "--combine_path ${combine_path} --lang_seq ${lang_seq}" \
     --feats_type raw \
     --use_sid ${use_sid} \
@@ -77,5 +75,4 @@ cleaner=none
     --score_feats_extract "${score_feats_extract}" \
     --srctexts "data/${train_set}/text" \
     --ngpu 1 \
-    --vocoder_file /home/exx/jiatong/projects/svs/ParallelWaveGAN/egs/multilingual/voc1/exp/train_nodev_multilingual_hifigan.v1/checkpoint-600000steps.pkl \
     ${opts} "$@"

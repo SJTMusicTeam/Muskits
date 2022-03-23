@@ -55,11 +55,7 @@ def process_text_info(text):
             label_info.append(
                 "{} {} {}".format(gaps[i], gaps[i + 1], phns[i])
             )
-        # label_info.append(
-        #     "{} {} {}".format(float(line[0]), float(line[1]), line[3].strip())
-        # )
         text_info.extend(phns)
-        # text_info.append(line[3].strip())
     return " ".join(label_info), " ".join(text_info)
 
 

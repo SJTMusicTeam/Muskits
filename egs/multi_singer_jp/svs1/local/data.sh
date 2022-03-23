@@ -32,7 +32,6 @@ for dataset in ${train_set} ${train_dev} ${test_set}; do
     echo "process for subset: ${dataset}"
     opts="data/${dataset}"
     for dir in $*; do
-        # echo "dir: ${dir}"
         if [ -d ${dir} ]; then
 	    org_workspace=$(realpath ${dir}/../../..)
 	    org_name=$(basename ${org_workspace})

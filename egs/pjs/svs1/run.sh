@@ -29,12 +29,8 @@ valid_set=dev
 test_sets="dev eval"
 
 # training and inference configuration
-# train_config=conf/tuning/train_xiaoice.yaml
-#train_config=conf/tuning/train_xiaoice_noDP.yaml
 train_config=conf/train.yaml
-
 inference_config=conf/decode.yaml
-#inference_config=conf/tuning/decode_rnn.yaml
 
 # text related processing arguments
 g2p=none
