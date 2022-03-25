@@ -13,7 +13,9 @@ n_fft=2048
 n_shift=300
 win_length=1200
 
+
 score_feats_extract=frame_score_feats   # frame_score_feats | syllable_score_feats
+expdir=exp/rnn_test
 
 opts=
 if [ "${fs}" -eq 48000 ]; then
@@ -40,6 +42,7 @@ cleaner=none
 
 ./svs.sh \
     --lang jp \
+    --stage 7 \
     --local_data_opts "--stage 0 $(pwd)" \
     --feats_type raw \
     --pitch_extract None \
@@ -59,6 +62,6 @@ cleaner=none
     --score_feats_extract "${score_feats_extract}" \
     --srctexts "data/${train_set}/text" \
     --svs_exp ${expdir} \
-    --vocoder_file "/home/fangzhex/music/train_nodev_kiritan_hifigan.v1/checkpoint-300000steps.pkl" \
+    --vocoder_file "/home/fangzhex/music/ParallelWaveGAN/egs/no7singing/voc1/exp/train_nodev_no7singing_hifigan.v1/checkpoint-240000steps.pkl" \
     --ngpu 1 \
     ${opts} "$@"
