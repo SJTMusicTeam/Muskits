@@ -31,8 +31,6 @@ def get_parser():
     )
     parser.add_argument("db_root", type=str, help="source dataset midi folder path")
     parser.add_argument("save_dir", type=str, help="path of dataset split for save")
-    parser.add_argument("dev", type=float, help="absolute size of dev dataset")
-    parser.add_argument("eval1", type=float, help="absolute size of test dataset")
     return parser
 
 
@@ -79,10 +77,10 @@ if __name__ == "__main__":
     makedir(data_test_url)
 
     dataset = os.listdir(source_root_url)
-    dev = int(len(dataset) * args.dev)
-    eval = int(len(dataset) * args.eval1)
-    train = len(dataset) - dev - eval
-    print(f"trainset={train}, vaild_set={dev}, eval1_set={eval}.")
+    dev = len(DEV_LIST)
+    eval1 = len(TEST_LIST)
+    train = len(dataset) - dev - eval1
+    print(f"trainset={train}, vaild_set={dev}, eval1_set={eval1}.")
     if train <= 0:
         print("Error, train set is empty.")
         exit()
@@ -115,15 +113,3 @@ def transition(dataset, des_url):
 transition(train_set, data_train_url)
 transition(validation_set, data_vaild_url)
 transition(test_set, data_test_url)
-
-
-# midfiles = list(find_files_by_extensions(data_root_url, exts=[".mid"]))
-# for path in midfiles:
-#     if path[-6:] == "13.mid":
-#         path13 = path
-#     if path[-6:] == "14.mid":
-#         path14 = path
-# path_temp = path14[-6:] + "00.mid"
-# shutil.move(path13, path_temp)
-# shutil.move(path14, path13)
-# shutil.move(path_temp, path14)

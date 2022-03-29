@@ -76,6 +76,3 @@ best_model_criterion:
 -   - train
     - loss
     - min
-
-gpu_id: 0
-vocoder_checkpoint: /home/fangzhex/music/train_nodev_kiritan_hifigan.v1/checkpoint-300000steps.pkl

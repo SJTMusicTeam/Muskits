@@ -28,10 +28,7 @@ valid_set=dev
 test_sets="dev eval"
 
 # training and inference configuration
-train_config=conf/tuning/train_naive_rnn.yaml
-# train_config=conf/tuning/train_xiaoice.yaml
-# train_config=conf/tuning/train_xiaoice_noDP.yaml
-# train_config=conf/train.yaml
+train_config=conf/train.yaml
 inference_config=conf/decode.yaml
 
 # text related processing arguments
@@ -58,7 +55,5 @@ cleaner=none
     --test_sets "${test_sets}" \
     --score_feats_extract "${score_feats_extract}" \
     --srctexts "data/${train_set}/text" \
-    --svs_exp ${expdir} \
-    --vocoder_file "/home/fangzhex/music/train_nodev_kiritan_hifigan.v1/checkpoint-300000steps.pkl" \
     --ngpu 1 \
     ${opts} "$@"
