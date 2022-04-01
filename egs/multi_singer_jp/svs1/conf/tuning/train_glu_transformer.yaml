@@ -8,11 +8,7 @@ svs_conf:                        # keyword arguments for the selected model
     #idim: 68 #phone_size
     midi_dim: 129                # midi dimension (note number + silence)
     tempo_dim: 300
-    # odim:  #output_dim
     embed_dim: 256 # embed_size  # char or phn embedding dimension
-    # eprenet_conv_layers: 3       # prenet (from bytesing) conv layers
-    # eprenet_conv_chans: 256      # prenet (from bytesing) conv channels numbers
-    # eprenet_conv_filts: 3        # prenet (from bytesing) conv filters size
     elayers: 3                   # number of glu_transformer layers in encoder
     eunits: 256                  # number of glu_transformer units hidden_size
     glu_num_layers: 3
@@ -57,7 +53,7 @@ scheduler_conf:
 #                OTHER TRAINING SETTING                  #
 ##########################################################
 # num_iters_per_epoch: 200    # number of iterations per epoch
-max_epoch: 1500              # number of epochs
+max_epoch: 500              # number of epochs
 grad_clip: 5.0              # gradient clipping norm
 grad_noise: false           # whether to use gradient noise injection
 accum_grad: 1               # gradient accumulation
