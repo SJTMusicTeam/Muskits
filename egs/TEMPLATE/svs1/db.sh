@@ -10,6 +10,7 @@ NATSUME=/home/exx/jiatong/projects/svs/data/
 KISING=/home/exx/jiatong/projects/svs/data/KiSing
 COMBINE=
 CSD=downloads
+ITAKO=
 
 # For only JHU environment
 if [[ "$(hostname -d)" == clsp.jhu.edu ]]; then
