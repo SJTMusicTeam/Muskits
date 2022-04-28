@@ -18,7 +18,6 @@ win_length=1200
 
 score_feats_extract=syllable_score_feats
 expdir=exp/3-14-glu
-# inference_model=196epoch.pth
 
 opts=
 if [ "${fs}" -eq 48000 ]; then

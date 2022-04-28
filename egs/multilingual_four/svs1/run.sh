@@ -54,13 +54,14 @@ cleaner=none
 
 ./svs.sh \
     --lang multi \
-    --stage 7 \
-    --stop_stage 7 \
+    --stage 8 \
+    --stop_stage 8 \
     --local_data_opts "--combine_path ${combine_path} --lang_seq ${lang_seq}" \
     --feats_type raw \
     --use_sid ${use_sid} \
     --use_lid ${use_lid} \
     --pitch_extract None \
+    --tag "with_lid" \
     --fs "${fs}" \
     --fmax "${fmax}" \
     --n_fft "${n_fft}" \

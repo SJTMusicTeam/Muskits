@@ -39,6 +39,11 @@ test_sets=eval
 # train_config=conf/train.yaml
 train_config=conf/tuning/train_glu_transformer.yaml
 # train_config=conf/tuning/train_naive_rnn.yaml
+<<<<<<< Updated upstream
+=======
+train_config=conf/tuning/train_naive_rnn_dp.yaml
+# train_config=conf/tuning/train_xiaoice_noDP.yaml
+>>>>>>> Stashed changes
 inference_config=conf/decode.yaml
 
 # text related processing arguments
@@ -47,7 +52,7 @@ cleaner=none
 
 ./svs.sh \
     --lang jp \
-    --stage 7 \
+    --stage 6 \
     --stop_stage 7 \
     --local_data_opts "${combine_path}" \
     --feats_type raw \

@@ -14,7 +14,7 @@ n_shift=300
 win_length=1200
 
 score_feats_extract=frame_score_feats   # frame_score_feats | syllable_score_feats
-expdir=exp/xiaoice_nodp
+expdir=exp/xiaoice_nodp_opencpop
 
 opts=
 if [ "${fs}" -eq 48000 ]; then
@@ -36,9 +36,11 @@ inference_config=conf/decode.yaml
 g2p=none
 cleaner=none
 
+#     --pretrained_model /home/exx/jiatong/projects/svs/Muskits/egs/multilingual_four/svs1/exp/svs_train_xiaoice_noDP_raw_phn_none_multi/latest.pth \
+
 ./svs.sh \
     --lang zh \
-    --stage 0 \
+    --stage 6 \
     --stop_stage 100 \
     --local_data_opts "--stage 2 $(pwd)" \
     --feats_type raw \
@@ -59,5 +61,8 @@ cleaner=none
     --score_feats_extract "${score_feats_extract}" \
     --srctexts "data/${train_set}/text" \
     --svs_exp ${expdir} \
+    --ignore_init_mismatch true \
+    --pretrained_model /home/exx/jiatong/projects/svs/Muskits/egs/opencpop/svs1/exp/xiaoice_nodp/train.loss.best.pth \
+    --vocoder_file /home/exx/jiatong/projects/svs/ParallelWaveGAN/egs/kising/voc1/exp/tr_no_dev_kising_hifigan.v1/checkpoint-300000steps.pkl \
     --ngpu 1 \
     ${opts} "$@"
