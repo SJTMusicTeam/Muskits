@@ -5,9 +5,6 @@ set -e
 set -u
 set -o pipefail
 
-. ./path.sh || exit 1
-. ./cmd.sh || exit 1
-
 fs=24000
 n_fft=2048
 n_shift=300
@@ -36,7 +33,8 @@ train_set=tr_no_dev_${full_lang}
 valid_set=dev_${full_lang}
 test_sets="dev_${full_lang} eval_${full_lang}"
 
-train_config=conf/tuning/train_naive_rnn.yaml
+# training and inference configuration
+train_config=conf/train.yaml
 inference_config=conf/decode.yaml
 
 # text related processing arguments
@@ -45,8 +43,6 @@ cleaner=none
 
 ./svs.sh \
     --lang ${lang} \
-    --stage 7 \
-    --stop_stage 7 \
     --dumpdir dump_${lang} \
     --local_data_opts "${local_data_opts}" \
     --feats_type raw \
@@ -63,5 +59,4 @@ cleaner=none
     --valid_set "${valid_set}" \
     --test_sets "${test_sets}" \
     --srctexts "data/${train_set}/text" \
-    --vocoder_file "/home/exx/jiatong/projects/svs/ParallelWaveGAN/egs/csd/voc1/exp/tr_no_dev_kr_csd_hifigan.v1_korean/checkpoint-250000steps.pkl" \
     ${opts} "$@"

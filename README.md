@@ -4,8 +4,6 @@
 
 Muskit is an open-source music processing toolkit. Currently we mostly focus on benchmarking the end-to-end singing voice synthesis and expect to extend more tasks in the future. Muskit employs [pytorch](http://pytorch.org/) as a deep learning engine and also follows [ESPnet](https://github.com/espnet/espnet) and [Kaldi](http://kaldi-asr.org/) style data processing, and recipes to provide a complete setup for various music processing experiments. The main structure and base codes are adapted from ESPnet (we expect to merge the Muskit into ESPnet in later stages)
 
-## We want to note that the toolkit is still pre-released. There are several issues with the code for final usage and we prepare to refine it towards first release by the end of this month. But you are still very welcome to contribute your effort on coding or high-level comments.
-
 ## Key Features
 
 ### ESPnet style complete recipe

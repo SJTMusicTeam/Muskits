@@ -5,14 +5,9 @@
 ##########################################################
 svs: glu_transformer             # model architecture
 svs_conf:                        # keyword arguments for the selected model
-    #idim: 68 #phone_size
     midi_dim: 129                # midi dimension (note number + silence)
     tempo_dim: 300
-    # odim:  #output_dim
     embed_dim: 256 # embed_size  # char or phn embedding dimension
-    # eprenet_conv_layers: 3       # prenet (from bytesing) conv layers
-    # eprenet_conv_chans: 256      # prenet (from bytesing) conv channels numbers
-    # eprenet_conv_filts: 3        # prenet (from bytesing) conv filters size
     elayers: 3                   # number of glu_transformer layers in encoder
     eunits: 256                  # number of glu_transformer units hidden_size
     glu_num_layers: 3
@@ -24,10 +19,7 @@ svs_conf:                        # keyword arguments for the selected model
     postnet_layers: 5            # number of layers in postnet
     postnet_chans: 256           # number of channels in postnet
     postnet_filts: 5             # filter size of postnet layer    n_mels: -1
-    # double_mel_loss: true
     local_gaussian: true
-    # semitone_size: 59
-    # Hz2semitone: false
     use_batch_norm: true         # whether to use batch normalization in postnet
     reduction_factor: 1          # reduction factor
     edropout_rate: 0.1           # encoder dropout rate
@@ -46,9 +38,6 @@ svs_conf:                        # keyword arguments for the selected model
 optim: adam           # optimizer type
 optim_conf:           # keyword arguments for selected optimizer
     lr: 1.0       # learning rate
-    # eps: 1.0e-06      # epsilon
-    # weight_decay: 0.0 # weight decay coefficient
-    # warmup_steps: 4000
 scheduler: noamlr
 scheduler_conf:
     warmup_steps: 4000
@@ -61,10 +50,8 @@ max_epoch: 1500              # number of epochs
 grad_clip: 5.0              # gradient clipping norm
 grad_noise: false           # whether to use gradient noise injection
 accum_grad: 1               # gradient accumulation
-# batch_bins: 1000000       # batch bins (for feats_type=fbank)
-batch_bins: 1000000         # batch bins (for feats_type=raw, *= n_shift / n_mels)
-# batch_size: 5
-# batch_type: sorted           # how to make batch
+batch_size: 5
+batch_type: sorted           # how to make batch
 batch_type: numel           # how to make batch
 sort_in_batch: descending   # how to sort data in making batch
 sort_batch: descending      # how to sort created batches
@@ -81,7 +68,3 @@ best_model_criterion:
 -   - train
     - loss
     - min
-
-gpu_id: 1
-# vocoder_checkpoint: /data3/qt/train_nodev_kiritan_ofuton_oniku_natsume/checkpoint-310000steps.pkl
-vocoder_checkpoint: /data3/qt/train_nodev_kiritan_ofuton_oniku_natsume/checkpoint-310000steps.pkl

@@ -5,9 +5,6 @@ set -e
 set -u
 set -o pipefail
 
-. ./path.sh || exit 1
-. ./cmd.sh || exit 1
-
 # spectrogram-related arguments
 fs=24000
 fmin=80
@@ -16,8 +13,7 @@ n_fft=2048
 n_shift=300
 win_length=1200
 
-score_feats_extract=syllable_score_feats
-expdir=exp/3-14-glu
+score_feats_extract=frame_score_feats
 
 opts=
 if [ "${fs}" -eq 48000 ]; then
@@ -33,8 +29,8 @@ test_sets="dev eval"
 
 # training and inference configuration
 # train_config=conf/tuning/train_xiaoice.yaml
-train_config=conf/tuning/train_glu_transformer.yaml
-# train_config=conf/train.yaml
+# train_config=conf/tuning/train_glu_transformer.yaml
+train_config=conf/train.yaml
 inference_config=conf/decode.yaml
 
 # text related processing arguments
@@ -43,8 +39,6 @@ cleaner=none
 
 ./svs.sh \
     --lang jp \
-    --stage 7 \
-    --stop_stage 7 \
     --local_data_opts "--stage 0" \
     --feats_type raw \
     --pitch_extract None \
@@ -63,7 +57,5 @@ cleaner=none
     --test_sets "${test_sets}" \
     --score_feats_extract "${score_feats_extract}" \
     --srctexts "data/${train_set}/text" \
-    --svs_exp ${expdir} \
-    --vocoder_file "/data3/qt/train_nodev_ofuton_hifigan.v1/checkpoint-300000steps.pkl" \
     --ngpu 1 \
     ${opts} "$@"
