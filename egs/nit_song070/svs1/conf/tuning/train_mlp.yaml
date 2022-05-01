@@ -1,0 +1,81 @@
+
+
+##########################################################
+#                  SVS MODEL SETTING                     #
+##########################################################
+svs: mlp                   # model architecture
+svs_conf:                        # keyword arguments for the selected model
+    midi_dim: 129                # midi dimension (note number + silence)
+    embed_dim: 256               # char or phn embedding dimension
+    eunits: 512                  # number of mlp units
+    midi_embed_integration_type: concat # how to integrate midi information
+    dlayers: 16                  # number of mlp layers in decoder
+    dunits: 256                  # number of mlp units in decoder
+    postnet_layers: 0            # number of layers in postnet
+    use_batch_norm: true         # whether to use batch normalization in postnet
+    reduction_factor: 1          # reduction factor
+    edropout_rate: 0.1           # encoder dropout rate
+    ddropout_rate: 0.5           # decoder dropout rate
+    postnet_dropout_rate: 0.5    # postnet dropout_rate
+    chunk_size: 200              # chunk size for mlp processing
+    overlap_size: 30             # overlap between chunks
+    init_type: pytorch           # parameter initialization
+    use_masking: true            # whether to apply masking for padded part in loss calculation
+    loss_type: L1
+
+
+##########################################################
+#                  OPTIMIZER SETTING                     #
+##########################################################
+optim: adam           # optimizer type
+optim_conf:           # keyword arguments for selected optimizer
+    lr: 1.0e-03       # learning rate
+    eps: 1.0e-06      # epsilon
+    weight_decay: 0.0 # weight decay coefficient
+scheduler: noamlr
+scheduler_conf:
+    warmup_steps: 4000
+
+##########################################################
+#                OTHER TRAINING SETTING                  #
+##########################################################
+# num_iters_per_epoch: 200    # number of iterations per epoch
+max_epoch: 500              # number of epochs
+grad_clip: 1.0              # gradient clipping norm
+grad_noise: false           # whether to use gradient noise injection
+accum_grad: 1               # gradient accumulation
+ 
+batch_bins: 100000       # batch bins (for feats_type=fbank)
+# batch_bins: 10000000         # batch bins (for feats_type=raw, *= n_shift / n_mels)
+batch_type: numel           # how to make batch
+
+# batch_type: sorted
+# batch_size: 8
+
+pitch_aug_min: 0            # Default: 0, [-1,-2,-3]
+pitch_aug_max: 0            # Default: 0, [1,2,3]
+time_aug_min: 1             # Default: 1, [0.99]
+time_aug_max: 1             # Default: 1, [1.01]
+random_crop: False          # Default: False, crop length [0.9 * length, length]
+mask_aug: False             # Default: False, random mask length 1500 samples
+
+sort_in_batch: descending   # how to sort data in making batch
+sort_batch: descending      # how to sort created batches
+num_workers: 8              # number of workers of data loader
+train_dtype: float32        # dtype in training
+log_interval: null          # log interval in iterations
+keep_nbest_models: 2        # number of models to keep
+num_att_plot: 3             # number of attention figures to be saved in every check
+seed: 0                     # random seed number
+best_model_criterion:
+-   - valid
+    - loss
+    - min
+-   - train
+    - loss
+    - min
+
+gpu_id: 0
+# vocoder_checkpoint: /data5/gs/vocoder_peter/hifigan-vocoder/exp/train_hifigan.v1_train_nodev_clean_libritts_hifigan-2.v1/checkpoint-50000steps.pkl
+# vocoder_checkpoint: /home/exx/jiatong/projects/svs/ParallelWaveGAN/egs/oniku_kurumi_utagoe_db/voc1/exp/train_nodev_oniku_hifigan.v1/checkpoint-298828steps.pkl
+vocoder_checkpoint: /home/exx/jiatong/projects/svs/ParallelWaveGAN/egs/multilingual/voc1/exp/train_nodev_multilingual_hifigan.v1/checkpoint-600000steps.pkl
