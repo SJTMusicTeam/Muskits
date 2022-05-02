@@ -43,3 +43,5 @@ Vocoders are available at https://github.com/kan-bayashi/ParallelWaveGAN/blob/ma
 ### Running instructions
 The tutorial of how to use Muskits is at https://github.com/SJTMusicTeam/Muskits/blob/main/doc/tutorial.md
 
+### Recipe Explanation
+A detailed recipe explanation in https://github.com/SJTMusicTeam/Muskits/blob/main/egs/TEMPLATE/svs1/README.md
