@@ -4,7 +4,7 @@ import shutil
 
 
 UTT_PREFIX = "pjs"
-DEV_LIST = ["pjs002", "pjs0012", "pjs022", "pjs032", "pjs042", "pjs052", "pjs062", "pjs072", "pjs082", "pjs092"]
+DEV_LIST = ["pjs002", "pjs012", "pjs022", "pjs032", "pjs042", "pjs052", "pjs062", "pjs072", "pjs082", "pjs092"]
 TEST_LIST = ["pjs007", "pjs017", "pjs027", "pjs037", "pjs047", "pjs057", "pjs067", "pjs077", "pjs087", "pjs097"]
 
 
