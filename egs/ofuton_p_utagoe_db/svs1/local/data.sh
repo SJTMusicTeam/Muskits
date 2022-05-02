@@ -47,7 +47,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
         data/${train_set} data/${train_dev} data/${recog_set} --fs ${fs}
 fi
 
-if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
+if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
     log "stage 2: Prepare segments"
     for x in ${train_set} ${train_dev} ${recog_set}; do
         src_data=data/${x}

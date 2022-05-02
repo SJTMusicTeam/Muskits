@@ -434,10 +434,10 @@ class XiaoiceSing(AbsSVS):
     def inference(
         self,
         text: torch.Tensor,
-        feats: torch.Tensor,
         label: torch.Tensor,
         midi: torch.Tensor,
         ds: torch.Tensor,
+        feats: torch.Tensor = None,
         tempo: Optional[torch.Tensor] = None,
         spembs: Optional[torch.Tensor] = None,
         sids: Optional[torch.Tensor] = None,
@@ -853,10 +853,11 @@ class XiaoiceSing_noDP(AbsSVS):
         if self.use_cycle_process:
             self.cycle_type = cycle_type
             from muskit.svs.predictor.TransformerPredictor import TransformerPredictor
+
             self.predictor = TransformerPredictor(
-                                predict_type=predict_type,
-                                predict_criterion_type=predict_criterion_type,
-                            )
+                predict_type=predict_type,
+                predict_criterion_type=predict_criterion_type,
+            )
             self.predict_type = predict_type
             self.predict_criterion_type = predict_criterion_type
             self.w_svs = w_svs
@@ -866,8 +867,9 @@ class XiaoiceSing_noDP(AbsSVS):
             assert cycle_type in ["single", "bi-direct"]
             assert predict_criterion_type in ["CrossEntropy", "CTC"]
             # when cycle_type is Bi-direct, the criterion type of predictor must be CrossEntropy, because of alignment related problems
-            assert (cycle_type == "bi-direct" and predict_criterion_type == "CrossEntropy") or cycle_type == "single"
-            
+            assert (
+                cycle_type == "bi-direct" and predict_criterion_type == "CrossEntropy"
+            ) or cycle_type == "single"
 
     def forward(
         self,
@@ -916,27 +918,43 @@ class XiaoiceSing_noDP(AbsSVS):
         if self.use_mixup_training and flag_IsValid == False:
             batch_size_mixup = 2
             args_mixup = {}
-            args_mixup['lst'] = random.sample([i for i in range(batch_size)], batch_size_mixup * 2)   # mix-up per 2 samples
-            args_mixup['w1_lst'] = []
-            args_mixup['w2_wst'] = []
-            args_mixup['batch_size_mixup'] = 2
-            
+            args_mixup["lst"] = random.sample(
+                [i for i in range(batch_size)], batch_size_mixup * 2
+            )  # mix-up per 2 samples
+            args_mixup["w1_lst"] = []
+            args_mixup["w2_wst"] = []
+            args_mixup["batch_size_mixup"] = 2
+
             # mix-up augmentation
-            feats_mixup = torch.zeros((batch_size_mixup, feats.shape[1], feats.shape[2]), dtype=feats.dtype, layout=feats.layout, device=feats.device)
-            feats_lengths_mixup = torch.zeros(batch_size_mixup, dtype=feats_lengths.dtype, layout=feats_lengths.layout, device=feats_lengths.device)
+            feats_mixup = torch.zeros(
+                (batch_size_mixup, feats.shape[1], feats.shape[2]),
+                dtype=feats.dtype,
+                layout=feats.layout,
+                device=feats.device,
+            )
+            feats_lengths_mixup = torch.zeros(
+                batch_size_mixup,
+                dtype=feats_lengths.dtype,
+                layout=feats_lengths.layout,
+                device=feats_lengths.device,
+            )
 
             for i in range(batch_size_mixup):
-                index1 = args_mixup['lst'][2*i]
-                index2 = args_mixup['lst'][2*i + 1]
+                index1 = args_mixup["lst"][2 * i]
+                index2 = args_mixup["lst"][2 * i + 1]
 
-                w1 = Beta_distribution.sample().to(feats.device)             # !!! NOTE:  random.random()
+                w1 = Beta_distribution.sample().to(
+                    feats.device
+                )  # !!! NOTE:  random.random()
                 w2 = 1 - w1
 
-                args_mixup['w1_lst'].append(w1)
-                args_mixup['w2_wst'].append(w2)
+                args_mixup["w1_lst"].append(w1)
+                args_mixup["w2_wst"].append(w2)
 
                 feats_mixup[i] = w1 * feats[index1] + w2 * feats[index2]
-                feats_lengths_mixup[i] = max(feats_lengths[index1], feats_lengths[index2])
+                feats_lengths_mixup[i] = max(
+                    feats_lengths[index1], feats_lengths[index2]
+                )
 
             feats_origin = feats
             feats_lengths_origin = feats_lengths
@@ -944,29 +962,27 @@ class XiaoiceSing_noDP(AbsSVS):
             feats_lengths = torch.cat((feats_lengths, feats_lengths_mixup), 0)
 
             batch_size = batch_size_origin + batch_size_mixup
-            args_mixup['batch_size_origin'] = batch_size_origin
-            args_mixup['batch_size'] = batch_size
-            
+            args_mixup["batch_size_origin"] = batch_size_origin
+            args_mixup["batch_size"] = batch_size
 
         after_outs, before_outs, olens, l1_loss, l2_loss = self._singingGenerate(
-                                                            text,
-                                                            text_lengths,
-                                                            feats,
-                                                            feats_lengths,
-                                                            label,
-                                                            label_lengths,
-                                                            midi,
-                                                            midi_lengths,
-                                                            ds,
-                                                            tempo,
-                                                            tempo_lengths,
-                                                            spembs,
-                                                            sids,
-                                                            lids,
-                                                            flag_IsValid,
-                                                            args_mixup,
-                                                        )
-        
+            text,
+            text_lengths,
+            feats,
+            feats_lengths,
+            label,
+            label_lengths,
+            midi,
+            midi_lengths,
+            ds,
+            tempo,
+            tempo_lengths,
+            spembs,
+            sids,
+            lids,
+            flag_IsValid,
+            args_mixup,
+        )
 
         # calculate loss values - cycle process, when use cycle process & training stage
         if self.use_cycle_process and flag_IsValid == False:
@@ -975,67 +991,153 @@ class XiaoiceSing_noDP(AbsSVS):
                 Part-1: SVS (Singing Voice Synthesis)
                     Generate singing voice from given music-score(G.T.)
                 Part-2: Predict (Automatic Music-score Transcription)
-                    Predict music-score information(pitch, phone, spk-id) from given singing voice(G.T.) 
+                    Predict music-score information(pitch, phone, spk-id) from given singing voice(G.T.)
                 Part-3: Music-score Reconstruction: SVS -> Predict
                     step1. Generate singing voice from given music-score(G.T.)
-                    step2. Predict music-score information(pitch, phone, spk-id) from the singing voice generated in step1 of Part-3 
+                    step2. Predict music-score information(pitch, phone, spk-id) from the singing voice generated in step1 of Part-3
                 Part-4: Singing Voice Reconstruction: Predict -> SVS
-                    step1. Predict music-score information(pitch, phone, spk-id) from given singing voice(G.T.) 
-                    step2. Generate singing voice from the music-score generated in step1 of Part-4 
+                    step1. Predict music-score information(pitch, phone, spk-id) from given singing voice(G.T.)
+                    step2. Generate singing voice from the music-score generated in step1 of Part-4
             Note:
-                When self.cycle_type == "single", 
+                When self.cycle_type == "single",
                     means the whole cycle training process is Part-1,2,3
                 When self.cycle_type == "bi-direct"
                     means the whole cycle training process is Part-1,2,3,4
             """
             # Part-2: Predict (Automatic Music-score Transcription) - without mix-up
             feats_input = feats_origin if self.use_mixup_training else feats
-            feats_lengths_input = feats_lengths_origin if self.use_mixup_training else feats_lengths
-            
+            feats_lengths_input = (
+                feats_lengths_origin if self.use_mixup_training else feats_lengths
+            )
+
             if self.predict_criterion_type == "CrossEntropy":
-                predictor_midi_loss, predictor_label_loss, predictor_speaker_loss, midi_predict, label_predict, speaker_predict = self.predictor(feats_input, midi, label, sids, feats_lengths_input, midi_lengths, label_lengths)
+                (
+                    predictor_midi_loss,
+                    predictor_label_loss,
+                    predictor_speaker_loss,
+                    midi_predict,
+                    label_predict,
+                    speaker_predict,
+                ) = self.predictor(
+                    feats_input,
+                    midi,
+                    label,
+                    sids,
+                    feats_lengths_input,
+                    midi_lengths,
+                    label_lengths,
+                )
             elif self.predict_criterion_type == "CTC":
-                predictor_midi_loss, predictor_label_loss, predictor_speaker_loss, _, _, speaker_predict = self.predictor(feats_input, midi, text, sids, feats_lengths_input, midi_lengths, text_lengths)
-            
-            predictor_loss = predictor_midi_loss + predictor_label_loss + predictor_speaker_loss
+                (
+                    predictor_midi_loss,
+                    predictor_label_loss,
+                    predictor_speaker_loss,
+                    _,
+                    _,
+                    speaker_predict,
+                ) = self.predictor(
+                    feats_input,
+                    midi,
+                    text,
+                    sids,
+                    feats_lengths_input,
+                    midi_lengths,
+                    text_lengths,
+                )
+
+            predictor_loss = (
+                predictor_midi_loss + predictor_label_loss + predictor_speaker_loss
+            )
 
             # Part-3: Music-score Reconstruction: SVS -> Predict - without mix-up
             if self.predict_criterion_type == "CrossEntropy":
-                recon_midi_loss, recon_label_loss, recon_speaker_loss, _, _, _ = self.predictor(after_outs[:batch_size_origin, : olens.max()], midi, label, sids, olens[:batch_size_origin], midi_lengths, label_lengths)
+                (
+                    recon_midi_loss,
+                    recon_label_loss,
+                    recon_speaker_loss,
+                    _,
+                    _,
+                    _,
+                ) = self.predictor(
+                    after_outs[:batch_size_origin, : olens.max()],
+                    midi,
+                    label,
+                    sids,
+                    olens[:batch_size_origin],
+                    midi_lengths,
+                    label_lengths,
+                )
             elif self.predict_criterion_type == "CTC":
-                recon_midi_loss, recon_label_loss, recon_speaker_loss, _, _, _ = self.predictor(after_outs[:batch_size_origin, : olens.max()], midi, text, sids, olens[:batch_size_origin], midi_lengths, text_lengths)
+                (
+                    recon_midi_loss,
+                    recon_label_loss,
+                    recon_speaker_loss,
+                    _,
+                    _,
+                    _,
+                ) = self.predictor(
+                    after_outs[:batch_size_origin, : olens.max()],
+                    midi,
+                    text,
+                    sids,
+                    olens[:batch_size_origin],
+                    midi_lengths,
+                    text_lengths,
+                )
 
             # Part-4: Singing Voice Reconstruction: Predict -> SVS
             recon_mel_loss = 0
             if self.cycle_type == "bi-direct":
-                label_input = label_predict if "label" in self.predict_type and self.predict_criterion_type == "CrossEntropy" else label
-                midi_input = midi_predict if "midi" in self.predict_type and self.predict_criterion_type == "CrossEntropy" else midi
+                label_input = (
+                    label_predict
+                    if "label" in self.predict_type
+                    and self.predict_criterion_type == "CrossEntropy"
+                    else label
+                )
+                midi_input = (
+                    midi_predict
+                    if "midi" in self.predict_type
+                    and self.predict_criterion_type == "CrossEntropy"
+                    else midi
+                )
                 speaker_input = speaker_predict if "spk" in self.predict_type else sids
-                mel_recon_after, mel_recon_before, olens, recon_mel_loss, _ = self._singingGenerate(
-                                                                                text,
-                                                                                text_lengths,
-                                                                                feats,
-                                                                                feats_lengths,
-                                                                                label_input,    # using predict res
-                                                                                label_lengths,
-                                                                                midi_input,     # using predict res
-                                                                                midi_lengths,
-                                                                                ds,
-                                                                                tempo,
-                                                                                tempo_lengths,
-                                                                                spembs,
-                                                                                speaker_input,  # using predict res
-                                                                                lids,
-                                                                                flag_IsValid,
-                                                                                args_mixup,
-                                                                            )
-            cycle_loss = recon_midi_loss + recon_label_loss + recon_speaker_loss + recon_mel_loss
+                (
+                    mel_recon_after,
+                    mel_recon_before,
+                    olens,
+                    recon_mel_loss,
+                    _,
+                ) = self._singingGenerate(
+                    text,
+                    text_lengths,
+                    feats,
+                    feats_lengths,
+                    label_input,  # using predict res
+                    label_lengths,
+                    midi_input,  # using predict res
+                    midi_lengths,
+                    ds,
+                    tempo,
+                    tempo_lengths,
+                    spembs,
+                    speaker_input,  # using predict res
+                    lids,
+                    flag_IsValid,
+                    args_mixup,
+                )
+            cycle_loss = (
+                recon_midi_loss + recon_label_loss + recon_speaker_loss + recon_mel_loss
+            )
 
         # calculate loss values
         if self.loss_type == "L1":
             loss = l1_loss
             if self.use_cycle_process and flag_IsValid == False:
-                loss = self.w_svs * l1_loss + self.w_cycle * cycle_loss + self.w_predictor * predictor_loss
+                loss = (
+                    self.w_svs * l1_loss
+                    + self.w_cycle * cycle_loss
+                    + self.w_predictor * predictor_loss
+                )
         elif self.loss_type == "L2":
             loss = l2_loss
         elif self.loss_type == "L1+L2":
@@ -1052,17 +1154,15 @@ class XiaoiceSing_noDP(AbsSVS):
         #     stats.update(l1_loss_mixup=l1_loss_mixup)
         if self.use_cycle_process and flag_IsValid == False:
             stats.update(
-                cycle_loss=cycle_loss, 
+                cycle_loss=cycle_loss,
                 predictor_loss=predictor_loss,
-                
                 predictor_midi_loss=predictor_midi_loss,
                 predictor_label_loss=predictor_label_loss,
                 predictor_speaker_loss=predictor_speaker_loss,
-
-                recon_midi_loss=recon_midi_loss, 
-                recon_label_loss=recon_label_loss, 
-                recon_speaker_loss=recon_speaker_loss, 
-                recon_mel_loss=recon_mel_loss, 
+                recon_midi_loss=recon_midi_loss,
+                recon_label_loss=recon_label_loss,
+                recon_speaker_loss=recon_speaker_loss,
+                recon_mel_loss=recon_mel_loss,
             )
 
         loss, stats, weight = force_gatherable((loss, stats, batch_size), loss.device)
@@ -1073,7 +1173,7 @@ class XiaoiceSing_noDP(AbsSVS):
         else:
             # validation stage
             return loss, stats, weight, after_outs[:, : olens.max()], feats, olens
-    
+
     def _singingGenerate(
         self,
         text: torch.Tensor,
@@ -1139,9 +1239,9 @@ class XiaoiceSing_noDP(AbsSVS):
 
         if self.use_mixup_training and flag_IsValid == False:
             assert args_mixup != None
-            batch_size_mixup = args_mixup['batch_size_mixup']
-            batch_size_origin = args_mixup['batch_size_origin']
-            batch_size = args_mixup['batch_size']
+            batch_size_mixup = args_mixup["batch_size_mixup"]
+            batch_size_origin = args_mixup["batch_size_origin"]
+            batch_size = args_mixup["batch_size"]
 
             midi_embed_mixup = torch.zeros(
                 (batch_size_mixup, midi_emb.shape[1], midi_emb.shape[2]),
@@ -1164,17 +1264,17 @@ class XiaoiceSing_noDP(AbsSVS):
             )
 
             for i in range(batch_size_mixup):
-                index1 = args_mixup['lst'][2*i]
-                index2 = args_mixup['lst'][2*i + 1]
+                index1 = args_mixup["lst"][2 * i]
+                index2 = args_mixup["lst"][2 * i + 1]
 
-                w1 = args_mixup['w1_lst'][i]
-                w2 = args_mixup['w2_wst'][i]
+                w1 = args_mixup["w1_lst"][i]
+                w2 = args_mixup["w2_wst"][i]
 
                 midi_embed_mixup[i] = w1 * midi_emb[index1] + w2 * midi_emb[index2]
                 midi_lengths_mixup[i] = max(midi_lengths[index1], midi_lengths[index2])
 
                 hs_mixup[i] = w1 * hs[index1] + w2 * hs[index2]
-            
+
             midi_emb = torch.cat((midi_emb, midi_embed_mixup), 0)
             midi_lengths = torch.cat((midi_lengths, midi_lengths_mixup), 0)
             hs = torch.cat((hs, hs_mixup), 0)
@@ -1212,17 +1312,17 @@ class XiaoiceSing_noDP(AbsSVS):
         if self.use_mixup_training and flag_IsValid == False:
             _olens = feats_lengths[:batch_size_origin]
             l1_loss_origin, l2_loss_origin = self.criterion(
-                after_outs[:batch_size_origin, : _olens.max()], 
-                before_outs[:batch_size_origin, : _olens.max()], 
-                feats[:batch_size_origin], 
-                feats_lengths[:batch_size_origin]
+                after_outs[:batch_size_origin, : _olens.max()],
+                before_outs[:batch_size_origin, : _olens.max()],
+                feats[:batch_size_origin],
+                feats_lengths[:batch_size_origin],
             )
-            _olens = feats_lengths[batch_size_origin : batch_size]
+            _olens = feats_lengths[batch_size_origin:batch_size]
             l1_loss_mixup, l2_loss_mixup = self.criterion(
-                after_outs[batch_size_origin : batch_size, : _olens.max()], 
-                before_outs[batch_size_origin : batch_size, : _olens.max()], 
-                feats[batch_size_origin : batch_size, : _olens.max()], 
-                feats_lengths[batch_size_origin : batch_size]
+                after_outs[batch_size_origin:batch_size, : _olens.max()],
+                before_outs[batch_size_origin:batch_size, : _olens.max()],
+                feats[batch_size_origin:batch_size, : _olens.max()],
+                feats_lengths[batch_size_origin:batch_size],
             )
             l1_loss = (
                 1 - self.loss_mixup_wight
@@ -1234,18 +1334,16 @@ class XiaoiceSing_noDP(AbsSVS):
             l1_loss, l2_loss = self.criterion(
                 after_outs[:, : olens.max()], before_outs[:, : olens.max()], ys, olens
             )
-        
-        return after_outs, before_outs, olens, l1_loss, l2_loss
 
-        
+        return after_outs, before_outs, olens, l1_loss, l2_loss
 
     def inference(
         self,
         text: torch.Tensor,
-        feats: torch.Tensor,
         label: torch.Tensor,
         midi: torch.Tensor,
         ds: torch.Tensor,
+        feats: torch.Tensor = None,
         tempo: Optional[torch.Tensor] = None,
         spembs: Optional[torch.Tensor] = None,
         sids: Optional[torch.Tensor] = None,

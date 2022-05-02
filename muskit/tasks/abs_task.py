@@ -668,6 +668,12 @@ class AbsTask(ABC):
             "  --init_param some/where/model.pth:decoder:decoder:decoder.embed\n",
         )
         group.add_argument(
+            "--ignore_init_mismatch",
+            type=str2bool,
+            default=False,
+            help="Ignore size mismatch when loading pre-trained model",
+        )
+        group.add_argument(
             "--freeze_param",
             type=str,
             default=[],
@@ -1251,6 +1257,7 @@ class AbsTask(ABC):
             load_pretrained_model(
                 model=model,
                 init_param=p,
+                ignore_init_mismatch=args.ignore_init_mismatch,
                 # NOTE(kamo): "cuda" for torch.load always indicates cuda:0
                 #   in PyTorch<=1.4
                 map_location=f"cuda:{torch.cuda.current_device()}"
@@ -1527,13 +1534,13 @@ class AbsTask(ABC):
         cls, args: argparse.Namespace, iter_options: IteratorOptions, mode: str
     ) -> AbsIterFactory:
         assert check_argument_types()
-        
+
         midi_loader_mode = (
-            "xiaoice"
-            if "xiaoice" in args.config
-            else "format"
+            "xiaoice" if "xiaoice" in args.config else "format"
         )  # NOTE(Shuai) format, xiaoice (tempo means index_nums)
-        time_shift = args.feats_extract_conf['hop_length'] / args.feats_extract_conf['fs']
+        time_shift = (
+            args.feats_extract_conf["hop_length"] / args.feats_extract_conf["fs"]
+        )
 
         dataset = MuskitDataset(
             iter_options.data_path_and_name_and_type,

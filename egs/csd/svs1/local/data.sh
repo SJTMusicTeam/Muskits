@@ -16,6 +16,8 @@ log() {
 SECONDS=0
 stage=1
 stop_stage=100
+fs=24000
+wav_dumpdir=wav_dump
 lang=english # english or korean
 
 log "$0 $*"
@@ -29,9 +31,9 @@ fi
 
 mkdir -p ${CSD}
 
-train_set=tr_no_dev
-train_dev=dev
-recog_set=eval
+train_set=tr_no_dev_${lang}
+train_dev=dev_${lang}
+recog_set=eval_${lang}
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     log "stage 0: Data Download"
@@ -42,15 +44,15 @@ fi
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     log "stage 1: Dataset split "
     # We use a pre-defined split (see details in local/dataset_split.py)"
-    python local/dataset_split.py ${CSD}/${lang} \
-        data/${train_set} data/${train_dev} data/${recog_set}
+    python local/dataset_split.py ${CSD}/CSD/${lang} \
+        data/${train_set} data/${train_dev} data/${recog_set} ${wav_dumpdir}
 fi
 
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     log "stage 2: Prepare segments"
     for x in ${train_set} ${train_dev} ${recog_set}; do
         src_data=data/${x}
-        local/prep_segments.py --silence pau --silence sil ${src_data} 10000 # in ms
+        python local/prep_segments.py --silence pau --silence sil ${src_data} 10000 # in ms
         mv ${src_data}/segments.tmp ${src_data}/segments
         mv ${src_data}/label.tmp ${src_data}/label
         mv ${src_data}/text.tmp ${src_data}/text

@@ -189,7 +189,9 @@ def sound_loader(path, float_dtype=None):
     return AdapterForSoundScpReader(loader, float_dtype)
 
 
-def midi_loader(path, float_dtype=None, rate=np.int32(24000), mode="format", time_shift=0.0125):
+def midi_loader(
+    path, float_dtype=None, rate=np.int32(24000), mode="format", time_shift=0.0125
+):
     # The file is as follows:
     #   utterance_id_A /some/where/a.mid
     #   utterance_id_B /some/where/b.midi
@@ -393,7 +395,7 @@ class MuskitDataset(AbsDataset):
         max_cache_fd: int = 0,
         not_align: list = ["text", "sids", "lids"],  # TODO(Tao): add to args
         mode: str = "valid",  # train, valid, plot_att, ...
-        midi_loader_mode: str = "format",   # format, xiaoice (tempo means index_nums)
+        midi_loader_mode: str = "format",  # format, xiaoice (tempo means index_nums)
         time_shift: float = 0.0125,
         pitch_aug_min: int = 0,
         pitch_aug_max: int = 0,
@@ -403,7 +405,7 @@ class MuskitDataset(AbsDataset):
         random_crop: bool = False,
         mask_aug: bool = False,
     ):
-        assert check_argument_types()
+        # assert check_argument_types() FIX ME
         if len(path_name_type_list) == 0:
             raise ValueError(
                 '1 or more elements are required for "path_name_type_list"'
@@ -440,7 +442,7 @@ class MuskitDataset(AbsDataset):
         else:
             self.cache = None
         self.not_align = not_align
-        self.mode = mode   
+        self.mode = mode
 
         self.pitch_aug_min = pitch_aug_min
         self.pitch_aug_max = pitch_aug_max
@@ -543,20 +545,7 @@ class MuskitDataset(AbsDataset):
                     global_pitch_mean = float(self.pitch_mean)
                 elif isinstance(eval(self.pitch_mean), list):
                     # multi datasets with spk-ids
-                    speaker_lst = [
-                        "oniku",
-                        "ofuton",
-                        "kiritan",
-                        "natsume",
-                    ]  # NOTE: Fix me into args
-                    _find_num = 0
-                    _find_index = 0
-                    for index in range(len(speaker_lst)):
-                        if speaker_lst[index] in uid:
-                            _find_num += 1
-                            _find_index = index
-                    assert _find_num == 1
-                    global_pitch_mean = eval(self.pitch_mean)[_find_index]
+                    raise ValueError("Not Supported multi-singer cases")
                 else:
                     ValueError("Not Support Type for pitch_mean: %s" % self.pitch_mean)
 

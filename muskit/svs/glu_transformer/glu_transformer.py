@@ -4,11 +4,13 @@
 """Transformer-SVS related modules."""
 
 import logging
+from os import supports_follow_symlinks
 
 from typing import Dict
 from typing import Optional
 from typing import Sequence
 from typing import Tuple
+from humanfriendly import parse_size
 
 import numpy as np
 import torch
@@ -134,6 +136,66 @@ class Encoder_Postnet(torch.nn.Module):
 
         return aligner_out
 
+class LookUpDurationModel(torch.nn.Module):
+    """Attention Network."""
+
+    def __init__(self, phone_size, padding_idx):
+        """init."""
+        super(LookUpDurationModel, self).__init__()
+        self.sum_duration = torch.zeros(phone_size)
+        self.cnt_duration = torch.zeros(phone_size)
+        self.duration = torch.nn.Parameter(torch.zeros(phone_size), requires_grad=False)
+        self.rv = torch.nn.Parameter(torch.FloatTensor([0.5]), requires_grad=False)
+        self.padding_idx = padding_idx
+        self.dn = torch.nn.Parameter(torch.FloatTensor([0.0]), requires_grad=False)
+    
+    def forward(self, idx, ds=None):
+        if self.sum_duration.device != idx.device:
+            self.sum_duration = self.sum_duration.to(idx.device)
+            self.cnt_duration = self.cnt_duration.to(idx.device)
+            self.duration = self.duration.to(idx.device)
+            self.rv = self.rv.to(idx.device)
+            self.dn = self.dn.to(idx.device)
+
+        bsz, seqlen = idx.size()[0], idx.size()[1]
+        if self.training and ds is not None:
+            for i in range(bsz):
+                for j in range(seqlen):
+                    txt, dur = idx[i,j], ds[i,j]
+                    # logging.info(f' txt.dev = { txt.device}')
+                    # logging.info(f' dur.dev = { dur.device}')
+                    # logging.info(f' sum_duration.dev = { self.sum_duration.device}')
+
+                    self.sum_duration[txt] += dur
+                    self.cnt_duration[txt] += 1
+                    self.duration[txt] = self.sum_duration[txt] / self.cnt_duration[txt]
+            if ((1<idx)&(idx<7)).any():
+                self.dn = torch.nn.Parameter(torch.FloatTensor([(self.sum_duration[2:7].sum()/self.cnt_duration[2:7].sum().item())]), requires_grad=False)
+
+            return ds
+        else:
+            dur = torch.zeros_like(idx, device=idx.device)
+            for i in range(bsz):
+                for j in range(seqlen):
+                    dur[i,j] = self.duration[idx[i,j]]
+            for i in range(bsz):
+                rc = 1
+                n = 1
+                for j in range(1,seqlen):
+                    if idx[i,j] == self.padding_idx:
+                        n = j
+                        break
+                if n != 1:
+                    rc = min(1, ((int(self.dn.item()) - int(self.rv.item()*self.dn.item())) / (dur[i, 1:n].sum().item())))
+                delta = 0
+                if dur.size()[1] > 1:
+                    delta = dur[i, 1:].max()
+                if delta < 1:
+                    delta = 1
+                dur[i, 0] =  max(1, int(self.dn) - delta)
+                for j in range(1, n):
+                    dur[i, j] = max(1, round(int(rc*dur[i,j].item())))
+            return dur
 
 class Attention(torch.nn.Module):
     """Attention Network."""
@@ -501,6 +563,7 @@ class GLU_Transformer(AbsSVS):
         init_type: str = "xavier_uniform",
         use_masking: bool = False,
         use_weighted_masking: bool = False,
+        use_duration: bool = False,
         loss_type: str = "L1",
     ):
         """init."""
@@ -509,7 +572,6 @@ class GLU_Transformer(AbsSVS):
         # store hyperparameters
         self.idim = idim
         self.midi_dim = midi_dim
-        # self.eunits = eunits
         self.odim = odim
         self.eos = idim - 1
         self.embed_dim = embed_dim
@@ -532,9 +594,7 @@ class GLU_Transformer(AbsSVS):
             num_layers=elayers,
             glu_kernel=glu_kernel,
         )
-        # self.label_encoder_input_layer = torch.nn.Embedding(
-        #     num_embeddings=idim, embedding_dim=embed_dim, padding_idx=self.padding_idx
-        # )
+        
         self.midi_encoder_input_layer = torch.nn.Embedding(
             num_embeddings=midi_dim,
             embedding_dim=embed_dim,
@@ -545,8 +605,13 @@ class GLU_Transformer(AbsSVS):
             self.projection = torch.nn.Linear(embed_dim, embed_dim)
         else:
             self.projection = torch.nn.Linear(2 * embed_dim, embed_dim)
-
-        self.enc_postnet = Encoder_Postnet()  # , semitone_size, Hz2semitone)
+        self.use_duration = use_duration
+        # if use_duration:
+        if True:
+            self.durationmodel = LookUpDurationModel(idim, self.padding_idx)
+        # else:
+        #     self.durationmodel = None
+        # self.enc_postnet = Encoder_Postnet() 
         # define length regulator
         self.length_regulator = LengthRegulator()
 
@@ -593,7 +658,8 @@ class GLU_Transformer(AbsSVS):
         self._reset_parameters(
             init_type=init_type,
         )
-
+        # logging.info(f'spks:{spks}')
+        # assert spks is None
         # define spk and lang embedding
         self.spks = None
         if spks is not None and spks > 1:
@@ -668,13 +734,24 @@ class GLU_Transformer(AbsSVS):
         # tempo = label[:, : tempo_lengths.max()]  # for data-parallel
         batch_size = text.size(0)
 
-        phone_emb, _ = self.phone_encoder(text)
-        midi_emb = self.midi_encoder_input_layer(midi)
+        # logging.info(f'text.size():{text.size()}')
+        # logging.info(f'midi.size():{midi.size()}')
+        # logging.info(f'label.size():{label.size()}')
+        # logging.info(f'feats_lengths:{feats_lengths}')
+        # logging.info(f'feats_lengths.size():{feats_lengths.size()}')
 
+        phone_emb, _ = self.phone_encoder(label)
+        midi_emb = self.midi_encoder_input_layer(midi)
+        # logging.info(f'phone_emb.size():{phone_emb.size()}')
+        # logging.info(f'midi_emb.size():{midi_emb.size()}')
+        # logging.info(f'ds.size():{ds.size()}')
         label_emb = self.length_regulator(phone_emb, ds)
+        midi_emb = self.length_regulator(midi_emb, ds)
         # label_emb = self.enc_postnet(
         #     phone_emb, label, text
         # )
+        if self.use_duration:
+            ds = self.durationmodel(text, ds)
 
         midi_emb = F.leaky_relu(self.fc_midi(midi_emb))
 
@@ -701,22 +778,20 @@ class GLU_Transformer(AbsSVS):
         pos_out = F.leaky_relu(self.fc_pos(pos_emb))
 
         hs = hs + pos_out
-
-        # logging.info(f'Tao - hs:{hs.shape}')
+        
+        # logging.info(f'ds:{ds}')
+        # logging.info(f'ds.size():{ds.size()}')
+        # logging.info(f'ds.sum(-1):{ds.sum(-1)}')
+        # logging.info(f'ds.sum(-1).size():{ds.sum(-1).size()}')
+        # logging.info(f'midi_lengths.size():{midi_lengths.size()}')
         # decoder
-        # mel_output, att_weight = self.decoder(
         zs = self.decoder(
-            hs, pos=(~make_pad_mask(midi_lengths)).to(device=hs.device)
+            hs, pos=(~make_pad_mask(feats_lengths)).to(device=hs.device)
         )  # True mask
-        # mel_output2 = self.double_mel(mel_output)
 
         zs = zs[:, self.reduction_factor - 1 :: self.reduction_factor]
 
         before_outs = F.leaky_relu(self.feat_out(zs).view(zs.size(0), -1, self.odim))
-
-        # logging.info(f'mel_output:{mel_output}')
-        # zs = self.postnet(zs.transpose(1, 2))
-        # zs = zs.transpose(1, 2)
 
         # (B, T_feats//r, odim * r) -> (B, T_feats//r * r, odim)
 
@@ -769,35 +844,14 @@ class GLU_Transformer(AbsSVS):
         else:
             return loss, stats, weight, after_outs[:, : olens.max()], ys, olens
 
-    # def forward(
-    #     self,
-    #     characters,
-    #     phone,
-    #     pitch,
-    #     beat,
-    #     pos_text=True,
-    #     pos_char=None,
-    #     pos_spec=None,
-    # ):
-    #     """forward."""
-    #     encoder_out, text_phone = self.encoder(characters.squeeze(2), pos=pos_char)
-    #     post_out = self.enc_postnet(encoder_out, phone, text_phone, pitch, beat)
-    #     mel_output, att_weight = self.decoder(post_out, pos=pos_spec)
-
-    #     if self.double_mel_loss:
-    #         mel_output2 = self.double_mel(mel_output)
-    #     else:
-    #         mel_output2 = mel_output
-    #     output = self.postnet(mel_output2)
-
-    #     return output, att_weight, mel_output, mel_output2
-
     def inference(
         self,
         text: torch.Tensor,
         label: torch.Tensor,
         midi: torch.Tensor,
+        ds: torch.Tensor,
         feats: torch.Tensor = None,
+        tempo: Optional[torch.Tensor] = None,
         spembs: Optional[torch.Tensor] = None,
         sids: Optional[torch.Tensor] = None,
         lids: Optional[torch.Tensor] = None,
@@ -816,23 +870,36 @@ class GLU_Transformer(AbsSVS):
             Dict[str, Tensor]: Output dict including the following items:
                 * feat_gen (Tensor): Output sequence of features (T_feats, odim).
         """
-        text = text.unsqueeze(0)  # for data-parallel
-        feats = feats.unsqueeze(0)  # for data-parallel
-        midi = midi.unsqueeze(0)  # for data-parallel
-        label = label.unsqueeze(0)  # for data-parallel
-
-        label_emb = self.encoder_input_layer(label)
+        phone_emb, _ = self.phone_encoder(label)
         midi_emb = self.midi_encoder_input_layer(midi)
 
-        hs_label, (_, _) = self.encoder(label_emb)
-        hs_midi, (_, _) = self.midi_encoder(midi_emb)
+        if self.use_duration:
+            ds = self.durationmodel(label, None)
+        
+        # logging.info(f'ds.size():{ds.size()[1]}')
+        # logging.info(f'midi_emb.size():{midi_emb.size()[1]}')
+        label_emb = self.length_regulator(phone_emb, ds)
+
+        midi_emb = F.leaky_relu(self.fc_midi(midi_emb))
+        
+        midi_emb = self.length_regulator(midi_emb, ds)
 
         if self.embed_integration_type == "add":
-            hs = hs_label + hs_midi
-            hs = self.projection(hs)
+            # logging.info(f'label_emb.size():{label_emb.size()[1]}')
+            # logging.info(f'midi_emb.size():{midi_emb.size()[1]}')
+            if label_emb.size()[1] > midi_emb.size()[1]:
+                hs = torch.zeros_like(label_emb, device=label_emb.device)
+                hs[:, :midi_emb.size()[1], :] = midi_emb
+                hs = hs + label_emb
+            else:
+                hs = torch.zeros_like(midi_emb, device=midi_emb.device)
+                hs[:, :label_emb.size()[1], :] = label_emb
+                hs = hs + midi_emb
+            # hs = label_emb + midi_emb
         else:
-            hs = torch.cat((hs_label, hs_midi), dim=-1)
-            hs = self.projection(hs)
+            hs = torch.cat((label_emb, midi_emb), dim=-1)
+
+        # hs = F.leaky_relu(self.projection(hs))
 
         # integrate spk & lang embeddings
         if self.spks is not None:
@@ -846,13 +913,24 @@ class GLU_Transformer(AbsSVS):
         if self.spk_embed_dim is not None:
             hs = self._integrate_with_spk_embed(hs, spembs)
 
-        zs = torch.nn.utils.rnn.pack_padded_sequence(
-            hs, label_lengths, batch_first=True
-        )
+        pos_emb = self.pos(hs)
+        pos_out = F.leaky_relu(self.fc_pos(pos_emb))
+
+        hs = hs + pos_out
+
+        # decoder
+        # logging.info(f'midi.size():{torch.LongTensor([midi.size()[1]], device=hs.device)}')
+        # torch.LongTensor([midi.size()[1]], device=hs.device)
+        zs = self.decoder(
+            hs, pos=(~make_pad_mask(ds.sum(-1))).to(device=hs.device)
+            # hs, pos=(~make_pad_mask(torch.LongTensor([hs.size()[1]], device=hs.device))).to(device=hs.device)
+        )  # True mask
 
         zs = zs[:, self.reduction_factor - 1 :: self.reduction_factor]
+
+        before_outs = F.leaky_relu(self.feat_out(zs).view(zs.size(0), -1, self.odim))
+
         # (B, T_feats//r, odim * r) -> (B, T_feats//r * r, odim)
-        before_outs = self.feat_out(zs).view(zs.size(0), -1, self.odim)
 
         # postnet -> (B, T_feats//r * r, odim)
         if self.postnet is None:
@@ -862,7 +940,7 @@ class GLU_Transformer(AbsSVS):
                 before_outs.transpose(1, 2)
             ).transpose(1, 2)
 
-        return after_outs
+        return after_outs, None, None
 
     def _integrate_with_spk_embed(
         self, hs: torch.Tensor, spembs: torch.Tensor

@@ -59,15 +59,15 @@ def process_utterance(
 
     midi_seq = create_midi(notes, tempo, phn_dur, tgt_sr)
 
-    midi_scp_writer[uid] = midi_seq
-    text.write("{} {}\n".format(uid, " ".join(phns)))
-    utt2spk.write("{} {}\n".format(uid, "opencpop"))
+    midi_scp_writer["opencpop_{}".format(uid)] = midi_seq
+    text.write("opencpop_{} {}\n".format(uid, " ".join(phns)))
+    utt2spk.write("opencpop_{} {}\n".format(uid, "opencpop"))
 
     # apply bit convert, there is a known issue in direct convert in format wavscp
     cmd = f"sox {os.path.join(audio_dir, uid)}.wav -c 1 -t wavpcm -b 16 -r {tgt_sr} {os.path.join(wav_dumpdir, uid)}_bits16.wav"
     os.system(cmd)
 
-    wavscp.write("{} {}_bits16.wav\n".format(uid, os.path.join(wav_dumpdir, uid)))
+    wavscp.write("opencpop_{} {}_bits16.wav\n".format(uid, os.path.join(wav_dumpdir, uid)))
 
     running_dur = 0
     assert len(phn_dur) == len(phns)
@@ -78,7 +78,7 @@ def process_utterance(
         label_entry.append("{:.3f} {:.3f} {}".format(start, end, phns[i]))
         running_dur += phn_dur[i]
 
-    label.write("{} {}\n".format(uid, " ".join(label_entry)))
+    label.write("opencpop_{} {}\n".format(uid, " ".join(label_entry)))
 
 
 def process_subset(args, set_name):

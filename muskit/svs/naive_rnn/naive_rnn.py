@@ -257,9 +257,13 @@ class NaiveRNN(AbsSVS):
             self.spk_embed_integration_type = spk_embed_integration_type
         if self.spk_embed_dim is not None:
             if self.spk_embed_integration_type == "add":
-                self.projection = torch.nn.Linear(self.spk_embed_dim, eunits * dim_direction)
+                self.projection = torch.nn.Linear(
+                    self.spk_embed_dim, eunits * dim_direction
+                )
             else:
-                self.projection = torch.nn.Linear(eunits * dim_direction + self.spk_embed_dim, eunits * dim_direction)
+                self.projection = torch.nn.Linear(
+                    eunits * dim_direction + self.spk_embed_dim, eunits * dim_direction
+                )
 
         # define final projection
         self.feat_out = torch.nn.Linear(eunits * dim_direction, odim * reduction_factor)
@@ -460,7 +464,7 @@ class NaiveRNN(AbsSVS):
         #     hs, label_lengths.to("cpu"), batch_first=True, enforce_sorted=False
         # )
 
-        # zs, (_, _) = self.decoder(hs_emb)
+        # zs, (_, _) = self.decoder(hs)
         # zs, _ = torch.nn.utils.rnn.pad_packed_sequence(zs, batch_first=True)
 
         # zs = zs[:, self.reduction_factor - 1 :: self.reduction_factor]
@@ -621,7 +625,7 @@ class NaiveRNN(AbsSVS):
         Returns:
             Tensor: Batch of integrated hidden state sequences (B, Tmax, adim).
         """
-        
+
         if self.spk_embed_integration_type == "add":
             # apply projection and then add to hidden states
             spembs = self.projection(F.normalize(spembs))

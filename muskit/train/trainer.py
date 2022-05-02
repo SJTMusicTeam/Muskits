@@ -46,6 +46,8 @@ from muskit.utils.griffin_lim import logmel2linear
 from muskit.utils.griffin_lim import griffin_lim
 
 from librosa.display import specshow
+import matplotlib as mpl
+mpl.use('Agg')
 import matplotlib.pyplot as plt
 
 import os
@@ -503,7 +505,12 @@ class Trainer:
             with autocast(scaler is not None):
                 with reporter.measure_time("forward_time"):
 
-                    del_keys = ["pitch_aug", "pitch_aug_lengths", "time_aug", "time_aug_lengths"]
+                    del_keys = [
+                        "pitch_aug",
+                        "pitch_aug_lengths",
+                        "time_aug",
+                        "time_aug_lengths",
+                    ]
                     for key in del_keys:
                         if key in batch.keys():
                             del batch[key]
@@ -731,7 +738,12 @@ class Trainer:
             if no_forward_run:
                 continue
 
-            del_keys = ["pitch_aug", "pitch_aug_lengths", "time_aug", "time_aug_lengths"]
+            del_keys = [
+                "pitch_aug",
+                "pitch_aug_lengths",
+                "time_aug",
+                "time_aug_lengths",
+            ]
             for key in del_keys:
                 if key in batch.keys():
                     del batch[key]
@@ -751,7 +763,7 @@ class Trainer:
                 )
                 spec_gt_denorm, _ = model.normalize.inverse(spec_gt.clone())
 
-                cls.log_figure(
+                cls.log_figure( # FIX ME
                     model,
                     model_vocoder,
                     index[0],
@@ -791,7 +803,7 @@ class Trainer:
         ngpu = options.ngpu
         no_forward_run = options.no_forward_run
 
-        matplotlib.use("Agg")
+        # matplotlib.use("Agg")
         import matplotlib.pyplot as plt
         from matplotlib.ticker import MaxNLocator
 
@@ -808,25 +820,6 @@ class Trainer:
 
             # 1. Forwarding model and gathering all attentions
             #    calculate_all_attentions() uses single gpu only.
-            speaker_lst = [
-                "oniku",
-                "ofuton",
-                "kiritan",
-                "natsume",
-            ]  # NOTE: Fix me into args
-            # add spk-id to **batch
-            if "svs.sid_emb.weight" in model.state_dict().keys():
-                sids = []
-                for filename in ids:
-                    if "kiritan" in filename.split("_")[0]:
-                        filename = "kiritan"
-                    elif "natsume" in filename.split("_")[0]:
-                        filename = "natsume"
-                    else:
-                        filename = filename.split("_")[0]
-                    sids.append(speaker_lst.index(filename))
-                sids = torch.tensor(sids).to(batch["score"].device)
-                batch["sids"] = sids
 
             del batch["pitch_aug"]
             del batch["pitch_aug_lengths"]
@@ -865,7 +858,7 @@ class Trainer:
                     if output_dir is not None:
                         p = output_dir / id_ / f"{k}.{reporter.get_epoch()}ep.png"
                         p.parent.mkdir(parents=True, exist_ok=True)
-                        fig.savefig(p)
+                        fig.savefig(p) #FIX ME
 
                     if summary_writer is not None:
                         summary_writer.add_figure(

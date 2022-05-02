@@ -35,6 +35,7 @@ from muskit.svs.feats_extract.log_spectrogram import LogSpectrogram
 from muskit.svs.encoder_decoder.transformer.transformer import Transformer
 from muskit.svs.bytesing.bytesing import ByteSing
 from muskit.svs.naive_rnn.naive_rnn import NaiveRNN
+from muskit.svs.naive_rnn.naive_rnn_dp import NaiveRNNDP
 from muskit.svs.mlp_singer.mlp_singer import MLPSinger
 from muskit.svs.glu_transformer.glu_transformer import GLU_Transformer
 from muskit.svs.xiaoice.XiaoiceSing import XiaoiceSing
@@ -104,6 +105,7 @@ svs_choices = ClassChoices(
         glu_transformer=GLU_Transformer,
         bytesing=ByteSing,
         naive_rnn=NaiveRNN,
+        naive_rnn_dp=NaiveRNNDP,
         mlp=MLPSinger,
         xiaoice=XiaoiceSing,
         xiaoice_noDP=XiaoiceSing_noDP,
@@ -241,7 +243,9 @@ class SVSTask(AbsTask):
     ]:
         assert check_argument_types()
         return CommonCollateFn(
-            float_pad_value=0.0, int_pad_value=0, not_sequence=["spembs", "sids", "lids"]
+            float_pad_value=0.0,
+            int_pad_value=0,
+            not_sequence=["spembs", "sids", "lids"],
         )
 
     @classmethod
@@ -262,7 +266,8 @@ class SVSTask(AbsTask):
             )
         else:
             retval = None
-        assert check_return_type(retval)
+        # FIXME (jiatong): sometimes checking is not working here
+        # assert check_return_type(retval)
         return retval
 
     @classmethod
@@ -281,10 +286,10 @@ class SVSTask(AbsTask):
         cls, train: bool = True, inference: bool = False
     ) -> Tuple[str, ...]:
         if not inference:
-            retval = ("spembs", "durations", "pitch", "energy", "sids")
+            retval = ("spembs", "durations", "pitch", "energy", "sids", "lids")
         else:
             # Inference mode
-            retval = ("spembs", "singing", "durations", "sids")
+            retval = ("spembs", "singing", "durations", "sids", "lids")
         return retval
 
     @classmethod
@@ -325,6 +330,7 @@ class SVSTask(AbsTask):
         else:
             normalize = None
 
+        # logging.info(f'args.conf:{args.svs_conf}')
         # 3. SVS
         svs_class = svs_choices.get_class(args.svs)
         svs = svs_class(idim=vocab_size, odim=odim, **args.svs_conf)

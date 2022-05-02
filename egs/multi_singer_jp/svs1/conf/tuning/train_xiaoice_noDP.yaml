@@ -5,6 +5,7 @@
 ##########################################################
 svs: xiaoice_noDP                   # model architecture
 svs_conf:                        # keyword arguments for the selected model
+    spks: 5                      # num of spks for sid
     midi_dim: 129                # midi dimension (note number + silence)
     tempo_dim: 100
     embed_dim: 384               # char or phn embedding dimension
@@ -23,18 +24,16 @@ svs_conf:                        # keyword arguments for the selected model
     init_type: xavier_uniform    # parameter initialization
     use_masking: true            # whether to apply masking for padded part in loss calculation
     loss_type: L1
-    spks: 4
-    
-    use_mixup_training: True    # Default: False
+    use_mixup_training: False    # Default: False
     loss_mixup_wight: 0.2          # Default: 0
-    use_cycle_process: True      # Default: False
-    cycle_type: single           # Default: single, bi-direct
+    use_cycle_process: False      # Default: False
+    cycle_type: single            # Default: single, bi-direct
     w_svs: 0.7                     # Default: 1
     w_predictor: 0.2               # Default: 1
     w_cycle: 0.1                   # Default: 1
-    predict_type: ["midi", "label", "spk"]     # Default: ["midi", "label"]
+    predict_type: ["midi", "label"]     # Default: ["midi", "label"]
     predict_criterion_type: CrossEntropy         # Default: CTC, CrossEntropy
-    
+
 
 ##########################################################
 #                  OPTIMIZER SETTING                     #
@@ -48,6 +47,7 @@ optim_conf:           # keyword arguments for selected optimizer
 
 scheduler: noamlr
 scheduler_conf:
+    model_size: 384
     warmup_steps: 4000
 
 ##########################################################
@@ -59,16 +59,12 @@ grad_clip: 1.0              # gradient clipping norm
 grad_noise: false           # whether to use gradient noise injection
 accum_grad: 1               # gradient accumulation
 
-# batch_bins: 1000000       # batch bins (for feats_type=fbank)
-# batch_bins: 10000000         # batch bins (for feats_type=raw, *= n_shift / n_mels)
-# batch_type: numel           # how to make batch
-
 batch_type: sorted
 batch_size: 14
 
 pitch_aug_min: 0            # Default: 0, [-1,-2,-3]
 pitch_aug_max: 0            # Default: 0, [1,2,3]
-pitch_mean: "[66.02, 53.15, 55.20, 53.83]"          # Default: "None", "[66.02, 53.15, 55.20, 53.83]" - for ["oniku", "ofuton", "kiritan", "natsume"] dataset(the mean midi-value of training split, used for adaptive pitch augmentation) | muskit/fileio/utils.py
+pitch_mean: "53.15"          # Default: "None", "53.15" - for ofuton dataset(the mean midi-value of training split, used for adaptive pitch augmentation) | muskit/fileio/utils.py
 time_aug_min: 1             # Default: 1, [0.99]
 time_aug_max: 1             # Default: 1, [1.01]
 random_crop: False          # Default: False, crop length [0.9 * length, length]
@@ -89,6 +85,3 @@ best_model_criterion:
 -   - train
     - loss
     - min
-
-gpu_id: 0
-vocoder_checkpoint: /data5/gs/vocoder_peter/hifigan-vocoder/exp/train_hifigan.v1_train_nodev_clean_libritts_hifigan-2.v1/checkpoint-50000steps.pkl

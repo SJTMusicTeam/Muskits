@@ -23,7 +23,7 @@ log "$0 $*"
 . utils/parse_options.sh || exit 1;
 
 if [ -z "${NATSUME}" ]; then
-    log "Fill the value of 'Natsume' of db.sh"
+    log "Fill the value of 'NATSUME' of db.sh"
     exit 1
 fi
 
