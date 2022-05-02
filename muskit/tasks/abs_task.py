@@ -79,6 +79,17 @@ else:
     from torch.multiprocessing.spawn import SpawnContext as ProcessContext
 
 
+def my_parameters_svs(model):
+        r"""Returns an iterator over immediate children modules.
+
+        Yields:
+            Module: a child module
+        """
+        for name, module in model.named_parameters():
+            if "predictor.pre" in name:
+                continue
+            yield module
+
 optim_classes = dict(
     adam=torch.optim.Adam,
     sgd=SGD,
@@ -902,55 +913,59 @@ class AbsTask(ABC):
 
         optimizers = [optim]
 
-        # model_params_svs = set()
-        # model_params_predicter = set()
-        # for name, param in model.named_parameters(): #查看可优化的参数有哪些
-        #     logging.info(f"name: {name}, param: {param}")
-        #     if param.requires_grad:
-        #         if "predictor." in name:
-        #             model_params_predicter |= set(param)
-        #         else:
-        #             model_params_svs |= set(param)
-        # model_params = model.parameters()
-        # logging.info(f"model_params: {model_params}, type(model_params): {type(model_params)}")
+        # if args.svs_conf['use_cycle_process']:
+        #     # multiple optimizers when use_cycle_process == True
+        #     model_params_svs = my_parameters_svs(model)
 
-        # logging.info(f"\n***************************\n")
+        #     # define svs optimizer
+        #     optim_class = optim_classes.get(args.optim)
+        #     if optim_class is None:
+        #         raise ValueError(f"must be one of {list(optim_classes)}: {args.optim}")
+        #     if args.sharded_ddp:
+        #         if fairscale is None:
+        #             raise RuntimeError("Requiring fairscale. Do 'pip install fairscale'")
+        #         optim = fairscale.optim.oss.OSS(
+        #             params=model_params_svs, optim=optim_class, **args.optim_conf
+        #         )
+        #     else:
+        #         optim = optim_class(model_params_svs, **args.optim_conf)
+        #     optimizers = [optim]
 
-        # for param in model_params:
-        #     logging.info(f"param: {param}")
-        
-        # for param in model_params_predicter:
-        #     logging.info(f"param: {param}")
-        
-
-        # nets = [encoder, decoder]
-        # parameters = set()
-        # for net in nets:
-        #     parameters |= set(net.parameters())
-
-        # quit()
-        
-
-        # # define predictor optimizer
-        # optim_d_class = optim_classes.get(args.optim2)
-        # if optim_d_class is None:
-        #     raise ValueError(f"must be one of {list(optim_classes)}: {args.optim2}")
-        # if args.sharded_ddp:
-        #     try:
-        #         import fairscale
-        #     except ImportError:
-        #         raise RuntimeError("Requiring fairscale. Do 'pip install fairscale'")
-        #     optim_d = fairscale.optim.oss.OSS(
-        #         params=model.tts.discriminator.parameters(),
-        #         optim=optim_d_class,
-        #         **args.optim2_conf,
-        #     )
+        #     # define predictor optimizer
+        #     optim_d_class = optim_classes.get(args.optim2)
+        #     if optim_d_class is None:
+        #         raise ValueError(f"must be one of {list(optim_classes)}: {args.optim2}")
+        #     if args.sharded_ddp:
+        #         try:
+        #             import fairscale
+        #         except ImportError:
+        #             raise RuntimeError("Requiring fairscale. Do 'pip install fairscale'")
+        #         optim_d = fairscale.optim.oss.OSS(
+        #             params=model.svs.predictor.parameters(),
+        #             optim=optim_d_class,
+        #             **args.optim2_conf,
+        #         )
+        #     else:
+        #         optim_d = optim_d_class(
+        #             model.svs.predictor.parameters(),
+        #             **args.optim2_conf,
+        #         )
+        #     optimizers += [optim_d]
         # else:
-        #     optim_d = optim_d_class(
-        #         model.tts.discriminator.parameters(),
-        #         **args.optim2_conf,
-        #     )
-        # optimizers += [optim_d]
+        #     # single optimizer when use_cycle_process == False, no predictor
+        #     optim_class = optim_classes.get(args.optim)
+        #     if optim_class is None:
+        #         raise ValueError(f"must be one of {list(optim_classes)}: {args.optim}")
+        #     if args.sharded_ddp:
+        #         if fairscale is None:
+        #             raise RuntimeError("Requiring fairscale. Do 'pip install fairscale'")
+        #         optim = fairscale.optim.oss.OSS(
+        #             params=model.parameters(), optim=optim_class, **args.optim_conf
+        #         )
+        #     else:
+        #         optim = optim_class(model.parameters(), **args.optim_conf)
+
+        #     optimizers = [optim]
 
         return optimizers
 

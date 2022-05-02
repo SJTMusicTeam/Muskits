@@ -23,6 +23,8 @@ svs_conf:                        # keyword arguments for the selected model
     init_type: pytorch           # parameter initialization
     use_masking: true            # whether to apply masking for padded part in loss calculation
     loss_type: L1
+    encoder_type: "conformer"
+    decoder_type: "conformer"
 
 
 ##########################################################
@@ -30,9 +32,15 @@ svs_conf:                        # keyword arguments for the selected model
 ##########################################################
 optim: adam           # optimizer type
 optim_conf:           # keyword arguments for selected optimizer
-    lr: 1.0e-03       # learning rate
-    eps: 1.0e-06      # epsilon
+    lr: 1             # learning rate
+    betas: [0.9, 0.98]
+    eps: 1.0e-09      # epsilon
     weight_decay: 0.0 # weight decay coefficient
+
+scheduler: noamlr
+scheduler_conf:
+    model_size: 384
+    warmup_steps: 4000
 
 ##########################################################
 #                OTHER TRAINING SETTING                  #
@@ -53,7 +61,7 @@ batch_size: 14
 pitch_aug_min: 0            # Default: 0, [-1,-2,-3]
 pitch_aug_max: 0            # Default: 0, [1,2,3]
 time_aug_min: 1             # Default: 1, [0.99]
-time_aug_max: 1.01             # Default: 1, [1.01]
+time_aug_max: 1             # Default: 1, [1.01]
 
 sort_in_batch: descending   # how to sort data in making batch
 sort_batch: descending      # how to sort created batches
@@ -71,5 +79,5 @@ best_model_criterion:
     - loss
     - min
 
-gpu_id: 5
-vocoder_checkpoint: /data5/gs/vocoder_peter/hifigan-vocoder/exp/train_hifigan.v1_train_nodev_clean_libritts_hifigan-2.v1/checkpoint-50000steps.pkl
+gpu_id: 1
+vocoder_checkpoint: /data5/gs/ParallelWaveGAN/egs/ofuton_p_utagoe_db/voc1/exp/train_nodev_ofuton_hifigan.v1/checkpoint-300000steps.pkl
