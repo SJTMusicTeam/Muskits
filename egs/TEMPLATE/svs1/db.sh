@@ -36,6 +36,13 @@ if [[ `hostname` == venus_wyn_2232 ]]; then
     PJS=/data1/wyn/Mus_data/PJS_corpus_ver1.1/
 fi
 
+# For only neptune environment
+if [[ `hostname` == neptune_wyn_2245 ]]; then
+    PJS=/data1/wyn/Mus_data/PJS_corpus_ver1.1/
+    AMEBOSHI=/data1/wyn/Mus_data/ameboshi_ciphyer_utagoe_db/
+    OPENCPOP=/data1/wyn/Mus_data/Opencpop/
+fi
+
 # For only uranus environment
 if [[ `hostname` == uranus_gs_2223 ]]; then
     KIRITAN=/data1/gs/Muskits/egs/kiritan/svs1/data/
