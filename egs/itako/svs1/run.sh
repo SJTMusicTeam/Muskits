@@ -13,6 +13,7 @@ n_fft=2048
 n_shift=300
 win_length=1200
 
+
 score_feats_extract=frame_score_feats   # frame_score_feats | syllable_score_feats
 
 opts=
@@ -20,7 +21,7 @@ if [ "${fs}" -eq 48000 ]; then
     # To suppress recreation, specify wav format
     opts="--audio_format wav "
 else
-    opts="--audio_format wav "
+    opts="--audio_format flac "
 fi
 
 train_set=tr_no_dev
@@ -28,7 +29,6 @@ valid_set=dev
 test_sets="dev eval"
 
 # training and inference configuration
-# train_config=conf/tuning/train_xiaoice_noDP.yaml
 train_config=conf/train.yaml
 inference_config=conf/decode.yaml
 
@@ -36,11 +36,10 @@ inference_config=conf/decode.yaml
 g2p=none
 cleaner=none
 
-#     --pretrained_model /home/exx/jiatong/projects/svs/Muskits/egs/multilingual_four/svs1/exp/svs_train_xiaoice_noDP_raw_phn_none_multi/latest.pth \
-
 ./svs.sh \
-    --lang zh \
-    --local_data_opts "--stage 2 $(pwd)" \
+    --lang jp \
+    --stage 0 \
+    --local_data_opts "--stage 0 $(pwd)" \
     --feats_type raw \
     --pitch_extract None \
     --fs "${fs}" \
@@ -59,4 +58,5 @@ cleaner=none
     --score_feats_extract "${score_feats_extract}" \
     --srctexts "data/${train_set}/text" \
     --ngpu 1 \
+    --vocoder_file "./downloads/checkpoint-310000steps.pkl" \
     ${opts} "$@"

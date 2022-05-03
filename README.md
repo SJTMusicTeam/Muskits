@@ -35,6 +35,13 @@ The full installation guide is available at https://github.com/SJTMusicTeam/Musk
 ### Demonstration
 - Real-time SVS demo with Muskits  [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/SJTMusicTeam/svs_demo/blob/master/muskit_svs_realtime.ipynb)
 
+### Pretrain models
+
+Acoustic models are available at https://github.com/SJTMusicTeam/Muskits/blob/main/doc/pretrained_models.md
+Vocoders are available at https://github.com/kan-bayashi/ParallelWaveGAN/blob/master/README.md
+
 ### Running instructions
 The tutorial of how to use Muskits is at https://github.com/SJTMusicTeam/Muskits/blob/main/doc/tutorial.md
 
+### Recipe Explanation
+A detailed recipe explanation in https://github.com/SJTMusicTeam/Muskits/blob/main/egs/TEMPLATE/svs1/README.md
