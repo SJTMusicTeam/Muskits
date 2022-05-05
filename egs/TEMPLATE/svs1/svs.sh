@@ -1068,13 +1068,43 @@ if ! "${skip_eval}"; then
             fi
         done
     fi
+
+    if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ]; then
+        log "Stage 8: Scoring"
+
+        for dset in ${test_sets}; do
+            _data="${data_feats}/${dset}"
+            _gt_wavscp="${_data}/wav.scp"
+            _dir="${svs_exp}/${inference_tag}/${dset}"
+            _gen_wavdir="${_dir}/wav"
+
+            # Objective Evaluation - MCD
+            log "Begin Scoring for MCD metrics on ${dset}, results are written under ${_dir}/MCD_res"
+
+            mkdir -p "${_dir}/MCD_res"
+            ${python} pyscripts/utils/evaluate_mcd.py \
+                --gen_wavdir_or_wavscp ${_gen_wavdir} \
+                --gt_wavdir_or_wavscp ${_gt_wavscp} \
+                --outdir "${_dir}/MCD_res"
+            
+            # Objective Evaluation - log-F0 RMSE & Semitone ACC & VUV Error Rate
+            log "Begin Scoring for F0 related metrics on ${dset}, results are written under ${_dir}/F0_res"
+
+            mkdir -p "${_dir}/F0_res"
+            ${python} pyscripts/utils/evaluate_f0.py \
+                --gen_wavdir_or_wavscp ${_gen_wavdir} \
+                --gt_wavdir_or_wavscp ${_gt_wavscp} \
+                --outdir "${_dir}/F0_res"
+
+        done
+    fi
 else
     log "Skip the evaluation stages"
 fi
 
 packed_model="${svs_exp}/${svs_exp##*/}_${inference_model%.*}.zip"
-if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ]; then
-    log "Stage 8: Pack model: ${packed_model}"
+if [ ${stage} -le 9 ] && [ ${stop_stage} -ge 9 ]; then
+    log "Stage 9: Pack model: ${packed_model}"
 
     _opts=""
     if [ -e "${svs_stats_dir}/train/feats_stats.npz" ]; then
@@ -1107,7 +1137,7 @@ if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ]; then
 
     # NOTE(kamo): If you'll use packed model to inference in this script, do as follows
     #   % unzip ${packed_model}
-    #   % ./run.sh --stage 8 --svs_exp $(basename ${packed_model} .zip) --inference_model pretrain.pth
+    #   % ./run.sh --stage 9 --svs_exp $(basename ${packed_model} .zip) --inference_model pretrain.pth
 fi
 
 ### TODO: other stages
