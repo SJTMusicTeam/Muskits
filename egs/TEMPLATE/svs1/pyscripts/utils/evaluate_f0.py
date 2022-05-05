@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 
-# Copyright 2020 Wen-Chin Huang and Tomoki Hayashi
+# Copyright 2021 Wen-Chin Huang and Tomoki Hayashi
+# Copyright 2022 Shuai Guo
 #  Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
 
-"""Evaluate MCD between generated and groundtruth audios with SPTK-based mcep."""
+"""Evaluate log-F0 RMSE between generated and groundtruth audios based on World."""
 
 import argparse
 import fnmatch
@@ -18,11 +19,34 @@ from typing import Tuple
 import librosa
 import numpy as np
 import pysptk
+import pyworld as pw
 import soundfile as sf
 
 from fastdtw import fastdtw
 from scipy import spatial
+from math import log2
+from math import pow
 
+
+def _Hz2Semitone(freq):
+    """_Hz2Semitone."""
+    A4 = 440
+    C0 = A4 * pow(2, -4.75)
+    name = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+
+    if freq == 0:
+        return "Sil"  # silence
+    else:
+        h = round(12 * log2(freq / C0))
+        octave = h // 12
+        n = h % 12
+        return name[n] + "_" + str(octave)
+
+def _Hz2Flag(freq):
+    if freq == 0:
+        return False
+    else:
+        return True
 
 def find_files(
     root_dir: str, query: List[str] = ["*.flac", "*.wav"], include_root_dir: bool = True
@@ -49,58 +73,48 @@ def find_files(
     return files
 
 
-def sptk_extract(
+def world_extract(
     x: np.ndarray,
     fs: int,
+    f0min: int = 40,
+    f0max: int = 800,
     n_fft: int = 512,
     n_shift: int = 256,
     mcep_dim: int = 25,
     mcep_alpha: float = 0.41,
-    is_padding: bool = False,
 ) -> np.ndarray:
-    """Extract SPTK-based mel-cepstrum.
+    """Extract World-based acoustic features.
 
     Args:
         x (ndarray): 1D waveform array.
-        fs (int): Sampling rate
+        fs (int): Minimum f0 value (default=40).
+        f0 (int): Maximum f0 value (default=800).
+        n_shift (int): Shift length in point (default=256).
         n_fft (int): FFT length in point (default=512).
         n_shift (int): Shift length in point (default=256).
         mcep_dim (int): Dimension of mel-cepstrum (default=25).
         mcep_alpha (float): All pass filter coefficient (default=0.41).
-        is_padding (bool): Whether to pad the end of signal (default=False).
 
     Returns:
         ndarray: Mel-cepstrum with the size (N, n_fft).
+        ndarray: F0 sequence (N,).
 
     """
-    # perform padding
-    if is_padding:
-        n_pad = n_fft - (len(x) - n_fft) % n_shift
-        x = np.pad(x, (0, n_pad), "reflect")
-
-    # get number of frames
-    n_frame = (len(x) - n_fft) // n_shift + 1
-
-    # get window function
-    win = pysptk.sptk.hamming(n_fft)
-
-    # check mcep and alpha
+    # extract features
+    x = x.astype(np.float64)
+    f0, time_axis = pw.harvest(
+        x,
+        fs,
+        f0_floor=f0min,
+        f0_ceil=f0max,
+        frame_period=n_shift / fs * 1000,
+    )
+    sp = pw.cheaptrick(x, f0, time_axis, fs, fft_size=n_fft)
     if mcep_dim is None or mcep_alpha is None:
         mcep_dim, mcep_alpha = _get_best_mcep_params(fs)
+    mcep = pysptk.sp2mc(sp, mcep_dim, mcep_alpha)
 
-    # calculate spectrogram
-    mcep = [
-        pysptk.mcep(
-            x[n_shift * i : n_shift * i + n_fft] * win,
-            mcep_dim,
-            mcep_alpha,
-            eps=1e-6,
-            etype=1,
-        )
-        for i in range(n_frame)
-    ]
-
-    return np.stack(mcep)
+    return mcep, f0
 
 
 def _get_basename(path: str) -> str:
@@ -126,9 +140,11 @@ def calculate(
     file_list: List[str],
     gt_file_list: List[str],
     args: argparse.Namespace,
-    mcd_dict: Dict,
+    f0_rmse_dict: Dict[str, float],
+    semitone_acc_dict: Dict[str, float],
+    vuv_err_dict: Dict[str, float],
 ):
-    """Calculate MCD."""
+    """Calculate log-F0 RMSE."""
     for i, gen_path in enumerate(file_list):
         corresponding_list = list(
             filter(lambda gt_path: _get_basename(gt_path) in gen_path, gt_file_list)
@@ -146,17 +162,21 @@ def calculate(
             gt_x = librosa.resample(gt_x.astype(np.float), gt_fs, gen_fs)
 
         # extract ground truth and converted features
-        gen_mcep = sptk_extract(
+        gen_mcep, gen_f0 = world_extract(
             x=gen_x,
             fs=fs,
+            f0min=args.f0min,
+            f0max=args.f0max,
             n_fft=args.n_fft,
             n_shift=args.n_shift,
             mcep_dim=args.mcep_dim,
             mcep_alpha=args.mcep_alpha,
         )
-        gt_mcep = sptk_extract(
+        gt_mcep, gt_f0 = world_extract(
             x=gt_x,
             fs=fs,
+            f0min=args.f0min,
+            f0max=args.f0max,
             n_fft=args.n_fft,
             n_shift=args.n_shift,
             mcep_dim=args.mcep_dim,
@@ -166,14 +186,31 @@ def calculate(
         # DTW
         _, path = fastdtw(gen_mcep, gt_mcep, dist=spatial.distance.euclidean)
         twf = np.array(path).T
-        gen_mcep_dtw = gen_mcep[twf[0]]
-        gt_mcep_dtw = gt_mcep[twf[1]]
+        gen_f0_dtw = gen_f0[twf[0]]
+        gt_f0_dtw = gt_f0[twf[1]]
 
-        # MCD
-        diff2sum = np.sum((gen_mcep_dtw - gt_mcep_dtw) ** 2, 1)
-        mcd = np.mean(10.0 / np.log(10.0) * np.sqrt(2 * diff2sum), 0)
-        # logging.info(f"{gt_basename} {mcd:.4f}")
-        mcd_dict[gt_basename] = mcd
+        # Semitone ACC
+        semitone_GT = np.array([_Hz2Semitone(_f0) for _f0 in gt_f0_dtw])
+        semitone_predict = np.array([_Hz2Semitone(_f0) for _f0 in gen_f0_dtw])
+        semitone_ACC = float((semitone_GT == semitone_predict).sum()) / len(semitone_GT)
+        semitone_acc_dict[gt_basename] = semitone_ACC
+
+        # VUV ERR
+        vuv_GT = np.array([_Hz2Flag(_f0) for _f0 in gt_f0_dtw])
+        vuv_predict = np.array([_Hz2Flag(_f0) for _f0 in gen_f0_dtw])
+        vuv_ERR = float((vuv_GT != vuv_predict).sum()) / len(vuv_GT)
+        vuv_err_dict[gt_basename] = vuv_ERR
+
+        # Get voiced part
+        nonzero_idxs = np.where((gen_f0_dtw != 0) & (gt_f0_dtw != 0))[0]
+        gen_f0_dtw_voiced = np.log(gen_f0_dtw[nonzero_idxs])
+        gt_f0_dtw_voiced = np.log(gt_f0_dtw[nonzero_idxs])
+
+        # log F0 RMSE
+        log_f0_rmse = np.sqrt(np.mean((gen_f0_dtw_voiced - gt_f0_dtw_voiced) ** 2))
+        f0_rmse_dict[gt_basename] = log_f0_rmse
+
+        # logging.info(f"{gt_basename} log_f0_rmse: {log_f0_rmse:.4f}, Semitone_ACC: {semitone_ACC*100:.2f}%, VUV_ERROR: {vuv_ERR*100:.2f}")
 
 
 def get_parser() -> argparse.Namespace:
@@ -227,6 +264,18 @@ def get_parser() -> argparse.Namespace:
         help="The number of shift points.",
     )
     parser.add_argument(
+        "--f0min",
+        default=40,
+        type=int,
+        help="Minimum f0 value.",
+    )
+    parser.add_argument(
+        "--f0max",
+        default=800,
+        type=int,
+        help="Maximum f0 value.",
+    )
+    parser.add_argument(
         "--nj",
         default=16,
         type=int,
@@ -242,7 +291,7 @@ def get_parser() -> argparse.Namespace:
 
 
 def main():
-    """Run MCD calculation in parallel."""
+    """Run log-F0 RMSE calculation in parallel."""
     args = get_parser().parse_args()
 
     # logging info
@@ -294,10 +343,15 @@ def main():
 
     # multi processing
     with mp.Manager() as manager:
-        mcd_dict = manager.dict()
+        log_f0_rmse_dict = manager.dict()
+        semitone_acc_dict = manager.dict()
+        vuv_err_dict = manager.dict()
         processes = []
+        # for f in file_lists:
+        #     calculate(f, gt_files, args, log_f0_rmse_dict)
         for f in file_lists:
-            p = mp.Process(target=calculate, args=(f, gt_files, args, mcd_dict))
+            p = mp.Process(target=calculate, args=(f, gt_files, args,
+                            log_f0_rmse_dict, semitone_acc_dict, vuv_err_dict))
             p.start()
             processes.append(p)
 
@@ -306,12 +360,21 @@ def main():
             p.join()
 
         # convert to standard list
-        mcd_dict = dict(mcd_dict)
+        log_f0_rmse_dict = dict(log_f0_rmse_dict)
+        semitone_acc_dict = dict(semitone_acc_dict)
+        vuv_err_dict = dict(vuv_err_dict)
 
         # calculate statistics
-        mean_mcd = np.mean(np.array([v for v in mcd_dict.values()]))
-        std_mcd = np.std(np.array([v for v in mcd_dict.values()]))
-        logging.info(f"Average: {mean_mcd:.4f} ± {std_mcd:.4f}")
+        mean_log_f0_rmse = np.mean(np.array([v for v in log_f0_rmse_dict.values()]))
+        std_log_f0_rmse = np.std(np.array([v for v in log_f0_rmse_dict.values()]))
+        logging.info(f"Average - log_F0-RMSE: {mean_log_f0_rmse:.4f} ± {std_log_f0_rmse:.4f}")
+
+        mean_semitone_acc = np.mean(np.array([v for v in semitone_acc_dict.values()]))
+        logging.info(f"Average - Semitone_ACC: {mean_semitone_acc*100:.2f}%")
+
+        mean_vuv_err = np.mean(np.array([v for v in vuv_err_dict.values()]))
+        logging.info(f"Average - VUV_ERROR: {mean_vuv_err*100:.2f}%")
+
 
     # write results
     if args.outdir is None:
@@ -320,15 +383,19 @@ def main():
         else:
             args.outdir = os.path.dirname(args.gen_wavdir_or_wavscp)
     os.makedirs(args.outdir, exist_ok=True)
-    with open(f"{args.outdir}/utt2mcd", "w") as f:
-        for utt_id in sorted(mcd_dict.keys()):
-            mcd = mcd_dict[utt_id]
-            f.write(f"{utt_id} {mcd:.4f}\n")
-    with open(f"{args.outdir}/mcd_avg_result.txt", "w") as f:
+    with open(f"{args.outdir}/utt2log_f0", "w") as f:
+        for utt_id in sorted(log_f0_rmse_dict.keys()):
+            log_f0_rmse = log_f0_rmse_dict[utt_id]
+            semitone_ACC = semitone_acc_dict[utt_id]
+            vuv_ERR = vuv_err_dict[utt_id]
+            f.write(f"{utt_id} log_f0_rmse: {log_f0_rmse:.4f}, Semitone_ACC: {semitone_ACC*100:.2f}%, VUV_ERROR: {vuv_ERR*100:.2f}\n")
+    with open(f"{args.outdir}/avg_result.txt", "w") as f:
         f.write(f"#utterances: {len(gen_files)}\n")
-        f.write(f"Average: {mean_mcd:.4f} ± {std_mcd:.4f}")
+        f.write(f"Average - log_F0-RMSE: {mean_log_f0_rmse:.4f} ± {std_log_f0_rmse:.4f}\n")
+        f.write(f"Average - Semitone_ACC: {mean_semitone_acc*100:.2f}%\n")
+        f.write(f"Average - VUV_ERROR: {mean_vuv_err*100:.2f}%\n")
 
-    logging.info("Successfully finished MCD evaluation.")
+    logging.info("Successfully finished F0 related evaluation.")
 
 
 if __name__ == "__main__":

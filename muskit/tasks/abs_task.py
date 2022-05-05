@@ -79,6 +79,17 @@ else:
     from torch.multiprocessing.spawn import SpawnContext as ProcessContext
 
 
+def my_parameters_svs(model):
+        r"""Returns an iterator over immediate children modules.
+
+        Yields:
+            Module: a child module
+        """
+        for name, module in model.named_parameters():
+            if "predictor.pre" in name:
+                continue
+            yield module
+
 optim_classes = dict(
     adam=torch.optim.Adam,
     sgd=SGD,
@@ -901,6 +912,7 @@ class AbsTask(ABC):
             optim = optim_class(model.parameters(), **args.optim_conf)
 
         optimizers = [optim]
+
         return optimizers
 
     @classmethod

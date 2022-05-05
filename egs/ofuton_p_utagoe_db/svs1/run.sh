@@ -25,7 +25,7 @@ fi
 
 train_set=tr_no_dev
 valid_set=dev
-test_sets="dev eval"
+test_sets="eval"
 
 # training and inference configuration
 # train_config=conf/tuning/train_xiaoice.yaml
