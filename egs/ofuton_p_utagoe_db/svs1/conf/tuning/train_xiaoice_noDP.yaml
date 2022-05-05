@@ -34,8 +34,8 @@ svs_conf:                        # keyword arguments for the selected model
     predict_criterion_type: CrossEntropy         # Default: CTC, CrossEntropy
 
 # init_param:
-# - exp/2-20-Xiaoice_noDP-baseline/valid.loss.best.pth:svs:svs:svs.predictor
-# - exp/2-24-Xiaoice_noDP_noam384-purePredictor/valid.loss.best.pth:svs.predictor:svs.predictor
+# - <checkpoint_path>:svs:svs:svs.predictor
+# - <checkpoint_path>:svs.predictor:svs.predictor
 
 ##########################################################
 #                  OPTIMIZER SETTING                     #

@@ -913,60 +913,6 @@ class AbsTask(ABC):
 
         optimizers = [optim]
 
-        # if args.svs_conf['use_cycle_process']:
-        #     # multiple optimizers when use_cycle_process == True
-        #     model_params_svs = my_parameters_svs(model)
-
-        #     # define svs optimizer
-        #     optim_class = optim_classes.get(args.optim)
-        #     if optim_class is None:
-        #         raise ValueError(f"must be one of {list(optim_classes)}: {args.optim}")
-        #     if args.sharded_ddp:
-        #         if fairscale is None:
-        #             raise RuntimeError("Requiring fairscale. Do 'pip install fairscale'")
-        #         optim = fairscale.optim.oss.OSS(
-        #             params=model_params_svs, optim=optim_class, **args.optim_conf
-        #         )
-        #     else:
-        #         optim = optim_class(model_params_svs, **args.optim_conf)
-        #     optimizers = [optim]
-
-        #     # define predictor optimizer
-        #     optim_d_class = optim_classes.get(args.optim2)
-        #     if optim_d_class is None:
-        #         raise ValueError(f"must be one of {list(optim_classes)}: {args.optim2}")
-        #     if args.sharded_ddp:
-        #         try:
-        #             import fairscale
-        #         except ImportError:
-        #             raise RuntimeError("Requiring fairscale. Do 'pip install fairscale'")
-        #         optim_d = fairscale.optim.oss.OSS(
-        #             params=model.svs.predictor.parameters(),
-        #             optim=optim_d_class,
-        #             **args.optim2_conf,
-        #         )
-        #     else:
-        #         optim_d = optim_d_class(
-        #             model.svs.predictor.parameters(),
-        #             **args.optim2_conf,
-        #         )
-        #     optimizers += [optim_d]
-        # else:
-        #     # single optimizer when use_cycle_process == False, no predictor
-        #     optim_class = optim_classes.get(args.optim)
-        #     if optim_class is None:
-        #         raise ValueError(f"must be one of {list(optim_classes)}: {args.optim}")
-        #     if args.sharded_ddp:
-        #         if fairscale is None:
-        #             raise RuntimeError("Requiring fairscale. Do 'pip install fairscale'")
-        #         optim = fairscale.optim.oss.OSS(
-        #             params=model.parameters(), optim=optim_class, **args.optim_conf
-        #         )
-        #     else:
-        #         optim = optim_class(model.parameters(), **args.optim_conf)
-
-        #     optimizers = [optim]
-
         return optimizers
 
     @classmethod

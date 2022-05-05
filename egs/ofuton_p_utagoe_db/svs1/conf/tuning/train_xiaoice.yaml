@@ -78,6 +78,3 @@ best_model_criterion:
 -   - train
     - loss
     - min
-
-gpu_id: 1
-vocoder_checkpoint: /data5/gs/ParallelWaveGAN/egs/ofuton_p_utagoe_db/voc1/exp/train_nodev_ofuton_hifigan.v1/checkpoint-300000steps.pkl
