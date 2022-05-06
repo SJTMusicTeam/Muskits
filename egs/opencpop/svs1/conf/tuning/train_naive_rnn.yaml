@@ -30,7 +30,7 @@ svs_conf:                        # keyword arguments for the selected model
     use_masking: true            # whether to apply masking for padded part in loss calculation
     loss_type: L1
     use_mixup_training: False    # Default: False
-    loss_mixup_wight: 0.3          # Default: 0
+    loss_mixup_wight: 0          # Default: 0
 
 
 ##########################################################

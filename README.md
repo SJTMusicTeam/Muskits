@@ -4,8 +4,6 @@
 
 Muskit is an open-source music processing toolkit. Currently we mostly focus on benchmarking the end-to-end singing voice synthesis and expect to extend more tasks in the future. Muskit employs [pytorch](http://pytorch.org/) as a deep learning engine and also follows [ESPnet](https://github.com/espnet/espnet) and [Kaldi](http://kaldi-asr.org/) style data processing, and recipes to provide a complete setup for various music processing experiments. The main structure and base codes are adapted from ESPnet (we expect to merge the Muskit into ESPnet in later stages)
 
-## We want to note that the toolkit is still pre-released. There are several issues with the code for final usage and we prepare to refine it towards first release by the end of this month. But you are still very welcome to contribute your effort on coding or high-level comments.
-
 ## Key Features
 
 ### ESPnet style complete recipe
@@ -37,6 +35,13 @@ The full installation guide is available at https://github.com/SJTMusicTeam/Musk
 ### Demonstration
 - Real-time SVS demo with Muskits  [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/SJTMusicTeam/svs_demo/blob/master/muskit_svs_realtime.ipynb)
 
+### Pretrain models
+
+Acoustic models are available at https://github.com/SJTMusicTeam/Muskits/blob/main/doc/pretrained_models.md
+Vocoders are available at https://github.com/kan-bayashi/ParallelWaveGAN/blob/master/README.md
+
 ### Running instructions
 The tutorial of how to use Muskits is at https://github.com/SJTMusicTeam/Muskits/blob/main/doc/tutorial.md
 
+### Recipe Explanation
+A detailed recipe explanation in https://github.com/SJTMusicTeam/Muskits/blob/main/egs/TEMPLATE/svs1/README.md

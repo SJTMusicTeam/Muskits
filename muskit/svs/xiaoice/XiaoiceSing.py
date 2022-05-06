@@ -102,6 +102,16 @@ class XiaoiceSing(AbsSVS):
         transformer_dec_dropout_rate: float = 0.1,
         transformer_dec_positional_dropout_rate: float = 0.1,
         transformer_dec_attn_dropout_rate: float = 0.1,
+        # only for conformer
+        conformer_rel_pos_type: str = "legacy",
+        conformer_pos_enc_layer_type: str = "rel_pos",
+        conformer_self_attn_layer_type: str = "rel_selfattn",
+        conformer_activation_type: str = "swish",
+        use_macaron_style_in_conformer: bool = True,
+        use_cnn_in_conformer: bool = True,
+        zero_triu: bool = False,
+        conformer_enc_kernel_size: int = 7,
+        conformer_dec_kernel_size: int = 31,
         # extra embedding related
         spks: Optional[int] = None,
         langs: Optional[int] = None,
@@ -196,6 +206,30 @@ class XiaoiceSing(AbsSVS):
         pos_enc_class = (
             ScaledPositionalEncoding if self.use_scaled_pos_enc else PositionalEncoding
         )
+        
+        # check relative positional encoding compatibility
+        if "conformer" in [encoder_type, decoder_type]:
+            if conformer_rel_pos_type == "legacy":
+                if conformer_pos_enc_layer_type == "rel_pos":
+                    conformer_pos_enc_layer_type = "legacy_rel_pos"
+                    logging.warning(
+                        "Fallback to conformer_pos_enc_layer_type = 'legacy_rel_pos' "
+                        "due to the compatibility. If you want to use the new one, "
+                        "please use conformer_pos_enc_layer_type = 'latest'."
+                    )
+                if conformer_self_attn_layer_type == "rel_selfattn":
+                    conformer_self_attn_layer_type = "legacy_rel_selfattn"
+                    logging.warning(
+                        "Fallback to "
+                        "conformer_self_attn_layer_type = 'legacy_rel_selfattn' "
+                        "due to the compatibility. If you want to use the new one, "
+                        "please use conformer_pos_enc_layer_type = 'latest'."
+                    )
+            elif conformer_rel_pos_type == "latest":
+                assert conformer_pos_enc_layer_type != "legacy_rel_pos"
+                assert conformer_self_attn_layer_type != "legacy_rel_selfattn"
+            else:
+                raise ValueError(f"Unknown rel_pos_type: {conformer_rel_pos_type}")
 
         # define encoder
         self.phone_encode_layer = torch.nn.Embedding(
@@ -227,6 +261,29 @@ class XiaoiceSing(AbsSVS):
                 concat_after=encoder_concat_after,
                 positionwise_layer_type=positionwise_layer_type,
                 positionwise_conv_kernel_size=positionwise_conv_kernel_size,
+            )
+        elif encoder_type == "conformer":
+            self.encoder = ConformerEncoder(
+                idim=idim,
+                attention_dim=adim,
+                attention_heads=aheads,
+                linear_units=eunits,
+                num_blocks=elayers,
+                input_layer=None,
+                dropout_rate=transformer_enc_dropout_rate,
+                positional_dropout_rate=transformer_enc_positional_dropout_rate,
+                attention_dropout_rate=transformer_enc_attn_dropout_rate,
+                normalize_before=encoder_normalize_before,
+                concat_after=encoder_concat_after,
+                positionwise_layer_type=positionwise_layer_type,
+                positionwise_conv_kernel_size=positionwise_conv_kernel_size,
+                macaron_style=use_macaron_style_in_conformer,
+                pos_enc_layer_type=conformer_pos_enc_layer_type,
+                selfattention_layer_type=conformer_self_attn_layer_type,
+                activation_type=conformer_activation_type,
+                use_cnn_module=use_cnn_in_conformer,
+                cnn_module_kernel=conformer_enc_kernel_size,
+                zero_triu=zero_triu,
             )
         else:
             raise ValueError(f"{encoder_type} is not supported.")
@@ -283,6 +340,28 @@ class XiaoiceSing(AbsSVS):
                 concat_after=decoder_concat_after,
                 positionwise_layer_type=positionwise_layer_type,
                 positionwise_conv_kernel_size=positionwise_conv_kernel_size,
+            )
+        elif decoder_type == "conformer":
+            self.decoder = ConformerEncoder(
+                idim=0,
+                attention_dim=adim,
+                attention_heads=aheads,
+                linear_units=dunits,
+                num_blocks=dlayers,
+                input_layer=None,
+                dropout_rate=transformer_dec_dropout_rate,
+                positional_dropout_rate=transformer_dec_positional_dropout_rate,
+                attention_dropout_rate=transformer_dec_attn_dropout_rate,
+                normalize_before=decoder_normalize_before,
+                concat_after=decoder_concat_after,
+                positionwise_layer_type=positionwise_layer_type,
+                positionwise_conv_kernel_size=positionwise_conv_kernel_size,
+                macaron_style=use_macaron_style_in_conformer,
+                pos_enc_layer_type=conformer_pos_enc_layer_type,
+                selfattention_layer_type=conformer_self_attn_layer_type,
+                activation_type=conformer_activation_type,
+                use_cnn_module=use_cnn_in_conformer,
+                cnn_module_kernel=conformer_dec_kernel_size,
             )
         else:
             raise ValueError(f"{decoder_type} is not supported.")
@@ -351,6 +430,9 @@ class XiaoiceSing(AbsSVS):
             Dict: Statistics to be monitored.
             Tensor: Weight value if not joint training else model outputs.
         """
+
+        # logging.info(f"tempo: {tempo.max()}")
+
         text = text[:, : text_lengths.max()]  # for data-parallel
         feats = feats[:, : feats_lengths.max()]  # for data-parallel
         midi = midi[:, : midi_lengths.max()]  # for data-parallel
@@ -366,6 +448,18 @@ class XiaoiceSing(AbsSVS):
 
         x_masks = self._source_mask(label_lengths)
         hs, _ = self.encoder(input_emb, x_masks)  # (B, T_text, adim)
+
+        # integrate with SID and LID embeddings
+        if self.spks is not None:
+            sid_embs = self.sid_emb(sids.view(-1))
+            hs = hs + sid_embs.unsqueeze(1)
+        if self.langs is not None:
+            lid_embs = self.lid_emb(lids.view(-1))
+            hs = hs + lid_embs.unsqueeze(1)
+
+        # integrate speaker embedding
+        if self.spk_embed_dim is not None:
+            hs = self._integrate_with_spk_embed(hs, spembs)
 
         # forward duration predictor and length regulator
         d_masks = make_pad_mask(label_lengths).to(input_emb.device)
@@ -469,6 +563,18 @@ class XiaoiceSing(AbsSVS):
 
         x_masks = None  # self._source_mask(label_lengths)
         hs, _ = self.encoder(input_emb, x_masks)  # (B, T_text, adim)
+
+        # integrate with SID and LID embeddings
+        if self.spks is not None:
+            sid_embs = self.sid_emb(sids.view(-1))
+            hs = hs + sid_embs.unsqueeze(1)
+        if self.langs is not None:
+            lid_embs = self.lid_emb(lids.view(-1))
+            hs = hs + lid_embs.unsqueeze(1)
+
+        # integrate speaker embedding
+        if self.spk_embed_dim is not None:
+            hs = self._integrate_with_spk_embed(hs, spembs)
 
         # forward duration predictor and length regulator
         d_masks = None  # make_pad_mask(label_lengths).to(input_emb.device)
@@ -618,6 +724,16 @@ class XiaoiceSing_noDP(AbsSVS):
         transformer_dec_dropout_rate: float = 0.1,
         transformer_dec_positional_dropout_rate: float = 0.1,
         transformer_dec_attn_dropout_rate: float = 0.1,
+        # only for conformer
+        conformer_rel_pos_type: str = "legacy",
+        conformer_pos_enc_layer_type: str = "rel_pos",
+        conformer_self_attn_layer_type: str = "rel_selfattn",
+        conformer_activation_type: str = "swish",
+        use_macaron_style_in_conformer: bool = True,
+        use_cnn_in_conformer: bool = True,
+        zero_triu: bool = False,
+        conformer_enc_kernel_size: int = 7,
+        conformer_dec_kernel_size: int = 31,
         # extra embedding related
         spks: Optional[int] = None,
         langs: Optional[int] = None,
@@ -727,6 +843,30 @@ class XiaoiceSing_noDP(AbsSVS):
             ScaledPositionalEncoding if self.use_scaled_pos_enc else PositionalEncoding
         )
 
+        # check relative positional encoding compatibility
+        if "conformer" in [encoder_type, decoder_type]:
+            if conformer_rel_pos_type == "legacy":
+                if conformer_pos_enc_layer_type == "rel_pos":
+                    conformer_pos_enc_layer_type = "legacy_rel_pos"
+                    logging.warning(
+                        "Fallback to conformer_pos_enc_layer_type = 'legacy_rel_pos' "
+                        "due to the compatibility. If you want to use the new one, "
+                        "please use conformer_pos_enc_layer_type = 'latest'."
+                    )
+                if conformer_self_attn_layer_type == "rel_selfattn":
+                    conformer_self_attn_layer_type = "legacy_rel_selfattn"
+                    logging.warning(
+                        "Fallback to "
+                        "conformer_self_attn_layer_type = 'legacy_rel_selfattn' "
+                        "due to the compatibility. If you want to use the new one, "
+                        "please use conformer_pos_enc_layer_type = 'latest'."
+                    )
+            elif conformer_rel_pos_type == "latest":
+                assert conformer_pos_enc_layer_type != "legacy_rel_pos"
+                assert conformer_self_attn_layer_type != "legacy_rel_selfattn"
+            else:
+                raise ValueError(f"Unknown rel_pos_type: {conformer_rel_pos_type}")
+
         # define encoder
         self.phone_encode_layer = torch.nn.Embedding(
             num_embeddings=idim, embedding_dim=embed_dim, padding_idx=self.padding_idx
@@ -755,6 +895,29 @@ class XiaoiceSing_noDP(AbsSVS):
                 concat_after=encoder_concat_after,
                 positionwise_layer_type=positionwise_layer_type,
                 positionwise_conv_kernel_size=positionwise_conv_kernel_size,
+            )
+        elif encoder_type == "conformer":
+            self.encoder = ConformerEncoder(
+                idim=idim,
+                attention_dim=adim,
+                attention_heads=aheads,
+                linear_units=eunits,
+                num_blocks=elayers,
+                input_layer=None,
+                dropout_rate=transformer_enc_dropout_rate,
+                positional_dropout_rate=transformer_enc_positional_dropout_rate,
+                attention_dropout_rate=transformer_enc_attn_dropout_rate,
+                normalize_before=encoder_normalize_before,
+                concat_after=encoder_concat_after,
+                positionwise_layer_type=positionwise_layer_type,
+                positionwise_conv_kernel_size=positionwise_conv_kernel_size,
+                macaron_style=use_macaron_style_in_conformer,
+                pos_enc_layer_type=conformer_pos_enc_layer_type,
+                selfattention_layer_type=conformer_self_attn_layer_type,
+                activation_type=conformer_activation_type,
+                use_cnn_module=use_cnn_in_conformer,
+                cnn_module_kernel=conformer_enc_kernel_size,
+                zero_triu=zero_triu,
             )
         else:
             raise ValueError(f"{encoder_type} is not supported.")
@@ -811,6 +974,28 @@ class XiaoiceSing_noDP(AbsSVS):
                 concat_after=decoder_concat_after,
                 positionwise_layer_type=positionwise_layer_type,
                 positionwise_conv_kernel_size=positionwise_conv_kernel_size,
+            )
+        elif decoder_type == "conformer":
+            self.decoder = ConformerEncoder(
+                idim=0,
+                attention_dim=adim,
+                attention_heads=aheads,
+                linear_units=dunits,
+                num_blocks=dlayers,
+                input_layer=None,
+                dropout_rate=transformer_dec_dropout_rate,
+                positional_dropout_rate=transformer_dec_positional_dropout_rate,
+                attention_dropout_rate=transformer_dec_attn_dropout_rate,
+                normalize_before=decoder_normalize_before,
+                concat_after=decoder_concat_after,
+                positionwise_layer_type=positionwise_layer_type,
+                positionwise_conv_kernel_size=positionwise_conv_kernel_size,
+                macaron_style=use_macaron_style_in_conformer,
+                pos_enc_layer_type=conformer_pos_enc_layer_type,
+                selfattention_layer_type=conformer_self_attn_layer_type,
+                activation_type=conformer_activation_type,
+                use_cnn_module=use_cnn_in_conformer,
+                cnn_module_kernel=conformer_dec_kernel_size,
             )
         else:
             raise ValueError(f"{decoder_type} is not supported.")
@@ -1011,123 +1196,52 @@ class XiaoiceSing_noDP(AbsSVS):
             )
 
             if self.predict_criterion_type == "CrossEntropy":
-                (
-                    predictor_midi_loss,
-                    predictor_label_loss,
-                    predictor_speaker_loss,
-                    midi_predict,
-                    label_predict,
-                    speaker_predict,
-                ) = self.predictor(
-                    feats_input,
-                    midi,
-                    label,
-                    sids,
-                    feats_lengths_input,
-                    midi_lengths,
-                    label_lengths,
-                )
+                predictor_midi_loss, predictor_label_loss, predictor_speaker_loss, midi_predict, label_predict, speaker_predict, info_text_out = self.predictor(feats, midi, label, sids, feats_lengths, midi_lengths, label_lengths, args_mixup)
             elif self.predict_criterion_type == "CTC":
-                (
-                    predictor_midi_loss,
-                    predictor_label_loss,
-                    predictor_speaker_loss,
-                    _,
-                    _,
-                    speaker_predict,
-                ) = self.predictor(
-                    feats_input,
-                    midi,
-                    text,
-                    sids,
-                    feats_lengths_input,
-                    midi_lengths,
-                    text_lengths,
-                )
-
-            predictor_loss = (
-                predictor_midi_loss + predictor_label_loss + predictor_speaker_loss
-            )
+                predictor_midi_loss, predictor_label_loss, predictor_speaker_loss, _, _, speaker_predict, _ = self.predictor(feats_input, midi, text, sids, feats_lengths_input, midi_lengths, text_lengths)
+            
+            predictor_loss = predictor_midi_loss + predictor_label_loss + predictor_speaker_loss
 
             # Part-3: Music-score Reconstruction: SVS -> Predict - without mix-up
             if self.predict_criterion_type == "CrossEntropy":
-                (
-                    recon_midi_loss,
-                    recon_label_loss,
-                    recon_speaker_loss,
-                    _,
-                    _,
-                    _,
-                ) = self.predictor(
-                    after_outs[:batch_size_origin, : olens.max()],
-                    midi,
-                    label,
-                    sids,
-                    olens[:batch_size_origin],
-                    midi_lengths,
-                    label_lengths,
-                )
+                recon_midi_loss, recon_label_loss, recon_speaker_loss, _, _, _, _ = self.predictor(after_outs, midi, label, sids, olens, midi_lengths, label_lengths, args_mixup)
             elif self.predict_criterion_type == "CTC":
-                (
-                    recon_midi_loss,
-                    recon_label_loss,
-                    recon_speaker_loss,
-                    _,
-                    _,
-                    _,
-                ) = self.predictor(
-                    after_outs[:batch_size_origin, : olens.max()],
-                    midi,
-                    text,
-                    sids,
-                    olens[:batch_size_origin],
-                    midi_lengths,
-                    text_lengths,
-                )
+                recon_midi_loss, recon_label_loss, recon_speaker_loss, _, _, _, _ = self.predictor(after_outs[:batch_size_origin, : olens.max()], midi, text, sids, olens[:batch_size_origin], midi_lengths, text_lengths)
 
             # Part-4: Singing Voice Reconstruction: Predict -> SVS
             recon_mel_loss = 0
             if self.cycle_type == "bi-direct":
-                label_input = (
-                    label_predict
-                    if "label" in self.predict_type
-                    and self.predict_criterion_type == "CrossEntropy"
-                    else label
-                )
-                midi_input = (
-                    midi_predict
-                    if "midi" in self.predict_type
-                    and self.predict_criterion_type == "CrossEntropy"
-                    else midi
-                )
+                if info_text_out != None:
+                    # maybe None when only using midi-cycle
+                    ds_text_predict = info_text_out['ds_text_outs']
+                    text_predict = info_text_out['masked_text_outs']
+                    text_lengths_predict = info_text_out['text_outs_lengths']
+
+                text_input = text_predict if "label" in self.predict_type and self.predict_criterion_type == "CrossEntropy" and info_text_out != None else test
+                text_lengths_input = text_lengths_predict if "label" in self.predict_type and self.predict_criterion_type == "CrossEntropy" and info_text_out != None else text_lengths
+                ds_input = ds_text_predict if "label" in self.predict_type and self.predict_criterion_type == "CrossEntropy" and info_text_out != None else ds
+                midi_input = midi_predict if "midi" in self.predict_type and self.predict_criterion_type == "CrossEntropy" else midi
                 speaker_input = speaker_predict if "spk" in self.predict_type else sids
-                (
-                    mel_recon_after,
-                    mel_recon_before,
-                    olens,
-                    recon_mel_loss,
-                    _,
-                ) = self._singingGenerate(
-                    text,
-                    text_lengths,
-                    feats,
-                    feats_lengths,
-                    label_input,  # using predict res
-                    label_lengths,
-                    midi_input,  # using predict res
-                    midi_lengths,
-                    ds,
-                    tempo,
-                    tempo_lengths,
-                    spembs,
-                    speaker_input,  # using predict res
-                    lids,
-                    flag_IsValid,
-                    args_mixup,
-                )
-            cycle_loss = (
-                recon_midi_loss + recon_label_loss + recon_speaker_loss + recon_mel_loss
-            )
+
+                mel_recon_after, mel_recon_before, olens, recon_mel_loss, _ = self._singingGenerate(
+                                                                                text_input,             # using predict res
+                                                                                text_lengths_input,     # using predict res
+                                                                                feats,
+                                                                                feats_lengths,
+                                                                                label,
+                                                                                label_lengths,
+                                                                                midi_input,             # using predict res
+                                                                                midi_lengths,
+                                                                                ds_input,               # using predict res
+                                                                                tempo,
+                                                                                tempo_lengths,
+                                                                                spembs,
+                                                                                speaker_input,          # using predict res
+                                                                                lids,
+                                                                                flag_IsValid,
+                                                                                args_mixup,
+                                                                            )
+            cycle_loss = recon_midi_loss + recon_label_loss + recon_speaker_loss + recon_mel_loss
 
         # calculate loss values
         if self.loss_type == "L1":

@@ -35,7 +35,7 @@ class MaskCrossEntropyLoss(torch.nn.Module):
         self.use_masking = use_masking
 
         # define criterions
-        reduction = "mean"
+        reduction = "sum"       # "mean"
         self.criterion = torch.nn.CrossEntropyLoss(reduction=reduction)
 
     def forward(self, inputs, targets, olens=None):
@@ -49,7 +49,7 @@ class MaskCrossEntropyLoss(torch.nn.Module):
             Tensor: Cross Entropy loss value.
         """
         # make mask and apply it
-        if self.use_masking:
+        if self.use_masking and olens != None:
             class_nums = inputs.shape[2]
             masks = make_non_pad_mask(olens).to(targets.device)
             inputs = inputs.masked_select(
@@ -71,7 +71,7 @@ class TransformerPredictor(nn.Module):
 
     def __init__(
         self,
-        label_nums: int = 50,
+        label_nums: int = 63,   # ofuton - 42 | opencpop - 63
         midi_nums: int = 129,
         speaker_nums: int = 4,
         adim: int = 80,
@@ -126,7 +126,7 @@ class TransformerPredictor(nn.Module):
             )
 
             # define final midi projection
-            self.linear_out_midi = torch.nn.Linear(adim, midi_nums)
+            self.predictor_linear_out_midi = torch.nn.Linear(adim, midi_nums)
 
         if "label" in self.predict_type:
             # define label predictor
@@ -148,7 +148,7 @@ class TransformerPredictor(nn.Module):
             )
 
             # define final label projection
-            self.linear_out_label = torch.nn.Linear(adim, label_nums)
+            self.predictor_linear_out_label = torch.nn.Linear(adim, label_nums)
 
         if "spk" in self.predict_type:
             # define speaker predictor
@@ -161,7 +161,7 @@ class TransformerPredictor(nn.Module):
                 bidirectional=True,
             )
             # define final speaker projection
-            self.linear_out_spk = torch.nn.Linear(eunits_spk * 2, speaker_nums)
+            self.predictor_linear_out_spk = torch.nn.Linear(eunits_spk * 2, speaker_nums)
             # define speaker criterion
             self.predictor_spk_criterion = MaskCrossEntropyLoss(use_masking=False)
 
@@ -172,38 +172,67 @@ class TransformerPredictor(nn.Module):
         elif predict_criterion_type == "CTC":
             self.predictor_criterion = torch.nn.CTCLoss(zero_infinity=True)
 
-    def forward(
-        self, feats, midi, label, spk_ids, feats_lengths, midi_lengths, label_lengths
-    ):
+
+    def forward(self, feats, midi, label, spk_ids, feats_lengths, midi_lengths, label_lengths, args_mixup=None):
         """forward.
         Args:
-            feats: Batch of lengths (B, T_feats, adim).
+            feats: Batch of lengths (B, T_feats, adim) or (B + B_mixup, T_feats, adim).
             midi: Batch of lengths (B, T_feats).
             label: Batch of lengths (B, T_feats).
-            feats_lengths: Batch of input lengths (B,). Note that the feats, midi, label are time-aligned on frame level.
+            feats_lengths: Batch of input lengths (B,) or (B + B_mixup,). Note that the feats, midi, label are time-aligned on frame level.
+
+            example - args_mixup: 
+            {
+                'lst': [2, 9, 1, 4], 
+                'w1_lst': [tensor([0.3216], device='cuda:5'), tensor([0.0965], device='cuda:5')], 
+                'w2_wst': [tensor([0.6784], device='cuda:5'), tensor([0.9035], device='cuda:5')], 
+                'batch_size_mixup': 2, 
+                'batch_size_origin': 14, 
+                'batch_size': 16
+            }
         """
         h_masks = self._source_mask(feats_lengths)  # (B, 1, T_feats)
         midi_loss, label_loss, speaker_loss = 0, 0, 0
         masked_midi_outs, masked_label_outs, speaker_predict = None, None, None
+        info_text_out = None
         batch_size = feats.shape[0]
 
         if "midi" in self.predict_type:
             # midi predict
-            zs_midi, _ = self.predictor_midi(feats, h_masks)  # (B, T_feats, adim=80)
-            zs_midi = self.linear_out_midi(zs_midi)  # (B, T_feats, midi classes=129)
+            zs_midi, _ = self.predictor_midi(feats, h_masks)        # (B, T_feats, adim=80)
+            zs_midi = self.predictor_linear_out_midi(zs_midi)                 # (B, T_feats, midi classes=129)
 
             # loss calculation
             if self.predict_criterion_type == "CrossEntropy":
-                probs_midi = zs_midi  # (B, T_feats, midi classes=129)
-                midi_loss = self.predictor_criterion(probs_midi, midi, feats_lengths)
+                probs_midi = zs_midi                                    # (B, T_feats, midi classes=129) 
+                if args_mixup != None:
+                    probs_midi = zs_midi[:args_mixup['batch_size_origin']]
+                    probs_midi_mixup = zs_midi[args_mixup['batch_size_origin']:]
 
+                feats_lengths_input = feats_lengths[:args_mixup['batch_size_origin']] if args_mixup != None else feats_lengths
+                midi_loss = self.predictor_criterion(probs_midi, midi, feats_lengths_input)
+                frame_total = torch.sum(feats_lengths)
+                if args_mixup != None:
+                    for i in range(args_mixup['batch_size_mixup']):
+                        index1 = args_mixup['lst'][2*i]
+                        index2 = args_mixup['lst'][2*i + 1]
+
+                        w1 = args_mixup['w1_lst'][i]
+                        w2 = args_mixup['w2_wst'][i]
+
+                        midi_lengths_mixup = feats_lengths[i]
+
+                        loss1 = self.predictor_criterion(probs_midi_mixup[i][:midi_lengths_mixup], midi[index1][:midi_lengths_mixup]) * w1
+                        loss2 = self.predictor_criterion(probs_midi_mixup[i][:midi_lengths_mixup], midi[index2][:midi_lengths_mixup]) * w2
+
+                        midi_loss = midi_loss + loss1 + loss2
+
+                midi_loss /= frame_total
+                
                 # make midi predict output for cycle
-                masked_probs_midi = probs_midi * h_masks.permute(
-                    0, 2, 1
-                )  # (B, T_feats, adim=80)
-                masked_midi_outs = torch.argmax(
-                    F.softmax(masked_probs_midi, dim=-1), dim=-1
-                )  # (B, T_feats)
+                h_masks_input = h_masks[:args_mixup['batch_size_origin']] if args_mixup != None else h_masks
+                masked_probs_midi = probs_midi * h_masks_input.permute(0,2,1)                             # (B, T_feats, midi classes=129)
+                masked_midi_outs = torch.argmax(F.softmax(masked_probs_midi,dim=-1), dim=-1)        # (B, T_feats)
 
             elif self.predict_criterion_type == "CTC":
                 # aggregate G.T.-midi
@@ -242,20 +271,60 @@ class TransformerPredictor(nn.Module):
 
         if "label" in self.predict_type:
             # label predict
-            zs_label, _ = self.predictor_label(feats, h_masks)  # (B, T_feats, adim=80)
-            zs_label = self.linear_out_label(zs_label)  # (B, T_feats, midi classes=50)
+            zs_label, _ = self.predictor_label(feats, h_masks)                                      # (B, T_feats, adim=80)
+            zs_label = self.predictor_linear_out_label(zs_label)                                              # (B, T_feats, label classes=50)
 
             if self.predict_criterion_type == "CrossEntropy":
-                probs_label = zs_label  # (B, T_feats, midi classes=50)
-                label_loss = self.predictor_criterion(probs_label, label, feats_lengths)
+                probs_label = zs_label                                                              # (B, T_feats, label classes=50) 
+                if args_mixup != None:
+                    probs_label = zs_label[:args_mixup['batch_size_origin']]
+                    probs_label_mixup = zs_label[args_mixup['batch_size_origin']:]
+                    
+                feats_lengths_input = feats_lengths[:args_mixup['batch_size_origin']] if args_mixup != None else feats_lengths
+                label_loss = self.predictor_criterion(probs_label, label, feats_lengths_input)
+                frame_total = torch.sum(feats_lengths)
+                if args_mixup != None:
+                    for i in range(args_mixup['batch_size_mixup']):
+                        index1 = args_mixup['lst'][2*i]
+                        index2 = args_mixup['lst'][2*i + 1]
+
+                        w1 = args_mixup['w1_lst'][i]
+                        w2 = args_mixup['w2_wst'][i]
+
+                        label_lengths_mixup = feats_lengths[i]
+
+                        loss1 = self.predictor_criterion(probs_label_mixup[i][:label_lengths_mixup], label[index1][:label_lengths_mixup]) * w1
+                        loss2 = self.predictor_criterion(probs_label_mixup[i][:label_lengths_mixup], label[index2][:label_lengths_mixup]) * w2
+
+                        label_loss = label_loss + loss1 + loss2
+
+                label_loss /= frame_total
 
                 # make label predict output for cycle
-                masked_probs_label = probs_label * h_masks.permute(
-                    0, 2, 1
-                )  # (B, T_feats, adim=80)
-                masked_label_outs = torch.argmax(
-                    F.softmax(masked_probs_label, dim=-1), dim=-1
-                )  # (B, T_feats)
+                h_masks_input = h_masks[:args_mixup['batch_size_origin']] if args_mixup != None else h_masks
+                masked_probs_label = probs_label * h_masks_input.permute(0,2,1)                           # (B, T_feats, label classes=50)
+                masked_label_outs = torch.argmax(F.softmax(masked_probs_label,dim=-1), dim=-1)      # (B, T_feats)
+
+                # make label output (time-aligned) to text output, as the transformer-based SVS use text in encoder, not label
+                _text_cal = []
+                _text_length_cal = []
+                ds_text_outs = []
+                for i, _ in enumerate(label_lengths):
+                    _text = masked_label_outs[i, :label_lengths[i]]
+
+                    _output, counts = torch.unique_consecutive(_text, return_counts=True)
+                    
+                    _text_cal.append(_output)
+                    _text_length_cal.append(len(_output))
+                    ds_text_outs.append(counts)
+                ds_text_outs = pad_list(ds_text_outs, pad_value=0).to(midi.device)
+                masked_text_outs = pad_list(_text_cal, pad_value=0).to(midi.device, dtype=torch.long)
+                text_outs_lengths = torch.tensor(_text_length_cal).to(midi.device)
+
+                info_text_out = {}
+                info_text_out['ds_text_outs'] = ds_text_outs
+                info_text_out['masked_text_outs'] = masked_text_outs
+                info_text_out['text_outs_lengths'] = text_outs_lengths
 
             elif self.predict_criterion_type == "CTC":
                 # aggregate G.T.-label
@@ -280,23 +349,15 @@ class TransformerPredictor(nn.Module):
             )
             # hn - (dim direction * layer nums, N_batch, eunits)
 
-            hn = hn.reshape(
-                batch_size, -1
-            )  # (N_batch, dim direction * layer nums * eunits_spk)
-            probs_spk = self.linear_out_spk(hn)  # (N_batch, speaker classes=4)
+            hn = hn.reshape(batch_size, -1)                                                         # (N_batch, dim direction * layer nums * eunits_spk)
+            probs_spk = self.predictor_linear_out_spk(hn)                                                     # (N_batch, speaker classes=4)
             speaker_loss = self.predictor_spk_criterion(probs_spk, spk_ids)
-            speaker_predict = torch.argmax(
-                F.softmax(probs_spk, dim=-1), dim=-1
-            )  # (B, 1)
+            speaker_predict = torch.argmax(F.softmax(probs_spk,dim=-1), dim=-1)                     # (B, 1)
 
-        return (
-            midi_loss,
-            label_loss,
-            speaker_loss,
-            masked_midi_outs,
-            masked_label_outs,
-            speaker_predict,
-        )
+
+        return midi_loss, label_loss, speaker_loss, masked_midi_outs, masked_label_outs, speaker_predict, info_text_out
+    
+
 
     def _source_mask(self, ilens: torch.Tensor) -> torch.Tensor:
         """Make masks for self-attention.

@@ -7,9 +7,11 @@ ONIKU=/home/exx/jiatong/projects/svs/data/ONIKU_KURUMI_UTAGOE_DB
 OFUTON=/home/exx/jiatong/projects/svs/data/OFUTON_P_UTAGOE_DB
 OPENCPOP=/home/exx/jiatong/projects/svs/data/Opencpop
 NATSUME=/home/exx/jiatong/projects/svs/data/
+NIT_SONG070=/home/exx/jiatong/projects/svs/data/
 KISING=/home/exx/jiatong/projects/svs/data/KiSing
 COMBINE=
 CSD=downloads
+ITAKO=
 
 # For only JHU environment
 if [[ "$(hostname -d)" == clsp.jhu.edu ]]; then
@@ -51,4 +53,5 @@ if [[ `hostname` == capri_gs_2345 ]]; then
     OFUTON=/data5/gs/dataset/OFUTON_P_UTAGOE_DB
     NATSUME=/data5/gs/dataset/
     COMBINE=/data5/gs/Muskits/egs/combine_data/svs1/
+    OPENCPOP=/data5/gs/dataset/Opencpop
 fi
