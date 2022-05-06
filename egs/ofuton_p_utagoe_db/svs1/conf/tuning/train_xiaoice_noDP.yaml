@@ -57,10 +57,6 @@ grad_clip: 1.0              # gradient clipping norm
 grad_noise: false           # whether to use gradient noise injection
 accum_grad: 1               # gradient accumulation
 
-# batch_bins: 1000000       # batch bins (for feats_type=fbank)
-# batch_bins: 10000000         # batch bins (for feats_type=raw, *= n_shift / n_mels)
-# batch_type: numel           # how to make batch
-
 batch_type: sorted
 batch_size: 16
 
@@ -87,6 +83,3 @@ best_model_criterion:
 -   - train
     - loss
     - min
-
-vocoder_checkpoint: /home/exx/jiatong/projects/svs/ParallelWaveGAN/egs/multilingual/voc1/exp/train_nodev_multilingual_hifigan.v1/checkpoint-600000steps.pkl
-gpu_id: 0

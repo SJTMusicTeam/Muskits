@@ -464,7 +464,7 @@ class NaiveRNN(AbsSVS):
         #     hs, label_lengths.to("cpu"), batch_first=True, enforce_sorted=False
         # )
 
-        # zs, (_, _) = self.decoder(hs_emb)
+        # zs, (_, _) = self.decoder(hs)
         # zs, _ = torch.nn.utils.rnn.pad_packed_sequence(zs, batch_first=True)
 
         # zs = zs[:, self.reduction_factor - 1 :: self.reduction_factor]

@@ -1,7 +1,8 @@
 # Set the path of your corpus
 # "downloads" means the corpus can be downloaded by the recipe automatically
 
-KIRITAN=/home/exx/jiatong/projects/svs/data/
+KIRITAN=/home/fangzhex/music/data/
+NO7SINGING=/home/fangzhex/music/data/
 ONIKU=/home/exx/jiatong/projects/svs/data/ONIKU_KURUMI_UTAGOE_DB
 OFUTON=/home/exx/jiatong/projects/svs/data/OFUTON_P_UTAGOE_DB
 OPENCPOP=/home/exx/jiatong/projects/svs/data/Opencpop
@@ -25,6 +26,14 @@ if [[ `hostname` == venus_qt_2241 ]]; then
     OFUTON=/data3/qt/OFUTON_P_UTAGOE_DB/
     NATSUME=/data3/qt
     COMBINE=/data3/qt/Muskits/egs/combine_data/svs1/
+fi
+
+if [[ `hostname` == venus_wyn_2232 ]]; then
+    KIRITAN=/data3/qt/
+    ONIKU=/data3/qt/ONIKU_KURUMI_UTAGOE_DB/
+    OFUTON=/data3/qt/OFUTON_P_UTAGOE_DB/
+    NATSUME=/data3/qt
+    PJS=/data1/wyn/Mus_data/PJS_corpus_ver1.1/
 fi
 
 # For only uranus environment
