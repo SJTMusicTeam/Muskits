@@ -203,21 +203,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--wav_dumpdir", type=str, help="wav dump directoyr (rebit)", default="wav_dump"
     )
-    # parser.add_argument("--src_data", type=str, default="/data3/qt", help="source data directory")
-    # parser.add_argument("--tgt_dir", type=str, default="/data3/qt/Muskits/egs/jsut/svs1/data")
-    # parser.add_argument(
-    #     "--midi_note_scp",
-    #     type=str,
-    #     help="midi note scp for information of note id",
-    #     default="/data3/qt/Muskits/egs/jsut/svs1/local/midi-note.scp",
-    # )
-    # parser.add_argument(
-    #     "--midi_dumpdir", type=str, help="midi obj dump directory", default="/data3/qt/Muskits/egs/jsut/svs1/midi_dump"
-    # )
-    # parser.add_argument(
-    #     "--wav_dumpdir", type=str, help="wav dump directoyr (rebit)", default="/data3/qt/Muskits/egs/jsut/svs1/wav_dump"
-    # )
-    parser.add_argument("--sr", type=int, default=24000, help="sampling rate (Hz)")
+    
+    parser.add_argument("--sr", type=int, help="sampling rate (Hz)")
     args = parser.parse_args()
 
     for name in ["train", "dev", "eval"]:
