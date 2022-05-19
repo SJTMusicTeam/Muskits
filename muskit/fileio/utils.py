@@ -79,7 +79,7 @@ def midi_to_seq(
                 note_duration = ed_time - st_time  # Beats in seconds
                 beat_num = note_duration * tempo_BPS  # Beats nums in note
                 beat_input = int(
-                    beat_num / time_shift + 0.5
+                    note_duration / time_shift + 0.5
                 )  # FIX ME! time_shift should align with input, not fixed 0.0125
                 tempo_seq[st:ed] = beat_input
 
