@@ -268,47 +268,46 @@ if __name__ == "__main__":
 
     import miditoolkit
 
-    path = "/data5/gs/Muskits/egs/ofuton_p_utagoe_db/svs1/dump/raw/org/dev/data/format_midi.1/ofuton_00000000000000momiji_0000.midi"
-    midi_obj = miditoolkit.midi.parser.MidiFile(path)
+    # path = "/data5/gs/Muskits/egs/ofuton_p_utagoe_db/svs1/dump/raw/org/dev/data/format_midi.1/ofuton_00000000000000momiji_0000.midi"
+    # midi_obj = miditoolkit.midi.parser.MidiFile(path)
 
-    note_seq, tempo_seq = midi_to_seq(midi_obj, np.int16, np.int16(24000), mode="xiaoice")
+    # note_seq, tempo_seq = midi_to_seq(midi_obj, np.int16, np.int16(24000))
 
-    print(f"note_seq: {note_seq[10000]}, note_seq.shape: {note_seq.shape}")
-    print(f"tempo_seq: {tempo_seq[10000]}, note_seq.shape: {note_seq.shape}")
+    # print(f"note_seq: {note_seq[10000]}, note_seq.shape: {note_seq.shape}")
 
-    # note_list = []
-    # # rootpath = "/data5/gs/Muskits/egs/opencpop/svs1/dump/raw/org/tr_no_dev/data"
+    note_list = []
+    # rootpath = "/data5/gs/Muskits/egs/opencpop/svs1/dump/raw/org/tr_no_dev/data"
 
-    # # for index in range(1, 33):
-    # #     folderName = f"format_midi.{str(index)}"
-    # #     folderPath = os.path.join(rootpath, folderName)
-    # #     for filename in os.listdir(folderPath):
-    # #         if filename.endswith(".midi"):
-    # #             midiPath = os.path.join(folderPath, filename)
+    # for index in range(1, 33):
+    #     folderName = f"format_midi.{str(index)}"
+    #     folderPath = os.path.join(rootpath, folderName)
+    #     for filename in os.listdir(folderPath):
+    #         if filename.endswith(".midi"):
+    #             midiPath = os.path.join(folderPath, filename)
 
-    # #             # midi_obj = miditoolkit.midi.parser.MidiFile(midiPath)
-    # #             # note_seq, tempo_seq = midi_to_seq(midi_obj, np.int16, np.int16(24000))
+    #             # midi_obj = miditoolkit.midi.parser.MidiFile(midiPath)
+    #             # note_seq, tempo_seq = midi_to_seq(midi_obj, np.int16, np.int16(24000))
 
-    # #             # note_list.append(note_seq)
-    # #             # print(np.mean(note_seq))
-    # # res = np.hstack(note_list)
-
-    # # print(f"shape: {res.shape}, mean: {np.mean(res)}")
-
-    # # speaker_lst = ["oniku", "ofuton", "kiritan", "natsume"]
-    # # mean of F0 = [66.02, 53.15, 55.20, 53.83]
-
-    # folderPath = "/data5/gs/Muskits/egs/opencpop/svs1/midi_dump"
-    # for filename in os.listdir(folderPath):
-    #     if filename.endswith(".midi"):
-    #         midiPath = os.path.join(folderPath, filename)
-
-    #         midi_obj = miditoolkit.midi.parser.MidiFile(midiPath)
-    #         note_seq, tempo_seq = midi_to_seq(midi_obj, np.int16, np.int16(24000))
-
-    #         note_list.append(note_seq)
+    #             # note_list.append(note_seq)
+    #             # print(np.mean(note_seq))
     # res = np.hstack(note_list)
 
     # print(f"shape: {res.shape}, mean: {np.mean(res)}")
-    # # speaker_lst = ["opencpop"]
-    # # mean of F0 = [60.79]
+
+    # speaker_lst = ["oniku", "ofuton", "kiritan", "natsume"]
+    # mean of F0 = [66.02, 53.15, 55.20, 53.83]
+
+    folderPath = "/data5/gs/Muskits/egs/opencpop/svs1/midi_dump"
+    for filename in os.listdir(folderPath):
+        if filename.endswith(".midi"):
+            midiPath = os.path.join(folderPath, filename)
+
+            midi_obj = miditoolkit.midi.parser.MidiFile(midiPath)
+            note_seq, tempo_seq = midi_to_seq(midi_obj, np.int16, np.int16(24000))
+
+            note_list.append(note_seq)
+    res = np.hstack(note_list)
+
+    print(f"shape: {res.shape}, mean: {np.mean(res)}")
+    # speaker_lst = ["opencpop"]
+    # mean of F0 = [60.79]
