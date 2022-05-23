@@ -495,7 +495,7 @@ class MuskitSVSModel(AbsMuskitModel):
         # score : 128 midi pitch
         # tempo : bpm
         # duration :
-        #   input-> phone-id seqence | output -> frame level or syllable level
+        #   input-> phone-id seqence | output -> frame level(取众数 from window) or syllable level
         ds = None
         batch_size = text.size(0)
         assert batch_size == 1
@@ -549,6 +549,8 @@ class MuskitSVSModel(AbsMuskitModel):
                 center=self.score_feats_extract.center,
             )
 
+            # logging.info(f"extractMethod_frame: {extractMethod_frame}")
+
             (
                 labelFrame,
                 labelFrame_lengths,
@@ -587,71 +589,70 @@ class MuskitSVSModel(AbsMuskitModel):
 
             # calculate durations, represent syllable encoder outputs to feats mapping
             # Syllable Level duration info needs phone & midi
+            ds = []
+            for i, _ in enumerate(labelFrame_lengths):
+                assert labelFrame_lengths[i] == scoreFrame_lengths[i]
+                assert label_lengths[i] == score_lengths[i]
 
-            ds = None
-            # for i, _ in enumerate(labelFrame_lengths):
-            #     assert labelFrame_lengths[i] == scoreFrame_lengths[i]
-            #     assert label_lengths[i] == score_lengths[i]
+                frame_length = labelFrame_lengths[i]
+                _phoneFrame = labelFrame[i, :frame_length]
+                _midiFrame = scoreFrame[i, :frame_length]
 
-            #     frame_length = labelFrame_lengths[i]
-            #     _phoneFrame = labelFrame[i, :frame_length]
-            #     _midiFrame = scoreFrame[i, :frame_length]
+                # Clean _phoneFrame & _midiFrame
+                for index in range(frame_length):
+                    if _phoneFrame[index] == 0 and _midiFrame[index] == 0:
+                        frame_length -= 1
+                        # feats_lengths[i] -= 1
 
-            #     # Clean _phoneFrame & _midiFrame
-            #     for index in range(frame_length):
-            #         if _phoneFrame[index] == 0 and _midiFrame[index] == 0:
-            #             frame_length -= 1
-            #             feats_lengths[i] -= 1
+                syllable_length = label_lengths[i]
+                _phoneSyllable = label[i, :syllable_length]
+                _midiSyllable = score[i, :syllable_length]
 
-            #     syllable_length = label_lengths[i]
-            #     _phoneSyllable = label[i, :syllable_length]
-            #     _midiSyllable = score[i, :syllable_length]
+                # logging.info(f"_phoneFrame: {_phoneFrame}, _midiFrame: {_midiFrame}")
+                # logging.info(f"_phoneSyllable: {_phoneSyllable}, _midiSyllable: {_midiSyllable}, _tempoSyllable: {tempo[i]}")
 
-            #     # logging.info(f"_phoneFrame: {_phoneFrame}, _midiFrame: {_midiFrame}")
-            #     # logging.info(f"_phoneSyllable: {_phoneSyllable}, _midiSyllable: {_midiSyllable}, _tempoSyllable: {tempo[i]}")
+                start_index = 0
+                ds_tmp = []
+                flag_finish = 0
+                for index in range(syllable_length):
+                    _findPhone = _phoneSyllable[index]
+                    _findMidi = _midiSyllable[index]
+                    _length = 0
+                    if flag_finish == 1:
+                        # Fix error in _phoneSyllable & _midiSyllable
+                        label[i, index] = 0
+                        score[i, index] = 0
+                        tempo[i, index] = 0
+                        label_lengths[i] -= 1
+                        score_lengths[i] -= 1
+                        tempo_lengths[i] -= 1
+                    else:
+                        for indexFrame in range(start_index, frame_length):
+                            if (
+                                _phoneFrame[indexFrame] == _findPhone
+                                and _midiFrame[indexFrame] == _findMidi
+                            ):
+                                _length += 1
+                            else:
+                                # logging.info(f"_findPhone: {_findPhone}, _findMidi: {_findMidi}, _length: {_length}")
+                                ds_tmp.append(_length)
+                                start_index = indexFrame
+                                break
+                            if indexFrame == frame_length - 1:
+                                # logging.info(f"_findPhone: {_findPhone}, _findMidi: {_findMidi}, _length: {_length}")
+                                flag_finish = 1
+                                ds_tmp.append(_length)
+                                start_index = indexFrame
+                                # logging.info("Finish")
+                                break
 
-            #     start_index = 0
-            #     ds_tmp = []
-            #     flag_finish = 0
-            #     for index in range(syllable_length):
-            #         _findPhone = _phoneSyllable[index]
-            #         _findMidi = _midiSyllable[index]
-            #         _length = 0
-            #         if flag_finish == 1:
-            #             # Fix error in _phoneSyllable & _midiSyllable
-            #             label[i, index] = 0
-            #             score[i, index] = 0
-            #             tempo[i, index] = 0
-            #             label_lengths[i] -= 1
-            #             score_lengths[i] -= 1
-            #             tempo_lengths[i] -= 1
-            #         else:
-            #             for indexFrame in range(start_index, frame_length):
-            #                 if (
-            #                     _phoneFrame[indexFrame] == _findPhone
-            #                     and _midiFrame[indexFrame] == _findMidi
-            #                 ):
-            #                     _length += 1
-            #                 else:
-            #                     # logging.info(f"_findPhone: {_findPhone}, _findMidi: {_findMidi}, _length: {_length}")
-            #                     ds_tmp.append(_length)
-            #                     start_index = indexFrame
-            #                     break
-            #                 if indexFrame == frame_length - 1:
-            #                     # logging.info(f"_findPhone: {_findPhone}, _findMidi: {_findMidi}, _length: {_length}")
-            #                     flag_finish = 1
-            #                     ds_tmp.append(_length)
-            #                     start_index = indexFrame
-            #                     # logging.info("Finish")
-            #                     break
+                logging.info(
+                    f"ds_tmp: {ds_tmp}, sum(ds_tmp): {sum(ds_tmp)}, frame_length: {frame_length}"
+                )
+                assert sum(ds_tmp) == frame_length
 
-            #     logging.info(
-            #         f"ds_tmp: {ds_tmp}, sum(ds_tmp): {sum(ds_tmp)}, frame_length: {frame_length}, feats_lengths[i]: {feats_lengths[i]}"
-            #     )
-            #     assert sum(ds_tmp) == frame_length and sum(ds_tmp) == feats_lengths[i]
-
-            #     ds.append(torch.tensor(ds_tmp))
-            # ds = pad_list(ds, pad_value=0).to(label.device)
+                ds.append(torch.tensor(ds_tmp))
+            ds = pad_list(ds, pad_value=0).to(label.device)
 
         input_dict = dict(text=text)
 
