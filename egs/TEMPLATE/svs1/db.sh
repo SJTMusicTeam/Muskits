@@ -63,3 +63,11 @@ if [[ `hostname` == capri_gs_2345 ]]; then
     COMBINE=/data5/gs/Muskits/egs/combine_data/svs1/
     OPENCPOP=/data5/gs/dataset/Opencpop
 fi
+
+
+if [[ `hostname` == tarus_zlt_2234 ]]; then
+    KIRITAN=/data4/zlt/muskit/Muskits-main/egs/kiritan/svs1
+    ONIKU=/data4/zlt/muskit/Muskits-main/egs/oniku_kurumi_utagoe_db/svs1/ONIKU_KURUMI_UTAGOE_DB
+    OFUTON=/data4/zlt/muskit/Muskits-main/egs/ofuton_p_utagoe_db/svs1/OFUTON_P_UTAGOE_DB
+    NAMINE=/data4/zlt/muskit/Muskits-main/egs/namine_ritsu_utagoe_db/svs1/NAMINE_RITSU_UTAGOE_DB
+fi
