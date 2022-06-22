@@ -14,7 +14,8 @@ This is a template of SVS recipe for Muskits.
     * [5\. Statistics collection](#5-statistics-collection)
     * [6\. Model training](#6-model-training)
     * [7\. Model inference](#7-model-inference)
-    * [8\. Model packing](#8-model-packing)
+    * [8\. Obejective evaluation](#8-obejective-evaluation)
+    * [9\. Model packing](#9-model-packing)
   * [How to run](#how-to-run)
     * [Multi speaker model with speaker ID embedding training](#multi-speaker-model-with-speaker-id-embedding-training)
     * [Multi language model with language ID embedding training](#multi-language-model-with-language-id-embedding-training)
@@ -94,7 +95,14 @@ See also:
 - [Vocoder trainging](#vocoder-training)
 - [Change the configuration for training](https://espnet.github.io/espnet/espnet2_training_option.html)
 
-### 8. Model packing
+### 8. Obejective evaluation
+
+Evaluation stage.
+It conducts four obejective evaluations.
+See also:
+- [Evaluation](#evaluation)
+
+### 9. Model packing
 
 Packing stage.
 It packs the trained model files.
@@ -234,11 +242,12 @@ $ ./run.sh --stage 7 --vocoder_file /path/to/checkpoint-xxxxxxsteps.pkl --infere
 
 ### Evaluation
 
-We provide three objective evaluation metrics:
+We provide four objective evaluation metrics:
 
 - Mel-cepstral distortion (MCD)
+- Logarithmic rooted mean square error of the fundamental frequency (F![1](http://latex.codecogs.com/svg.latex?_0)RMSE)
+- Semitone accuracy (Semitone ACC)
 - Voiced / unvoiced error rate (VUV_E)
-- Logarithmic rooted mean square error of the fundamental frequency (F![1](http://latex.codecogs.com/svg.latex?_0)RMSE). 
 
 For MCD, we apply dynamic time-warping (DTW) to match the length difference between ground-truth singing and generated singing.
 
@@ -249,8 +258,16 @@ cd egs/<recipe_name>/svs1
 . ./path.sh
 # Evaluate MCD
 ./pyscripts/utils/evaluate_mcd.py \
-    exp/<model_dir_name>/<decode_dir_name>/eval/wav/wav.scp \
-    dump/raw/eval/wav.scp
+    exp/<model_dir_name>/<decode_dir_name>/eval/wav/gen_wavdir_or_wavscp.scp \
+    dump/raw/eval/gt_wavdir_or_wavscp.scp
+```
+```sh
+cd egs/<recipe_name>/svs1
+. ./path.sh
+# Evaluate log-F0 RMSE & Semitone ACC & VUV Error Rate
+./pyscripts/utils/evaluate_f0.py \
+    exp/<model_dir_name>/<decode_dir_name>/eval/wav/gen_wavdir_or_wavscp.scp \
+    dump/raw/eval/gen_wavdir_or_wavscp.scp
 ```
 While these objective metrics can estimate the quality of synthesized singing, it is still difficult to fully determine human perceptual quality from these values, especially with high-fidelity generated singing.
 Therefore, we recommend performing the subjective evaluation (eg. MOS) if you want to check perceptual quality in detail.
