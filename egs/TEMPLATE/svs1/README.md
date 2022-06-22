@@ -14,7 +14,7 @@ This is a template of SVS recipe for Muskits.
     * [5\. Statistics collection](#5-statistics-collection)
     * [6\. Model training](#6-model-training)
     * [7\. Model inference](#7-model-inference)
-    * [8\. Obejective evaluation](#8-obejective-evaluation)
+    * [8\. Objective evaluation](#8-objective-evaluation)
     * [9\. Model packing](#9-model-packing)
   * [How to run](#how-to-run)
     * [Multi speaker model with speaker ID embedding training](#multi-speaker-model-with-speaker-id-embedding-training)
@@ -95,10 +95,10 @@ See also:
 - [Vocoder trainging](#vocoder-training)
 - [Change the configuration for training](https://espnet.github.io/espnet/espnet2_training_option.html)
 
-### 8. Obejective evaluation
+### 8. Objective evaluation
 
 Evaluation stage.
-It conducts four obejective evaluations.
+It conducts four objective evaluations.
 See also:
 - [Evaluation](#evaluation)
 
