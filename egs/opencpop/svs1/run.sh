@@ -25,7 +25,7 @@ fi
 
 train_set=tr_no_dev
 valid_set=dev
-test_sets="dev eval"
+test_sets="dev test"
 
 # training and inference configuration
 train_config=conf/train.yaml
@@ -37,7 +37,7 @@ cleaner=none
 
 ./svs.sh \
     --lang zh \
-    --local_data_opts "--stage 0 $(pwd)" \
+    --local_data_opts "--stage 5 $(pwd)" \
     --feats_type raw \
     --pitch_extract None \
     --fs "${fs}" \
