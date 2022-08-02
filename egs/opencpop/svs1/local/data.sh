@@ -31,6 +31,7 @@ mkdir -p ${OPENCPOP}
 
 train_set=tr_no_dev
 train_dev=dev
+test_set=eval
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     log "stage 0: Data Download"
@@ -63,5 +64,12 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
 
     utils/fix_data_dir.sh --utt_extra_files "label midi.scp" data/tr_no_dev
     utils/fix_data_dir.sh --utt_extra_files "label midi.scp" data/dev
+    
+fi
+
+if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
+    log "stage 3: Held out eval set"
+    
+    scripts/utils/copy_data_dir.sh data/test data/eval
     
 fi

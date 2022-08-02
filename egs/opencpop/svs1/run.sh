@@ -25,7 +25,7 @@ fi
 
 train_set=tr_no_dev
 valid_set=dev
-test_sets="dev test"
+test_sets="dev eval"
 
 # training and inference configuration
 train_config=conf/train.yaml
