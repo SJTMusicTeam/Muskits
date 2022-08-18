@@ -77,4 +77,4 @@ best_model_criterion:
     - loss
     - min
 
-vocoder_checkpoint: /data3/tyx/train_nodev_opencpop_hifigan.v1/checkpoint-250000steps.pkl
+vocoder_checkpoint: none # vocoder checkpoint
