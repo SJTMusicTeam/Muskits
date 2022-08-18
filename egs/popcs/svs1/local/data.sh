@@ -22,12 +22,12 @@ log "$0 $*"
 
 . utils/parse_options.sh || exit 1;
 
-if [ -z "${POPCSDB}" ]; then
-    log "Fill the value of 'POPCSDB' of db.sh"
+if [ -z "${POPCS}" ]; then
+    log "Fill the value of 'POPCS' of db.sh"
     exit 1
 fi
 
-mkdir -p ${POPCSDB}
+mkdir -p ${POPCS}
 
 train_set=tr_no_dev
 train_dev=dev
@@ -36,18 +36,18 @@ eval_set=eval
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     log "stage 0: Data Download"
     # The POPCS data should be downloaded from \
-    # https://drive.google.com/file/d/1qbfgZX9hG4qG3E39xndd76D6plvWaCQd/view
+    # https://github.com/MoonInTheRiver/DiffSinger/blob/master/resources/apply_form.md
 fi
 
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     log "stage 1: Data preparaion "
 
     mkdir -p data/local_raw
-    python local/restruct_db.py ${POPCSDB} ${POPCS}/data/local_raw
+    python local/restruct_db.py ${POPCS} data/local_raw
 
     mkdir -p wav_dump
     # we convert the music score to midi format
-    python local/data_prep.py ${POPCS}/data/local_raw \
+    python local/data_prep.py data/local_raw \
         --wav_dumpdir wav_dump \
         --sr ${fs}
 fi
