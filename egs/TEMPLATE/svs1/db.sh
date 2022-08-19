@@ -12,6 +12,7 @@ KISING=/home/exx/jiatong/projects/svs/data/KiSing
 COMBINE=
 CSD=downloads
 ITAKO=
+POPCS=
 
 # For only JHU environment
 if [[ "$(hostname -d)" == clsp.jhu.edu ]]; then
@@ -29,6 +30,16 @@ if [[ `hostname` == venus_qt_2241 ]]; then
     NATSUME=/data3/qt
     JSUT=/data3/qt
     COMBINE=/data3/qt/Muskits/egs/combine_data/svs1/
+fi
+
+if [[ `hostname` == venus_tyx_2235 ]]; then
+    KIRITAN=/data3/qt/
+    ONIKU=/data3/qt/ONIKU_KURUMI_UTAGOE_DB/
+    OFUTON=/data3/qt/OFUTON_P_UTAGOE_DB/
+    NATSUME=/data3/qt
+    JSUT=/data3/qt
+    COMBINE=/data3/qt/Muskits/egs/combine_data/svs1/
+    POPCS=/data3/tyx/popcs/
 fi
 
 if [[ `hostname` == venus_wyn_2232 ]]; then
