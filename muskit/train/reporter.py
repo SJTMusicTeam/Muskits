@@ -20,7 +20,6 @@ import numpy as np
 import torch
 from typeguard import check_argument_types
 from typeguard import check_return_type
-import wandb
 
 if LooseVersion(torch.__version__) >= LooseVersion("1.1.0"):
     from torch.utils.tensorboard import SummaryWriter
