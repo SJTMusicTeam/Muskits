@@ -36,7 +36,6 @@ inference_config=conf/decode.yaml
 g2p=none
 cleaner=none
 
-#     --pretrained_model /home/exx/jiatong/projects/svs/Muskits/egs/multilingual_four/svs1/exp/svs_train_xiaoice_noDP_raw_phn_none_multi/latest.pth \
 
 ./svs.sh \
     --lang zh \
