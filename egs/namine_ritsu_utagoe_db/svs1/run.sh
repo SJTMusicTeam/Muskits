@@ -28,8 +28,6 @@ valid_set=dev
 test_sets="eval"
 
 # training and inference configuration
-# train_config=conf/tuning/train_xiaoice.yaml
-# train_config=conf/tuning/train_glu_transformer.yaml
 train_config=conf/train.yaml
 inference_config=conf/decode.yaml
 
