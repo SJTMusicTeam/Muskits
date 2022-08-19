@@ -82,4 +82,3 @@ best_model_criterion:
     - min
 
 gpu_id: 0
-vocoder_checkpoint: /home/exx/jiatong/projects/svs/ParallelWaveGAN/egs/multilingual/voc1/exp/train_nodev_multilingual_hifigan.v1/checkpoint-600000steps.pkl
