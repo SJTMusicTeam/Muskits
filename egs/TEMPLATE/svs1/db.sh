@@ -9,6 +9,7 @@ OPENCPOP=/home/exx/jiatong/projects/svs/data/Opencpop
 NATSUME=/home/exx/jiatong/projects/svs/data/
 NIT_SONG070=/home/exx/jiatong/projects/svs/data/
 KISING=/home/exx/jiatong/projects/svs/data/KiSing
+NAMINE=/data4/zlt/datas/NAMINE_RITSU_UTAGOE_DB
 COMBINE=
 CSD=downloads
 ITAKO=
