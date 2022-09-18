@@ -897,22 +897,22 @@ if ! "${skip_train}"; then
             --num_nodes "${num_nodes}" \
             --init_file_prefix "${svs_exp}"/.dist_init_ \
             --multiprocessing_distributed true -- \
-            ${python} -m "muskit.bin.${svs_task}_train" \
-                --use_preprocessor true \
-                --token_type "${token_type}" \
-                --token_list "${token_list}" \
-                --non_linguistic_symbols "${nlsyms_txt}" \
-                --cleaner "${cleaner}" \
-                --g2p "${g2p}" \
-                --normalize "${feats_normalize}" \
-                --resume true \
-		--init_param ${pretrained_model} \
-                --ignore_init_mismatch ${ignore_init_mismatch} \
-                --fold_length "${text_fold_length}" \
-                --fold_length "${_fold_length}" \
-                --output_dir "${svs_exp}" \
-                ${_opts} ${train_args}
-
+        ${python} -m "muskit.bin.${svs_task}_train" \
+            --use_preprocessor true \
+            --token_type "${token_type}" \
+            --token_list "${token_list}" \
+            --non_linguistic_symbols "${nlsyms_txt}" \
+            --cleaner "${cleaner}" \
+            --g2p "${g2p}" \
+            --normalize "${feats_normalize}" \
+            --resume true \
+		    --init_param ${pretrained_model} \
+            --ignore_init_mismatch ${ignore_init_mismatch} \
+            --fold_length "${text_fold_length}" \
+            --fold_length "${_fold_length}" \
+            --output_dir "${svs_exp}" \
+            --vocoder_checkpoint "${vocoder_file}" \
+            ${_opts} ${train_args}
     fi
 else
     log "Skip training stages"
@@ -1028,7 +1028,7 @@ if ! "${skip_eval}"; then
                     --model_file "${svs_exp}"/"${inference_model}" \
                     --train_config "${svs_exp}"/config.yaml \
                     --output_dir "${_logdir}"/output.JOB \
-		    --vocoder_checkpoint "${vocoder_file}" \
+		            --vocoder_checkpoint "${vocoder_file}" \
                     ${_opts} ${_ex_opts} ${inference_args}
 
             # 4. Concatenates the output files from each jobs
