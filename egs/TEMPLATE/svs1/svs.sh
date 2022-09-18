@@ -510,15 +510,15 @@ if ! "${skip_data_prep}"; then
         # 0 is reserved for CTC-blank for ASR and also used as ignore-index in the other task
 
         ${python} -m muskit.bin.tokenize_text \
-              --token_type "${token_type}" -f 2- \
-              --input "${data_feats}/srctexts" --output "${token_list}" \
-              --non_linguistic_symbols "${nlsyms_txt}" \
-              --cleaner "${cleaner}" \
-              --g2p "${g2p}" \
-              --write_vocabulary true \
-              --add_symbol "${blank}:0" \
-              --add_symbol "${oov}:1" \
-              --add_symbol "${sos_eos}:-1"
+            --token_type "${token_type}" -f 2- \
+            --input "${data_feats}/srctexts" --output "${token_list}" \
+            --non_linguistic_symbols "${nlsyms_txt}" \
+            --cleaner "${cleaner}" \
+            --g2p "${g2p}" \
+            --write_vocabulary true \
+            --add_symbol "${blank}:0" \
+            --add_symbol "${oov}:1" \
+            --add_symbol "${sos_eos}:-1"
     fi
 else
     log "Skip the stages for data preparation"
@@ -730,13 +730,13 @@ if ! "${skip_train}"; then
                 if [ ! -f "${_split_dir}/.done" ]; then
                     rm -f "${_split_dir}/.done"
                     ${python} -m muskit.bin.split_scps \
-                      --scps \
-                          "${_train_dir}/text" \
-                          "${_train_dir}/${_scp}" \
-                          "${svs_stats_dir}/train/singing_shape" \
-                          "${svs_stats_dir}/train/text_shape.${token_type}" \
-                      --num_splits "${num_splits}" \
-                      --output_dir "${_split_dir}"
+                        --scps \
+                        "${_train_dir}/text" \
+                        "${_train_dir}/${_scp}" \
+                        "${svs_stats_dir}/train/singing_shape" \
+                        "${svs_stats_dir}/train/text_shape.${token_type}" \
+                        --num_splits "${num_splits}" \
+                        --output_dir "${_split_dir}"
                     touch "${_split_dir}/.done"
                 else
                     log "${_split_dir}/.done exists. Spliting is skipped"
@@ -906,7 +906,7 @@ if ! "${skip_train}"; then
             --g2p "${g2p}" \
             --normalize "${feats_normalize}" \
             --resume true \
-		    --init_param ${pretrained_model} \
+            --init_param ${pretrained_model} \
             --ignore_init_mismatch ${ignore_init_mismatch} \
             --fold_length "${text_fold_length}" \
             --fold_length "${_fold_length}" \
@@ -1028,7 +1028,7 @@ if ! "${skip_eval}"; then
                     --model_file "${svs_exp}"/"${inference_model}" \
                     --train_config "${svs_exp}"/config.yaml \
                     --output_dir "${_logdir}"/output.JOB \
-		            --vocoder_checkpoint "${vocoder_file}" \
+                    --vocoder_checkpoint "${vocoder_file}" \
                     ${_opts} ${_ex_opts} ${inference_args}
 
             # 4. Concatenates the output files from each jobs
