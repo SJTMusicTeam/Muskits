@@ -356,7 +356,7 @@ class Trainer:
                 if summary_writer is not None:
                     reporter.tensorboard_add_scalar(summary_writer)
                 if trainer_options.use_wandb:
-                    assert Fasle, "wandb is disabled for colab purpose (see issue #115)"
+                    assert False, "wandb is disabled for colab purpose (see issue #115)"
                     reporter.wandb_log()
 
                 # 4. Save/Update the checkpoint
@@ -671,7 +671,7 @@ class Trainer:
                 if summary_writer is not None:
                     reporter.tensorboard_add_scalar(summary_writer, -log_interval)
                 if use_wandb:
-                    assert Fasle, "wandb is disabled for colab purpose (see issue #115)"
+                    assert False, "wandb is disabled for colab purpose (see issue #115)"
                     reporter.wandb_log()
 
         else:
