@@ -3,7 +3,7 @@ import os
 import librosa
 import numpy as np
 
-UTT_PREFIX = "pkising"
+UTT_PREFIX = "popcs"
 DEV_LIST = ["0001.wav", "0005.wav", "0010.wav", "0020.wav", "0040.wav"]
 TEST_LIST = ["0002.wav", "0006.wav", "0011.wav", "0021.wav", "0041.wav"]
 

@@ -4,8 +4,7 @@ import sys
 import os
 from praatio import textgrid
 
-cnt1 = 0
-cnt2 = 0
+cnt = 0
 # str(cnt).zfill(4)
 
 def writeTextgrid(arg1, arg2, file_name):
@@ -27,7 +26,11 @@ def writeTextgrid(arg1, arg2, file_name):
     # Interval, List, including (start, end, lable)
  
     t = 0
+    tp = 1
     for nmTier in tg.tierNameList:
+        if tp:
+            tp = 0
+            continue
         wordTier = tg.tierDict[nmTier]
         for st, en, lab in wordTier.entryList:
             f.write("%f %f %s" % (t + st, t + en, lab) + '\n')
@@ -55,16 +58,14 @@ def walkFile(arg1, arg2):
     # arg2: target_dir
     file_list = os.listdir(arg1)
     for file_name in file_list:
-        file_path = os.path.join(arg1, file_name)
-        file_ext = file_path.rsplit('.', maxsplit=1)
-        if file_ext[1] == 'TextGrid':
-            global cnt1
-            cnt1 = cnt1 + 1
-            writeTextgrid(file_path, arg2, str(cnt1).zfill(4))
-        elif file_ext[1] == 'wav':
-            global cnt2
-            cnt2 = cnt2 + 1
-            writeWav(file_path, arg2, str(cnt2).zfill(4))
+        global cnt
+        text_path = os.path.join(arg1, file_name)
+        text_ext = text_path.rsplit('.', maxsplit=1)
+        if text_ext[1] == 'TextGrid':
+            cnt = cnt + 1
+            writeTextgrid(text_path, arg2, str(cnt).zfill(4))
+            wav_path = os.path.join(arg1, text_ext[0] + '_wf0.wav')
+            writeWav(wav_path, arg2, str(cnt).zfill(4))
 
 if __name__ == '__main__':
     arg1 = sys.argv[1] #source_dir
@@ -73,3 +74,4 @@ if __name__ == '__main__':
         for folder_name in folder_list:
             dir_path = os.path.join(base_path, folder_name)
             walkFile(dir_path, arg2)
+            
