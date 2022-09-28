@@ -7,6 +7,8 @@ Muskit is an open-source music processing toolkit. Currently we mostly focus on 
 ## News
 The project is current merging to ESPnet! If you have any comments and suggestions, please feel free to discuss either in this repo or espnet. See https://github.com/espnet/espnet/issues/4437 for details.
 
+We just start to [merge the first version to ESPnet](https://github.com/espnet/espnet/pull/4670)! With some improvements in the fundational data structure, we even reach better performances than the original Muskits. Please stay tuned for our later news!
+
 ## Key Features
 
 ### ESPnet style complete recipe
