@@ -76,3 +76,5 @@ best_model_criterion:
 -   - train
     - loss
     - min
+
+vocoder_checkpoint: /data3/qt/train_nodev_opencpop_hifigan.v1/checkpoint-250000steps.pkl
