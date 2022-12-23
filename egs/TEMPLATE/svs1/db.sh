@@ -9,9 +9,11 @@ OPENCPOP=/home/exx/jiatong/projects/svs/data/Opencpop
 NATSUME=/home/exx/jiatong/projects/svs/data/
 NIT_SONG070=/home/exx/jiatong/projects/svs/data/
 KISING=/home/exx/jiatong/projects/svs/data/KiSing
+NAMINE=/data4/zlt/datas/NAMINE_RITSU_UTAGOE_DB
 COMBINE=
 CSD=downloads
 ITAKO=
+POPCS=
 
 # For only JHU environment
 if [[ "$(hostname -d)" == clsp.jhu.edu ]]; then
@@ -29,6 +31,16 @@ if [[ `hostname` == venus_qt_2241 ]]; then
     NATSUME=/data3/qt
     JSUT=/data3/qt
     COMBINE=/data3/qt/Muskits/egs/combine_data/svs1/
+fi
+
+if [[ `hostname` == venus_tyx_2235 ]]; then
+    KIRITAN=/data3/qt/
+    ONIKU=/data3/qt/ONIKU_KURUMI_UTAGOE_DB/
+    OFUTON=/data3/qt/OFUTON_P_UTAGOE_DB/
+    NATSUME=/data3/qt
+    JSUT=/data3/qt
+    COMBINE=/data3/qt/Muskits/egs/combine_data/svs1/
+    POPCS=/data3/tyx/popcs/
 fi
 
 if [[ `hostname` == venus_wyn_2232 ]]; then
@@ -62,4 +74,12 @@ if [[ `hostname` == capri_gs_2345 ]]; then
     NATSUME=/data5/gs/dataset/
     COMBINE=/data5/gs/Muskits/egs/combine_data/svs1/
     OPENCPOP=/data5/gs/dataset/Opencpop
+fi
+
+
+if [[ `hostname` == tarus_zlt_2234 ]]; then
+    KIRITAN=/data4/zlt/muskit/Muskits-main/egs/kiritan/svs1
+    ONIKU=/data4/zlt/muskit/Muskits-main/egs/oniku_kurumi_utagoe_db/svs1/ONIKU_KURUMI_UTAGOE_DB
+    OFUTON=/data4/zlt/muskit/Muskits-main/egs/ofuton_p_utagoe_db/svs1/OFUTON_P_UTAGOE_DB
+    NAMINE=/data4/zlt/muskit/Muskits-main/egs/namine_ritsu_utagoe_db/svs1/NAMINE_RITSU_UTAGOE_DB
 fi
