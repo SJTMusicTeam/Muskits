@@ -549,7 +549,7 @@ class XiaoiceSing(AbsSVS):
         uvu_loss = self.uvu_criterion(
             olens, uvu_outs, uvu
         )
-        loss = l1_loss + duration_loss + pitch_loss + uvu_loss
+        loss = l1_loss + 0.3 * duration_loss + 0.2 * pitch_loss + 0.1 * uvu_loss
 
         stats = dict(
             loss=loss.item(),

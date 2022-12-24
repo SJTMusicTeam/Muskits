@@ -13,7 +13,7 @@ n_fft=2048
 n_shift=300
 win_length=1200
 
-score_feats_extract=frame_score_feats   # frame_score_feats | syllable_score_feats
+score_feats_extract=syllable_score_feats #frame_score_feats   # frame_score_feats | syllable_score_feats
 
 opts=
 if [ "${fs}" -eq 48000 ]; then
@@ -39,7 +39,7 @@ cleaner=none
     --lang zh \
     --local_data_opts "--stage 0 $(pwd)" \
     --feats_type raw \
-    --pitch_extract None \
+    --pitch_extract Dio \
     --fs "${fs}" \
     --fmax "${fmax}" \
     --n_fft "${n_fft}" \

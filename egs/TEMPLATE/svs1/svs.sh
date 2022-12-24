@@ -25,7 +25,7 @@ min() {
 SECONDS=0
 
 # General configuration
-stage=1              # Processes starts from the specified stage.
+stage=6              # Processes starts from the specified stage.
 stop_stage=10000     # Processes is stopped at the specified stage.
 skip_data_prep=false # Skip data preparation stages.
 skip_train=false     # Skip training stages.
@@ -38,7 +38,7 @@ nj=32                # The number of parallel jobs.
 inference_nj=32      # The number of parallel jobs in decoding.
 gpu_inference=false  # Whether to perform gpu decoding.
 dumpdir=dump         # Directory to dump features.
-expdir=exp           # Directory to save experiments.
+expdir=exp_xiaoice_f0           # Directory to save experiments.
 python=python3       # Specify python to execute muskit commands.
 
 # Data preparation related
@@ -64,6 +64,8 @@ n_shift=256       # The number of shift points.
 win_length=null   # Window length.
 score_feats_extract=frame_score_feats # The type of music score feats (frame_score_feats or syllable_score_feats)
 pitch_extract=None
+use_continuous_f0=false
+use_log_f0=false
 # Only used for the model using pitch features (e.g. FastSpeech2)
 f0min=80          # Maximum f0 for pitch extraction.
 f0max=400         # Minimum f0 for pitch extraction.
@@ -570,6 +572,8 @@ if ! "${skip_train}"; then
         _opts+="--pitch_extract_conf hop_length=${n_shift} "
         _opts+="--pitch_extract_conf f0max=${f0max} "
         _opts+="--pitch_extract_conf f0min=${f0min} "
+        _opts+="--pitch_extract_conf use_continuous_f0=${use_continuous_f0} "
+        _opts+="--pitch_extract_conf use_log_f0=${use_log_f0} "
         _opts+="--energy_extract_conf fs=${fs} "
         _opts+="--energy_extract_conf n_fft=${n_fft} "
         _opts+="--energy_extract_conf hop_length=${n_shift} "
