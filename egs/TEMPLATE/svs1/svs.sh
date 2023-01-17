@@ -25,7 +25,7 @@ min() {
 SECONDS=0
 
 # General configuration
-stage=6              # Processes starts from the specified stage.
+stage=4              # Processes starts from the specified stage.
 stop_stage=10000     # Processes is stopped at the specified stage.
 skip_data_prep=false # Skip data preparation stages.
 skip_train=false     # Skip training stages.
@@ -67,8 +67,8 @@ pitch_extract=None
 use_continuous_f0=false
 use_log_f0=false
 # Only used for the model using pitch features (e.g. FastSpeech2)
-f0min=80          # Maximum f0 for pitch extraction.
-f0max=400         # Minimum f0 for pitch extraction.
+f0min=60          # Maximum f0 for pitch extraction.
+f0max=1100         # Minimum f0 for pitch extraction.
 
 oov="<unk>"         # Out of vocabrary symbol.
 blank="<blank>"     # CTC blank symbol.
@@ -99,7 +99,7 @@ inference_model=valid.loss.best.pth # Model path for decoding.
                                    # inference_model=3epoch.pth
                                    # inference_model=valid.acc.best.pth
                                    # inference_model=valid.loss.ave.pth
-vocoder_file=none  # Vocoder parameter file, If set to none, Griffin-Lim will be used.
+vocoder_file=/data3/qt/train_nodev_opencpop_hifigan.v1/checkpoint-250000steps.pkl  # Vocoder parameter file, If set to none, Griffin-Lim will be used.
 download_model=""   # Download a model from Model Zoo and use it for decoding.
 
 # [Task dependent] Set the datadir name created by local/data.sh
@@ -322,7 +322,7 @@ if ! "${skip_data_prep}"; then
         
         if [ "${feats_type}" = raw ]; then
             log "Stage 2: Format wav.scp: data/ -> ${data_feats}/"
-            for dset in "${train_set}" "${valid_set}" ${test_sets} ; do
+            for dset in ${test_sets} "${valid_set}"   "${train_set}" ; do
                 if [ "${dset}" = "${train_set}" ] || [ "${dset}" = "${valid_set}" ]; then
                     _suf="/org"
                 else
