@@ -13,6 +13,8 @@ from typing import Tuple
 
 import torch
 import torch.nn.functional as F
+import numpy as np
+import librosa
 
 from typeguard import check_argument_types
 
@@ -28,6 +30,7 @@ from muskit.layers.fastspeech.length_regulator import LengthRegulator
 from muskit.torch_utils.nets_utils import make_non_pad_mask
 from muskit.torch_utils.nets_utils import make_pad_mask
 from muskit.svs.bytesing.decoder import Postnet
+from muskit.svs.xiaoice.pitchloss import PitchLoss, UVULoss
 from muskit.layers.transformer.embedding import PositionalEncoding
 from muskit.layers.transformer.embedding import ScaledPositionalEncoding
 
@@ -368,6 +371,8 @@ class XiaoiceSing(AbsSVS):
 
         # define final projection
         self.feat_out = torch.nn.Linear(adim, odim * reduction_factor)
+        self.f0_out = torch.nn.Linear(adim, 1)
+        self.uvu_out = torch.nn.Linear(adim, 1)
 
         # define postnet
         self.postnet = (
@@ -395,6 +400,12 @@ class XiaoiceSing(AbsSVS):
         self.criterion = XiaoiceSingLoss(
             use_masking=use_masking, use_weighted_masking=use_weighted_masking
         )
+        self.pitch_criterion = PitchLoss(
+            use_masking=use_masking, use_weighted_masking=use_weighted_masking
+        )
+        self.uvu_criterion = UVULoss(
+            use_masking=use_masking, use_weighted_masking=use_weighted_masking
+        )
 
     def forward(
         self,
@@ -409,6 +420,8 @@ class XiaoiceSing(AbsSVS):
         tempo: torch.Tensor,
         tempo_lengths: torch.Tensor,
         ds: torch.Tensor,
+        pitch: Optional[torch.Tensor] = None,
+        pitch_lengths: Optional[torch.Tensor] = None,
         spembs: Optional[torch.Tensor] = None,
         sids: Optional[torch.Tensor] = None,
         lids: Optional[torch.Tensor] = None,
@@ -438,7 +451,23 @@ class XiaoiceSing(AbsSVS):
         midi = midi[:, : midi_lengths.max()]  # for data-parallel
         label = label[:, : label_lengths.max()]  # for data-parallel
         tempo = tempo[:, : tempo_lengths.max()]  # for data-parallel
+        if pitch is not None:
+            pitch = pitch[:, : pitch_lengths.max()]  # for data-parallel
+            logpitch = pitch[:,:,0].clone()
+            uvu = (logpitch!=0)
+            nonzero_idx, nonzero_idy = torch.where(logpitch!=0)
+            logpitch[nonzero_idx, nonzero_idy] = torch.log(logpitch[nonzero_idx, nonzero_idy])
+            logpitch = logpitch.unsqueeze(-1)
 
+        midi2pitch = self.length_regulator(midi, ds)
+        
+        for i in range(len(midi2pitch)):
+            note = midi2pitch[i,: ].cpu().numpy()
+            nonzero_idx = np.where(note!=0)[0]
+            note[nonzero_idx] = np.log(librosa.midi_to_hz(note[nonzero_idx]))
+            midi2pitch[i, :] = torch.from_numpy(note).to(device=midi.device)
+
+        midi2pitch = midi2pitch.unsqueeze(-1)
         batch_size = text.size(0)
 
         label_emb = self.phone_encode_layer(label)
@@ -474,6 +503,14 @@ class XiaoiceSing(AbsSVS):
             zs.size(0), -1, self.odim
         )  # (B, T_feats, odim)
 
+        f0_outs = self.f0_out(zs).view(
+            zs.size(0), -1, 1
+        ) + midi2pitch # (B, T_feats)
+
+        uvu_outs = self.uvu_out(zs).view(
+            zs.size(0), -1
+        )  # (B, T_feats)
+
         # postnet -> (B, Lmax//r * r, odim)
         if self.postnet is None:
             after_outs = before_outs
@@ -492,6 +529,8 @@ class XiaoiceSing(AbsSVS):
             )
             max_olen = max(olens)
             ys = feats[:, :max_olen]
+            logpitch = logpitch[:, :max_olen]
+            uvu = uvu[:, :max_olen]
         else:
             ys = feats
             olens = feats_lengths
@@ -500,12 +539,20 @@ class XiaoiceSing(AbsSVS):
         l1_loss, duration_loss = self.criterion(
             after_outs, before_outs, d_outs, ys, ds, ilens, olens
         )
-        loss = l1_loss + duration_loss
+        pitch_loss = self.pitch_criterion(
+            uvu, f0_outs.squeeze(-1), logpitch.squeeze(-1)
+        )
+        uvu_loss = self.uvu_criterion(
+            olens, uvu_outs, uvu
+        )
+        loss = l1_loss + 0.3 * duration_loss + 0.2 * pitch_loss + 0.1 * uvu_loss
 
         stats = dict(
             loss=loss.item(),
             l1_loss=l1_loss.item(),
             duration_loss=duration_loss.item(),
+            pitch_loss=pitch_loss.item(),
+            uvu_loss=uvu_loss.item(),
         )
 
         # report extra information

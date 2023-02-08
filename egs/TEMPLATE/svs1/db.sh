@@ -14,6 +14,7 @@ COMBINE=
 CSD=downloads
 ITAKO=
 POPCS=
+OPENSINGER=
 
 # For only JHU environment
 if [[ "$(hostname -d)" == clsp.jhu.edu ]]; then
@@ -31,6 +32,7 @@ if [[ `hostname` == venus_qt_2241 ]]; then
     NATSUME=/data3/qt
     JSUT=/data3/qt
     COMBINE=/data3/qt/Muskits/egs/combine_data/svs1/
+    OPENCPOP=/data3/qt/dataset/Opencpop
 fi
 
 if [[ `hostname` == venus_tyx_2235 ]]; then
@@ -76,10 +78,20 @@ if [[ `hostname` == capri_gs_2345 ]]; then
     OPENCPOP=/data5/gs/dataset/Opencpop
 fi
 
-
 if [[ `hostname` == tarus_zlt_2234 ]]; then
     KIRITAN=/data4/zlt/muskit/Muskits-main/egs/kiritan/svs1
     ONIKU=/data4/zlt/muskit/Muskits-main/egs/oniku_kurumi_utagoe_db/svs1/ONIKU_KURUMI_UTAGOE_DB
     OFUTON=/data4/zlt/muskit/Muskits-main/egs/ofuton_p_utagoe_db/svs1/OFUTON_P_UTAGOE_DB
     NAMINE=/data4/zlt/muskit/Muskits-main/egs/namine_ritsu_utagoe_db/svs1/NAMINE_RITSU_UTAGOE_DB
+fi
+
+if [[ `hostname` == capricornus_zl_2233 ]]; then
+    # KIRITAN=/data3/qt/
+    # ONIKU=/data3/qt/ONIKU_KURUMI_UTAGOE_DB/
+    # OFUTON=/data3/qt/OFUTON_P_UTAGOE_DB/
+    # NATSUME=/data3/qt
+    # JSUT=/data3/qt
+    COMBINE=/data3/qt/Muskits/egs/combine_data/svs1/
+    OPENCPOP=/data3/qt/Opencpop
+    OPENSINGER=/data3/qt/else_data/OpenSinger
 fi

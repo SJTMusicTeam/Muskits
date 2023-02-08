@@ -16,6 +16,8 @@ from muskit.torch_utils.nets_utils import make_non_pad_mask
 from muskit.torch_utils.nets_utils import make_pad_mask
 
 
+
+
 class FeedForwardTransformerLoss(torch.nn.Module):
     """Loss function module for feed-forward Transformer."""
 
@@ -89,3 +91,5 @@ class FeedForwardTransformerLoss(torch.nn.Module):
             )
 
         return l1_loss, duration_loss
+
+

@@ -5,6 +5,8 @@ from io import BytesIO
 from pathlib import Path
 from typing import Tuple, Optional
 
+from multiprocessing import Pool, RLock
+
 import humanfriendly
 import numpy as np
 import librosa
@@ -61,6 +63,54 @@ def smooth_note(note, smooth_context, filter_seg_len=5):
     note = np.apply_along_axis(lambda x: np.argmax(np.bincount(x)), arr=note, axis=1)
     return np.repeat(note, smooth_context)[:-pad].astype(int)
 
+def process_wav2midi(line, writer, utt2ref_channels, args):
+    # global writer
+    # global utt2ref_channels
+    # global args
+    uttid, wavpath = line.strip().split(None, 1)
+
+    if wavpath.endswith("|"):
+        # Streaming input e.g. cat a.wav |
+        with kaldiio.open_like_kaldi(wavpath, "rb") as f:
+            with BytesIO(f.read()) as g:
+                wave, rate = soundfile.read(g, dtype=np.float)
+                if wave.ndim == 2 and utt2ref_channels is not None:
+                    wave = wave[:, utt2ref_channels(uttid)]
+    else:
+        wave, rate = soundfile.read(wavpath, dtype=np.float64)
+        if wave.ndim == 2 and utt2ref_channels is not None:
+            wave = wave[:, utt2ref_channels(uttid)]
+    
+    
+    # pitch extraction with DIO
+    _f0, t = pw.dio(wave, rate, frame_period=args.frame_period)
+
+    # pitch refinement
+    f0 = pw.stonemask(wave, _f0, t, rate)
+    f0[f0 < 40] = 50 # set lower bound to prevent underflow
+
+    f0 = 12 * np.log2(f0 / 440) + 49 # round to piano keys
+    note = np.round(f0, 0) + 20 # round to midi note
+    note[note < 35] = 0
+    note[note > 85] = 0
+    note = note.astype(int)
+    period_time =  int(rate / 1000 * args.frame_period)
+    note = smooth_note(note, args.smooth_context, args.filter_seg_len)
+    note = np.repeat(note, period_time) # expand to sample level
+
+    # # tempo estimation
+    onset_env = librosa.onset.onset_strength(y=wave, sr=rate)
+    # # beats often need longer hop_length for estimation
+    # tempo = librosa.beat.tempo(onset_envelope=onset_env, sr=rate, aggregate=None)
+    # tempo = np.round(tempo, 0)
+    # tempo = np.repeat(tempo, 512) # magic number (as defined in librosa)
+    # tempo = tempo[:len(note)]
+    tempo = librosa.beat.tempo(onset_envelope=onset_env, sr=rate)
+    tempo = np.ones_like(note) * tempo
+
+    writer[uttid] = note, tempo.astype(np.int32)
+    # logging.info(f'Sucess for {wavpath}')
+
 
 def main():
     logfmt = "%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s"
@@ -84,6 +134,7 @@ def main():
     parser.add_argument("--downsample_pitch", default=5, help="f0 downsample rate for pitch extraction")
     parser.add_argument("--smooth_context", default=20, help="smoothting factor of semitone estimation")
     parser.add_argument("--filter_seg_len", default=10, help="the threshold to filter out note segments")
+    parser.add_argument("--nj", default=20, help="Number of concurrent jobs, default 20")
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--ref-channels", default=None, type=str2int_tuple)
     group.add_argument("--utt2ref-channels", default=None, type=str)
@@ -110,52 +161,11 @@ def main():
     Path(args.midi_dump).mkdir(parents=True, exist_ok=True)
     out_midiscp = Path(args.outdir) / f"{args.name}.scp"
     writer = MIDIScpWriter(args.midi_dump, out_midiscp, format="midi", rate=np.int32(args.fs))
-
+    
+    pool = Pool(args.nj, initargs=(RLock(),), initializer=tqdm.set_lock)
     with Path(args.scp).open("r") as fscp:
-            for line in tqdm(fscp):
-                uttid, wavpath = line.strip().split(None, 1)
-
-                if wavpath.endswith("|"):
-                    # Streaming input e.g. cat a.wav |
-                    with kaldiio.open_like_kaldi(wavpath, "rb") as f:
-                        with BytesIO(f.read()) as g:
-                            wave, rate = soundfile.read(g, dtype=np.float)
-                            if wave.ndim == 2 and utt2ref_channels is not None:
-                                wave = wave[:, utt2ref_channels(uttid)]
-
-                        
-                else:
-                    wave, rate = soundfile.read(wavpath, dtype=np.float64)
-                    if wave.ndim == 2 and utt2ref_channels is not None:
-                        wave = wave[:, utt2ref_channels(uttid)]
-                
-                # pitch extraction with DIO
-                _f0, t = pw.dio(wave, rate, frame_period=args.frame_period)
-
-                # pitch refinement
-                f0 = pw.stonemask(wave, _f0, t, rate)
-                f0[f0 < 40] = 50 # set lower bound to prevent underflow
-
-                f0 = 12 * np.log2(f0 / 440) + 49 # round to piano keys
-                note = np.round(f0, 0) + 20 # round to midi note
-                note[note < 50] = 0
-                note = note.astype(int)
-                period_time =  int(rate / 1000 * args.frame_period)
-                note = smooth_note(note, args.smooth_context, args.filter_seg_len)
-                note = np.repeat(note, period_time) # expand to sample level
-
-                # # tempo estimation
-                onset_env = librosa.onset.onset_strength(y=wave, sr=rate)
-                # # beats often need longer hop_length for estimation
-                # tempo = librosa.beat.tempo(onset_envelope=onset_env, sr=rate, aggregate=None)
-                # tempo = np.round(tempo, 0)
-                # tempo = np.repeat(tempo, 512) # magic number (as defined in librosa)
-                # tempo = tempo[:len(note)]
-                tempo = librosa.beat.tempo(onset_envelope=onset_env, sr=rate)
-                tempo = np.ones_like(note) * tempo
-
-                writer[uttid] = note, tempo.astype(np.int32)
-
+        for line in tqdm(fscp):
+            process_wav2midi(line, writer, utt2ref_channels, args)
 
 if __name__ == "__main__":
     main()

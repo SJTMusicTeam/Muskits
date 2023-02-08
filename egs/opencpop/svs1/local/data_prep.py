@@ -44,7 +44,8 @@ def process_utterance(
     phns = phns.split(" ")
     notes = notes.split(" ")
     phn_dur = phn_dur.split(" ")
-
+    syb_dur = syb_dur.split(" ")
+    
     y, sr = librosa.load(os.path.join(audio_dir, uid) + ".wav")
     onset_env = librosa.onset.onset_strength(y=y, sr=sr)
     # estimate a static tempo for midi format
@@ -56,6 +57,7 @@ def process_utterance(
 
     # duration type convert
     phn_dur = [float(dur) for dur in phn_dur]
+    syb_dur = [float(dur) for dur in syb_dur]
 
     midi_seq = create_midi(notes, tempo, phn_dur, tgt_sr)
 

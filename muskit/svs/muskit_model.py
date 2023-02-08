@@ -344,7 +344,7 @@ class MuskitSVSModel(AbsMuskitModel):
         if label is not None:
             label = label.to(dtype=torch.long)
             batch.update(label=label, label_lengths=label_lengths)
-        if score is not None and pitch is None:
+        if score is not None:
             score = score.to(dtype=torch.long)
             batch.update(midi=score, midi_lengths=score_lengths)
         if tempo is not None:
@@ -353,7 +353,7 @@ class MuskitSVSModel(AbsMuskitModel):
         if ds is not None:
             batch.update(ds=ds)
         if self.pitch_extract is not None and pitch is not None:
-            batch.update(midi=pitch, midi_lengths=pitch_lengths)
+            batch.update(pitch=pitch, pitch_lengths=pitch_lengths)
         if self.energy_extract is not None and energy is not None:
             batch.update(energy=energy, energy_lengths=energy_lengths)
         if self.svs.require_raw_singing:

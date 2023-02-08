@@ -714,7 +714,9 @@ class Trainer:
             with open(options.vocoder_config) as f:
                 config = yaml.load(f, Loader=yaml.Loader)
             config.update(vars(options))
+            
 
+            logging.info(f"Loading model parameters from {options.vocoder_checkpoint}.")
             model_vocoder = load_model(options.vocoder_checkpoint, config)
             logging.info(f"Loaded model parameters from {options.vocoder_checkpoint}.")
             # if options.normalize_before:

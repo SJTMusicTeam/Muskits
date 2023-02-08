@@ -64,9 +64,11 @@ n_shift=256       # The number of shift points.
 win_length=null   # Window length.
 score_feats_extract=frame_score_feats # The type of music score feats (frame_score_feats or syllable_score_feats)
 pitch_extract=None
+use_continuous_f0=false
+use_log_f0=false
 # Only used for the model using pitch features (e.g. FastSpeech2)
-f0min=80          # Maximum f0 for pitch extraction.
-f0max=400         # Minimum f0 for pitch extraction.
+f0min=60          # Maximum f0 for pitch extraction.
+f0max=1100         # Minimum f0 for pitch extraction.
 
 oov="<unk>"         # Out of vocabrary symbol.
 blank="<blank>"     # CTC blank symbol.
@@ -97,7 +99,7 @@ inference_model=valid.loss.best.pth # Model path for decoding.
                                    # inference_model=3epoch.pth
                                    # inference_model=valid.acc.best.pth
                                    # inference_model=valid.loss.ave.pth
-vocoder_file=none  # Vocoder parameter file, If set to none, Griffin-Lim will be used.
+vocoder_file=  # Vocoder parameter file, If set to none, Griffin-Lim will be used.
 download_model=""   # Download a model from Model Zoo and use it for decoding.
 
 # [Task dependent] Set the datadir name created by local/data.sh
@@ -320,7 +322,7 @@ if ! "${skip_data_prep}"; then
         
         if [ "${feats_type}" = raw ]; then
             log "Stage 2: Format wav.scp: data/ -> ${data_feats}/"
-            for dset in "${train_set}" "${valid_set}" ${test_sets} ; do
+            for dset in ${test_sets} "${valid_set}"   "${train_set}" ; do
                 if [ "${dset}" = "${train_set}" ] || [ "${dset}" = "${valid_set}" ]; then
                     _suf="/org"
                 else
@@ -570,6 +572,10 @@ if ! "${skip_train}"; then
         _opts+="--pitch_extract_conf hop_length=${n_shift} "
         _opts+="--pitch_extract_conf f0max=${f0max} "
         _opts+="--pitch_extract_conf f0min=${f0min} "
+        _opts+="--pitch_extract_conf use_continuous_f0=${use_continuous_f0} "
+        _opts+="--pitch_extract_conf use_log_f0=${use_log_f0} "
+        _opts+="--pitch_extract_conf f0min=${f0min} "
+        _opts+="--pitch_extract_conf f0max=${f0max} "
         _opts+="--energy_extract_conf fs=${fs} "
         _opts+="--energy_extract_conf n_fft=${n_fft} "
         _opts+="--energy_extract_conf hop_length=${n_shift} "
@@ -841,6 +847,8 @@ if ! "${skip_train}"; then
             _opts+="--pitch_extract_conf n_fft=${n_fft} "
             _opts+="--pitch_extract_conf win_length=${win_length} "
             _opts+="--pitch_extract_conf hop_length=${n_shift} "
+            _opts+="--pitch_extract_conf f0max=${f0max} "
+            _opts+="--pitch_extract_conf f0max=${f0min} "
             _opts+="--pitch_normalize_conf stats_file=${svs_stats_dir}/train/pitch_stats.npz "
         fi
         if [ -e "${svs_stats_dir}/train/energy_stats.npz" ]; then
