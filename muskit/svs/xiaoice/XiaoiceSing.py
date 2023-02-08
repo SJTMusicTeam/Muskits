@@ -472,7 +472,6 @@ class XiaoiceSing(AbsSVS):
 
         label_emb = self.phone_encode_layer(label)
         midi_emb = self.midi_encode_layer(midi)
-        # logging.info(f'temp:{tempo}')
         tempo_emb = self.tempo_encode_layer(tempo)
         input_emb = label_emb + midi_emb + tempo_emb
 
@@ -504,13 +503,9 @@ class XiaoiceSing(AbsSVS):
             zs.size(0), -1, self.odim
         )  # (B, T_feats, odim)
 
-        # logging.info(f'zs:{zs.shape}')
-
         f0_outs = self.f0_out(zs).view(
             zs.size(0), -1, 1
         ) + midi2pitch # (B, T_feats)
-        # logging.info(f'f0_outs:{f0_outs.shape}')
-        # logging.info(f'midi2pitch:{midi2pitch.shape}')
 
         uvu_outs = self.uvu_out(zs).view(
             zs.size(0), -1

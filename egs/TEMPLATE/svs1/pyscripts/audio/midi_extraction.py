@@ -166,13 +166,6 @@ def main():
     with Path(args.scp).open("r") as fscp:
         for line in tqdm(fscp):
             process_wav2midi(line, writer, utt2ref_channels, args)
-    #         pool.apply_async(process_wav2midi, (line, writer, utt2ref_channels, args,))
-    # pool.close()
-    # pool.join()
-    # for p in processes:
-    #     p.get()
-                
-
 
 if __name__ == "__main__":
     main()

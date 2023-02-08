@@ -15,7 +15,7 @@ win_length=1200
 f0min=60
 f0max=1100
 
-expdir=exp_f0
+
 score_feats_extract=syllable_score_feats #frame_score_feats   # frame_score_feats | syllable_score_feats
 
 opts=
@@ -60,6 +60,5 @@ cleaner=none
     --test_sets "${test_sets}" \
     --score_feats_extract "${score_feats_extract}" \
     --srctexts "data/${train_set}/text" \
-    --expdir "${expdir}" \
     --ngpu 1 \
     ${opts} "$@"

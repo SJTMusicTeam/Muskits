@@ -48,9 +48,6 @@ export LC_ALL=C
 srcdir=$1
 destdir=$2
 
-# echo "${srcdir}"
-# echo "${destdir}"
-
 if [ ! -f $srcdir/utt2spk ]; then
   echo "copy_data_dir.sh: no such file $srcdir/utt2spk"
   exit 1;
