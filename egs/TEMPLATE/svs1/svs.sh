@@ -38,7 +38,7 @@ nj=32                # The number of parallel jobs.
 inference_nj=32      # The number of parallel jobs in decoding.
 gpu_inference=false  # Whether to perform gpu decoding.
 dumpdir=dump         # Directory to dump features.
-expdir=exp_xiaoice_f0           # Directory to save experiments.
+expdir=exp           # Directory to save experiments.
 python=python3       # Specify python to execute muskit commands.
 
 # Data preparation related
@@ -99,7 +99,7 @@ inference_model=valid.loss.best.pth # Model path for decoding.
                                    # inference_model=3epoch.pth
                                    # inference_model=valid.acc.best.pth
                                    # inference_model=valid.loss.ave.pth
-vocoder_file=/data3/qt/train_nodev_opencpop_hifigan.v1/checkpoint-250000steps.pkl  # Vocoder parameter file, If set to none, Griffin-Lim will be used.
+vocoder_file=  # Vocoder parameter file, If set to none, Griffin-Lim will be used.
 download_model=""   # Download a model from Model Zoo and use it for decoding.
 
 # [Task dependent] Set the datadir name created by local/data.sh
@@ -574,6 +574,8 @@ if ! "${skip_train}"; then
         _opts+="--pitch_extract_conf f0min=${f0min} "
         _opts+="--pitch_extract_conf use_continuous_f0=${use_continuous_f0} "
         _opts+="--pitch_extract_conf use_log_f0=${use_log_f0} "
+        _opts+="--pitch_extract_conf f0min=${f0min} "
+        _opts+="--pitch_extract_conf f0max=${f0max} "
         _opts+="--energy_extract_conf fs=${fs} "
         _opts+="--energy_extract_conf n_fft=${n_fft} "
         _opts+="--energy_extract_conf hop_length=${n_shift} "
@@ -845,6 +847,8 @@ if ! "${skip_train}"; then
             _opts+="--pitch_extract_conf n_fft=${n_fft} "
             _opts+="--pitch_extract_conf win_length=${win_length} "
             _opts+="--pitch_extract_conf hop_length=${n_shift} "
+            _opts+="--pitch_extract_conf f0max=${f0max} "
+            _opts+="--pitch_extract_conf f0max=${f0min} "
             _opts+="--pitch_normalize_conf stats_file=${svs_stats_dir}/train/pitch_stats.npz "
         fi
         if [ -e "${svs_stats_dir}/train/energy_stats.npz" ]; then

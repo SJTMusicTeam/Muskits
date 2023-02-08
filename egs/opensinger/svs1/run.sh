@@ -7,8 +7,10 @@ set -o pipefail
 
 # spectrogram-related arguments
 fs=24000
-fmin=60
-fmax=1100
+fmin=80
+fmax=12000
+f0min=60
+f0max=1100
 n_fft=2048
 n_shift=300
 win_length=1200
@@ -31,6 +33,7 @@ test_sets="dev eval"
 train_config=conf/tuning/train_xiaoice_noDP.yaml
 # train_config=conf/train.yaml
 inference_config=conf/decode.yaml
+expdir=exp_xiaoice_pitch
 
 # text related processing arguments
 g2p=none
@@ -41,10 +44,12 @@ cleaner=none
     --lang zh \
     --local_data_opts "--stage 1 $(pwd)" \
     --feats_type raw \
-    --pitch_extract Dio \
+    --pitch_extract dio \
     --fs "${fs}" \
     --fmin "${fmin}" \
     --fmax "${fmax}" \
+    --f0min "${f0min}" \
+    --f0max "${f0max}" \
     --n_fft "${n_fft}" \
     --n_shift "${n_shift}" \
     --win_length "${win_length}" \
@@ -58,5 +63,6 @@ cleaner=none
     --test_sets "${test_sets}" \
     --score_feats_extract "${score_feats_extract}" \
     --srctexts "data/${train_set}/text" \
+    --expdir "${expdir}"\
     --ngpu 1 \
     ${opts} "$@"

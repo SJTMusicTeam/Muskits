@@ -12,7 +12,10 @@ fmax=7600
 n_fft=2048
 n_shift=300
 win_length=1200
+f0min=60
+f0max=1100
 
+expdir=exp_f0
 score_feats_extract=syllable_score_feats #frame_score_feats   # frame_score_feats | syllable_score_feats
 
 opts=
@@ -39,9 +42,11 @@ cleaner=none
     --lang zh \
     --local_data_opts "--stage 0 $(pwd)" \
     --feats_type raw \
-    --pitch_extract Dio \
+    --pitch_extract dio \
     --fs "${fs}" \
     --fmax "${fmax}" \
+    --f0min "${f0min}" \
+    --f0max "${f0max}" \
     --n_fft "${n_fft}" \
     --n_shift "${n_shift}" \
     --win_length "${win_length}" \
@@ -55,5 +60,6 @@ cleaner=none
     --test_sets "${test_sets}" \
     --score_feats_extract "${score_feats_extract}" \
     --srctexts "data/${train_set}/text" \
+    --expdir "${expdir}" \
     --ngpu 1 \
     ${opts} "$@"

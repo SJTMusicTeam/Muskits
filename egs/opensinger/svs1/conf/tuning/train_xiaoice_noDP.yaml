@@ -6,7 +6,7 @@
 svs: xiaoice                    # model architecture
 svs_conf:                        # keyword arguments for the selected model
     midi_dim: 129                # midi dimension (note number + silence)
-    tempo_dim: 300
+    tempo_dim: 600
     embed_dim: 384               # char or phn embedding dimension
     adim: 384
     aheads: 4
@@ -58,7 +58,7 @@ grad_noise: false           # whether to use gradient noise injection
 accum_grad: 1               # gradient accumulation
 
 batch_type: sorted
-batch_size: 4
+batch_size: 16
 
 pitch_aug_min: 0            # Default: 0, [-1,-2,-3]
 pitch_aug_max: 0            # Default: 0, [1,2,3]

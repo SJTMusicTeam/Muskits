@@ -359,7 +359,12 @@ class SVSTask(AbsTask):
                 args.pitch_extract_conf["reduction_factor"] = args.svs_conf.get(
                     "reduction_factor", 1
                 )
+                
+            
             pitch_extract = pitch_extract_class(**args.pitch_extract_conf)
+            # logging.info(f'pitch_extract:{pitch_extract}')
+            # logging.info(f'pitch_range:{pitch_extract.f0min}-{pitch_extract.f0max}')
+            # logging.info(f'conf_pitch:{args.pitch_extract_conf}')
         # logging.info(f'pitch_extract:{pitch_extract}')
         if getattr(args, "energy_extract", None) is not None:
             if args.energy_extract_conf.get("reduction_factor", None) is not None:
